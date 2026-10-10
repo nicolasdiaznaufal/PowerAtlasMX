@@ -1,0 +1,43 @@
+/* PowerAtlasMx v2 tokens: dark Vercel-style, single sand accent.
+   Single source: web/tests/contrast-v2.test.mjs reads every hex token below. */
+@font-face { font-family: 'Geist'; src: url('../fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('../fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+:root {
+  color-scheme: dark;
+  /* surfaces: tonal steps, no shadows */
+  --canvas: #0B100D;
+  --surface: #111813;
+  --raised: #18211B;
+  /* ink (same as v1) */
+  --ink: #F0E8D2;
+  --ink-2: #C3BEA9;
+  --ink-3: #9C9985;
+  /* single accent: eclipse sand */
+  --accent: #E8A266;
+  --on-accent: #0B100D;
+  /* series colours for compare */
+  --s1: #E8A266;
+  --s2: #EDE6D0;
+  --s3: #8DA892;
+  /* chart components (v1 deck) */
+  --c-energy: #658169;
+  --c-losses: #8DA892;
+  --c-cong: #B9A88A;
+  /* map */
+  --map-lo: #1E2B23;
+  --map-hi: #EDE6D0;
+  --map-dot-lo: #4F6B5A;
+  --map-nodata: #3A453E;
+  /* hairlines (rgba: not read by the contrast test) */
+  --ring: 0 0 0 1px rgba(240, 232, 210, .10);
+  --ring-strong: 0 0 0 1px rgba(240, 232, 210, .18);
+  --hairline: rgba(240, 232, 210, .10);
+
+  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, Menlo, monospace;
+  --radius: 6px;
+  --pill: 9999px;
+  --max: 1280px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur: 450ms;
+}
