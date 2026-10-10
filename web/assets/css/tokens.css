@@ -1,0 +1,66 @@
+/* Nodal Solar Value tokens: the deck's palette (dark forest field, cream paper cards, one orange accent, sun yellow).
+   Single source: web/tests/contrast.test.mjs reads every hex token below. Change a value: `node --test web/tests/*.test.mjs`.
+   Traffic light (approved): green / yellow / red, always paired with an icon AND text. */
+:root {
+  color-scheme: dark;
+  /* field */
+  --bg: #232E26;
+  --bg-2: #2E3D30;
+  --bg-3: #384A3B;
+  --stage: #1A221C;
+  /* paper */
+  --cream: #EDE6D0;
+  --cream-2: #E4DAC4;
+  --dark: #1E2820;
+  --dark-2: #4A5448;
+  /* ink on the dark field */
+  --ink: #F0E8D2;
+  --ink-2: #C3BEA9;
+  --ink-3: #9C9985;
+  --line: #43503F;
+  --line-2: #5B6957;
+  /* accent: one orange, one sun */
+  --orange: #C07030;
+  --orange-text: #E8A266;
+  --orange-on-cream: #96501A;
+  --sun: #E0B33A;
+  --on-orange: #0B0F0C;
+  /* chart components (deck): system energy, losses, congestion */
+  --c-energy: #658169;
+  --c-losses: #8DA892;
+  --c-cong: #B9A88A;
+  --c-fail: #658169;
+  /* traffic light: text/icon on tinted fill, mark on the field */
+  --sig-ok-text: #8FDCA0;
+  --sig-ok-mark: #4FB868;
+  --sig-ok-bg: #173A22;
+  --sig-warn-text: #F5D65C;
+  --sig-warn-mark: #E0B020;
+  --sig-warn-bg: #3B300C;
+  --sig-bad-text: #FFA498;
+  --sig-bad-mark: #EF5350;
+  --sig-bad-bg: #44201B;
+  --sig-neutral-text: #D9D3BC;
+  --sig-neutral-bg: #3A4A3D;
+  /* map ramp */
+  --map-lo: #33443A;
+  --map-hi: #EDE6D0;
+  --map-nodata: #2B3830;
+
+  --font-display: 'Bricolage Grotesque', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, Menlo, monospace;
+  --radius: 6px;
+  --shadow: 0 6px 18px rgba(0, 0, 0, .28);
+}
+@media print {
+  :root {
+    color-scheme: light;
+    --bg: #FFFFFF; --bg-2: #F5F1E4; --bg-3: #EDE6D0; --stage: #FFFFFF;
+    --ink: #1E2820; --ink-2: #3F4A3F; --ink-3: #5A6458; --line: #C9C2AA; --line-2: #A9A28A;
+    --orange-text: #96501A; --c-energy: #4A5E4D; --c-fail: #4A5E4D;
+    --sig-ok-text: #0F5A23; --sig-ok-bg: #E2F3E6; --sig-warn-text: #6B4E00; --sig-warn-bg: #FBF0C8;
+    --sig-bad-text: #8A1F13; --sig-bad-bg: #FBE1DD; --sig-neutral-text: #2B342C; --sig-neutral-bg: #E8E4D3;
+    --map-lo: #D9D3BC; --map-hi: #3F5A44; --map-nodata: #EEE9D8;
+  }
+}

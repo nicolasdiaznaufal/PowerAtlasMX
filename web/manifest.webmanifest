@@ -1,0 +1,29 @@
+{
+  "name": "Nodal Solar Value",
+  "short_name": "Nodal Solar",
+  "description": "What is a solar MWh worth at each node of Mexico's wholesale market? CENACE MDA reference prices.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#232E26",
+  "theme_color": "#232E26",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nodal Solar Value</title>
+<meta name="description" content="What is a solar MWh worth at each node of Mexico's wholesale market? REPSA origination analytics on CENACE day-ahead nodal prices.">
+<meta name="theme-color" content="#232E26">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="preload" href="assets/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top" id="top">
+  <a class="brand" href="#summary" aria-label="Nodal Solar Value, back to the summary">
+    <span class="logo-chip"><img src="assets/img/repsa-logo.png" width="112" height="29" alt="REPSA Group"></span>
+    <span class="brand-t">Nodal Solar Value<small>CENACE MDA · SIN</small></span>
+  </a>
+  <nav class="chips" id="chips" aria-label="Sections"></nav>
+  <div class="top-ctl">
+    <div class="seg" id="basis" role="group" aria-label="Price basis">
+      <button type="button" data-v="real" aria-pressed="true" id="basis-real">Today's pesos</button>
+      <button type="button" data-v="nominal" aria-pressed="false">Nominal</button>
+    </div>
+    <button type="button" class="btn btn-assump" id="open-assump" aria-controls="assump" aria-expanded="false">
+      <span>Assumptions</span><span class="badge" id="assump-badge">Deck scenario</span>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="rail" id="rail" aria-label="Page outline">
+    <ol class="rail-list" id="rail-list"></ol>
+    <div class="rail-card">
+      <div class="lbl">Active assumptions</div>
+      <div id="rail-assump" class="rail-assump">Deck scenario</div>
+      <button type="button" class="btn btn-ghost" data-open-assump>Edit assumptions</button>
+    </div>
+    <p class="rail-foot">Price basis: <b id="rail-basis">today's pesos</b><br><span id="rail-data">Data to Sep 2026</span></p>
+  </aside>
+
+  <main id="main" class="page">
+    <div id="banners" aria-live="polite"></div>
+
+    <!-- ===================== SUMMARY ===================== -->
+    <section class="sec hero" id="summary" aria-labelledby="h-summary" data-title="Summary">
+      <div class="kicker">Nodal solar value · CENACE MDA · SIN</div>
+      <h1 id="h-summary">What is a solar MWh worth at each node?</h1>
+      <p class="lead">We value a <strong>1 MWp photovoltaic plant at every node of the national grid</strong> by multiplying its hour-by-hour production by the hour-by-hour nodal price, and compare that with the simple average price used in quick prospection. Then we ask which nodes cover their cost.</p>
+      <div class="stats headline" id="headline" aria-live="polite"></div>
+      <div class="read-first">
+        <div class="lbl">What to read first</div>
+        <ol class="rf">
+          <li><a href="#explorer"><b>Explore a node, state or region.</b><span>Prices, production and value factor by hour and by month.</span></a></li>
+          <li><a href="#map"><b>See where value is made and lost.</b><span>Control regions, states and ~2,400 nodes on one map.</span></a></li>
+          <li><a href="#profit"><b>Test profitability with your numbers.</b><span>Enter capex, O&amp;M and rate in the Assumptions panel; every table recomputes.</span></a></li>
+        </ol>
+      </div>
+      <p class="fine" id="asof"></p>
+    </section>
+
+    <!-- ===================== PROJECT ===================== -->
+    <section class="sec" id="project" aria-labelledby="h-project" data-title="The project">
+      <div class="kicker">About the project</div>
+      <h2 id="h-project">What this is, what it uses, what it answers</h2>
+      <p class="lead">Nodal Solar Value is an origination tool for REPSA. It turns three public data sources into one number per node: the price a solar plant would actually capture in the day-ahead market.</p>
+
+      <div class="grid g3">
+        <article class="paper">
+          <span class="lbl">The project</span>
+          <h3>One plant, every node, every hour</h3>
+          <p>We place a reference plant of 1 MWp at each of the ~2,650 nodes of the CENACE market, model its hourly output, and price every MWh at the node's own hourly price. The result is a <b>captured price</b> and a <b>value factor</b> for each node, state and control region.</p>
+        </article>
+        <article class="paper">
+          <span class="lbl">Goals</span>
+          <h3>Screen with the captured price</h3>
+          <p>Replace the average-price shortcut with a number that reflects when the sun shines and what the grid pays at that moment. Find where solar keeps its value, where it loses it, and whether a node can cover a given cost per MWh.</p>
+        </article>
+        <article class="paper">
+          <span class="lbl">Why it matters</span>
+          <h3>Midday is cheap and getting cheaper</h3>
+          <p>Prices fall when many plants produce at once. A node that looks good on average prices can be mediocre on the hours a plant really sells. The gap is large, it differs by region, and it is growing.</p>
+        </article>
+      </div>
+
+      <h3 class="sub">Tools and data</h3>
+      <div class="grid g3 tools">
+        <article class="panel">
+          <span class="lbl">Prices</span>
+          <h4><a href="https://www.cenace.gob.mx" target="_blank" rel="noopener">CENACE</a> PML, day-ahead market (MDA)</h4>
+          <p>Hourly locational marginal prices (PML, in MXN/MWh) for about 2,650 nodes, 2020 to Sep 2026. Each price is energy + losses + congestion. This is the reference market price, not a plant's full revenue.</p>
+        </article>
+        <article class="panel">
+          <span class="lbl">Weather</span>
+          <h4><a href="https://power.larc.nasa.gov" target="_blank" rel="noopener">NASA POWER</a> hourly weather</h4>
+          <p>Hourly sunlight (GHI, DNI, DHI), air temperature and wind on a 1&deg; grid, 2015 to 2025. Each node uses the cell of its municipality. Fine for screening, not for financing.</p>
+        </article>
+        <article class="panel">
+          <span class="lbl">Production</span>
+          <h4><a href="https://pvlib-python.readthedocs.io" target="_blank" rel="noopener">pvlib</a> PV model</h4>
+          <p>Open-source Python library. It turns each hour of weather into energy per kWp for a single-axis tracker and a fixed-tilt plant. Details in the <a href="#methods">appendix</a>.</p>
+        </article>
+      </div>
+
+      <h3 class="sub">The pipeline</h3>
+      <ol class="pipe" aria-label="Pipeline steps">
+        <li><b>1 · Ingest</b><span>CENACE PML files and NASA POWER weather are downloaded and cached.</span></li>
+        <li><b>2 · CDMX clock</b><span>Every hour of every system is put on one fixed clock (CDMX standard time, UTC&minus;6).</span></li>
+        <li><b>3 · Quality</b><span>Gaps, duplicates, short histories and renamed nodes are flagged; nothing is silently dropped.</span></li>
+        <li><b>4 · Additive aggregates</b><span>Sums by node, month and hour, so any period can be recombined in the browser.</span></li>
+        <li><b>5 · KPIs</b><span>Captured price, value factor, share of energy at PML &le; 0, revenue per MWp, today's pesos.</span></li>
+        <li><b>6 · Independent validation</b><span>A second implementation recomputes the KPIs; additive sums match to the cent.</span></li>
+      </ol>
+
+      <div class="grid g2">
+        <article class="panel">
+          <span class="lbl">Questions it answers</span>
+          <ul class="dash">
+            <li>What is a MWh of solar worth at this node, in pesos and as a share of the average price?</li>
+            <li>How much does the average-price shortcut overstate revenue, and where?</li>
+            <li>Is value falling over time, and how fast?</li>
+            <li>Which nodes, states and regions cover a given cost per MWh, and by how much?</li>
+          </ul>
+        </article>
+        <article class="panel scope" id="scope">
+          <span class="lbl">Scope and limits</span>
+          <ul class="dash">
+            <li><b>Reference price only.</b> The captured price uses the MDA PML. It excludes settlement of imbalances, capacity (potencia), CELs, ancillary services, transmission charges and bilateral contracts.</li>
+            <li><b>Typical-year production.</b> Output uses a 2015&ndash;2025 typical year applied to each real hour of price.</li>
+            <li><b>Node = municipal centroid.</b> Locations are not substations; see the <a href="#geography">Geography</a> block.</li>
+            <li><b>REPSA assumptions are pending.</b> Capex, O&amp;M and rate come from you, in the <a href="#assumptions">Assumptions</a> panel.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===================== NOTATION ===================== -->
+    <section class="sec" id="notation" aria-labelledby="h-notation" data-title="Notation">
+      <div class="kicker"><b>01</b> · Notation · read this once</div>
+      <h2 id="h-notation">Every symbol on this page</h2>
+      <p class="lead">Four families: what the market pays, what the plant produces, how the panel behaves, and what it costs. Each later section repeats the symbols it uses.</p>
+      <div class="grid g4 notation">
+        <div class="col">
+          <div class="lbl accent">Price</div>
+          <p><b>\(h\)</b> hour of the day, 0&ndash;23, hour in which the interval starts. CENACE publishes 1&ndash;24 (hour ending), so \(h=\text{hora}-1\).</p>
+          <p><b>\(\mathrm{PML}_h\)</b> day-ahead nodal price in hour \(h\), MXN/MWh = energy \(\lambda^E\) + losses \(\lambda^L\) + congestion \(\lambda^C\).</p>
+          <p><b>\(N\)</b> number of hours in the period (8,760 in a year).</p>
+          <p><b>\(\overline{\mathrm{PML}}\)</b> simple average of all \(N\) hourly prices.</p>
+          <p><b>\(P_{\mathrm{cap}}\)</b> captured price: production-weighted average price.</p>
+          <p><b>\(\mathrm{VF}\)</b> value factor, \(P_{\mathrm{cap}}/\overline{\mathrm{PML}}\), no unit.</p>
+        </div>
+        <div class="col">
+          <div class="lbl accent">Production</div>
+          <p><b>\(P_{\mathrm{STC}}\)</b> nameplate DC power of the panels at standard test conditions, kWp or MWp.</p>
+          <p><b>\(E_h\)</b> AC energy delivered in hour \(h\), MWh.</p>
+          <p><b>\(y_h\)</b> energy per installed kWp in hour \(h\), kWh/kWp (= MWh/MWp).</p>
+          <p><b>\(Y_f\)</b> annual yield \(\sum_h y_h\), kWh/kWp.</p>
+          <p><b>\(\mathrm{GHI}\)</b> sunlight on a horizontal surface, W/m&sup2;.</p>
+          <p><b>\(G_{\mathrm{POA}}\)</b> sunlight on the tilted panel surface (plane of array), W/m&sup2;.</p>
+        </div>
+        <div class="col">
+          <div class="lbl accent">Panel physics</div>
+          <p><b>\(G_{\mathrm{STC}},T_{\mathrm{STC}}\)</b> test reference: 1,000 W/m&sup2; and 25 &deg;C cell temperature.</p>
+          <p><b>\(T_a,\ T_c,\ v\)</b> air temperature, cell temperature (&deg;C), wind speed (m/s).</p>
+          <p><b>\(\gamma\)</b> power temperature coefficient of the panel, %/&deg;C, negative.</p>
+          <p><b>\(L_{\mathrm{sys}},\ \eta_{\mathrm{inv}}\)</b> system losses (wiring, soiling, mismatch); inverter efficiency.</p>
+          <p><b>\(r\)</b> DC/AC ratio: panel kWp per kW of inverter.</p>
+          <p><b>\(\mathrm{PR}\)</b> performance ratio: share of plane-of-array sunlight that leaves the plant as AC energy.</p>
+        </div>
+        <div class="col">
+          <div class="lbl accent">Economics</div>
+          <p><b>\(R\)</b> revenue from selling energy at the node, MXN.</p>
+          <p><b>\(R_{\mathrm{short}}\)</b> revenue as if every MWh sold at \(\overline{\mathrm{PML}}\) (the average-price shortcut).</p>
+          <p><b>\(H_{\mathrm{GHI}}\)</b> annual horizontal irradiation, kWh/m&sup2;.</p>
+          <p><b>\(\mathrm{LCOE}\)</b> levelized cost of energy, USD/MWh (or MXN/MWh).</p>
+          <p><b>\(\mathrm{VF}_{\mathrm{req}}\)</b> value factor needed to break even.</p>
+          <p><b>\(\Pi\)</b> annual margin: revenue minus levelized cost, MXN.</p>
+        </div>
+      </div>
+      <p class="fine">Units: prices in MXN/MWh as published by CENACE. "Module" and "panel" mean the same thing: one photovoltaic panel. USD figures use the exchange rate you set in Assumptions (the deck scenario uses 17.84 MXN/USD).</p>
+    </section>
+
+    <!-- ===================== PRICES ===================== -->
+    <section class="sec" id="prices" aria-labelledby="h-prices" data-title="Prices" data-init="prices">
+      <div class="kicker"><b>02</b> · Prices · simple average vs captured price</div>
+      <h2 id="h-prices">A plant earns the captured price, not the average</h2>
+      <p class="lead">Both average the same hourly prices. Only the weights differ: equal for every hour, or proportional to what the plant produces.</p>
+      <div class="split">
+        <div class="stack">
+          <div class="eq-card"><span class="lbl">What a PML is · precio marginal local</span>
+            \[ \mathrm{PML}_{n,h}=\underbrace{\lambda^{E}_{h}}_{\text{system energy}}+\underbrace{\lambda^{L}_{n,h}}_{\text{losses}}+\underbrace{\lambda^{C}_{n,h}}_{\text{congestion}} \]
+            <p class="note">Cost of serving one more MWh at node \(n\) in hour \(h\). <b>System energy</b>: cheapest generator if the grid had no limits; it changes every hour but is one value for the whole SIN (<span data-bind="lambda_txt">computed from the data</span>). <b>Losses</b> and <b>congestion</b> differ by node: congestion averaged <span data-bind="cong_pen">—</span> MXN/MWh in Peninsular (cheap power cannot get in) and <span data-bind="cong_noro">—</span> in Noroeste (too much local supply to export).</p></div>
+          <div class="eq-card"><span class="lbl">Simple average · every hour weighs 1/N</span>\[ \overline{\mathrm{PML}}=\frac{1}{N}\sum_{h=1}^{N}\mathrm{PML}_h \]</div>
+          <div class="eq-card"><span class="lbl">Captured price · every hour weighs by production</span>\[ P_{\mathrm{cap}}=\sum_{h=1}^{N} w_h\,\mathrm{PML}_h,\qquad w_h=\frac{y_h}{\sum_{k=1}^{N} y_k},\qquad \sum_h w_h = 1 \]</div>
+          <p>Night hours count in \(\overline{\mathrm{PML}}\) but have \(w_h=0\) in \(P_{\mathrm{cap}}\). If production and price were unrelated, both would be equal: \(P_{\mathrm{cap}}-\overline{\mathrm{PML}}=N\,\mathrm{Cov}(w,\mathrm{PML})\). In Mexico prices fall at midday, exactly when \(w_h\) is largest, so <em>\(P_{\mathrm{cap}}&lt;\overline{\mathrm{PML}}\)</em>.</p>
+        </div>
+        <div class="stack">
+          <div class="ctrls three">
+            <div class="ctrl"><label for="d4">Midday price dip, MXN/MWh</label><output id="d4o"></output><input type="range" id="d4" min="0" max="1500" step="10" value="350"></div>
+            <div class="ctrl"><label for="p4">Evening peak, MXN/MWh</label><output id="p4o"></output><input type="range" id="p4" min="0" max="1000" step="10" value="500"></div>
+            <div class="ctrl"><label for="m4">Mounting</label><output></output>
+              <select id="m4"><option value="fixed">Fixed tilt</option><option value="track">Single-axis tracker</option></select></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Average · MXN/MWh</span><strong id="k4a">—</strong></div>
+            <div class="stat"><span>Captured · MXN/MWh</span><strong id="k4c">—</strong></div>
+            <div class="stat"><span>VF · no unit</span><strong id="k4v">—</strong></div>
+            <div class="stat"><span>Energy at PML ≤ 0</span><strong id="k4z">—</strong></div>
+          </div>
+          <div class="legend"><span><i style="background:var(--ink)"></i>PML by hour</span><span><i class="dsh" style="border-color:var(--ink-2)"></i>Simple average \(\overline{\mathrm{PML}}\)</span><span><i class="dsh" style="border-color:var(--orange)"></i>Captured price \(P_{\mathrm{cap}}\)</span></div>
+          <div class="chart" style="height:250px"><canvas id="c4a" role="img" aria-label="Hourly price of a synthetic day with the simple average and the captured price"></canvas></div>
+          <div class="legend"><span><i class="sq" style="background:var(--sun)"></i>Production \(y_h\)</span></div>
+          <div class="chart" style="height:150px"><canvas id="c4b" role="img" aria-label="Production profile by hour of a synthetic day"></canvas></div>
+          <p class="fine">Illustrative synthetic day, base price 600 MXN/MWh, production an idealised bell curve with a peak near 1 kWh/kWp. Real days are in the explorer below.</p>
+        </div>
+      </div>
+      <p class="fine"><b>Where \(y_h\) comes from.</b> In the node analysis: a <a href="https://pvlib-python.readthedocs.io" target="_blank" rel="noopener">pvlib</a> single-axis tracker at each node with <a href="https://power.larc.nasa.gov" target="_blank" rel="noopener">NASA POWER</a> hourly irradiance and temperature; see appendix A1&ndash;A3.</p>
+    </section>
+
+    <!-- ===================== EXPLORER ===================== -->
+    <section class="sec" id="explorer" aria-labelledby="h-explorer" data-title="Explorer" data-init="explorer">
+      <div class="kicker"><b>02</b> · Prices · any node, state or region</div>
+      <h2 id="h-explorer">Pick a node, a state or a region and compute its value factor</h2>
+      <p class="lead">Charts show the average day; the exact VF uses every hour, and the gap between the two is the seasonal effect. Below the charts you can follow the VF over the last 12 months and by calendar year.</p>
+      <div id="explorer-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== REVENUE ===================== -->
+    <section class="sec" id="revenue" aria-labelledby="h-revenue" data-title="Revenue" data-init="revenue">
+      <div class="kicker"><b>03</b> · Revenue · production × price, hour by hour</div>
+      <h2 id="h-revenue">What the value factor costs a plant</h2>
+      <p class="lead">Revenue is energy times the captured price. The average-price shortcut prices that energy at the simple average, i.e. it assumes VF&nbsp;=&nbsp;1, and so overstates revenue by 1/VF&nbsp;&minus;&nbsp;1.</p>
+      <div class="split">
+        <div class="stack">
+          <div class="eq-card"><span class="lbl">Revenue of a plant at one node</span>\[ R=\sum_h E_h\,\mathrm{PML}_h=P_{\mathrm{STC}}\sum_h y_h\,\mathrm{PML}_h = P_{\mathrm{STC}}\,Y_f\,P_{\mathrm{cap}} \]</div>
+          <div class="eq-card"><span class="lbl">The average-price shortcut</span>\[ R_{\mathrm{short}}=P_{\mathrm{STC}}\,Y_f\,\overline{\mathrm{PML}} \]</div>
+          <div class="eq-card"><span class="lbl">Value factor</span>\[ \mathrm{VF}=\frac{P_{\mathrm{cap}}}{\overline{\mathrm{PML}}}=\frac{R}{R_{\mathrm{short}}}\qquad \frac{R_{\mathrm{short}}}{R}-1=\frac{1}{\mathrm{VF}}-1 \]</div>
+          <details class="how" open><summary>How to read the revenue chart</summary>
+            <p>Two bars per hour: what 1 MWp earns in that hour of an average day. <b>Grey</b>: the shortcut (energy &times; average price). <b>Orange</b>: what the node pays (energy &times; that hour's price). Orange shorter means the plant sells below the average price; summed over the day, the gap is the revenue the shortcut overstates.</p></details>
+          <p id="insight5" class="insight"></p>
+        </div>
+        <div class="stack" id="revenue-root"></div>
+      </div>
+    </section>
+
+    <!-- ===================== VALUE FACTOR ===================== -->
+    <section class="sec" id="vf" aria-labelledby="h-vf" data-title="Value factor" data-init="vf">
+      <div class="kicker"><b>04</b> · Value factor · Hirth (2013)</div>
+      <h2 id="h-vf">A falling VF is the fingerprint of cannibalization</h2>
+      <p class="lead">VF below 1 is normal in Mexico because demand peaks after sunset. Its level today matters less than two things: where it is heading, and the price level it multiplies.</p>
+      <div class="vf-grid">
+        <div class="stack">
+          <div class="eq-card"><span class="lbl">Definition · Hirth (2013) [4]</span>
+            \[ \mathrm{VF}=\frac{P_{\mathrm{cap}}}{\overline{\mathrm{PML}}}=\frac{\sum_h y_h\,\mathrm{PML}_h}{\overline{\mathrm{PML}}\,\sum_h y_h} \]
+            <p class="note"><b>VF = 1:</b> the plant's hours are worth as much as the average hour. <b>VF = 0.80:</b> it collects 20&nbsp;% less than the average price suggests.</p></div>
+          <div class="panel">
+            <div class="lbl accent">Why the trend and the price level matter more</div>
+            <p><b>Trend.</b> Every new solar plant adds energy in the same midday hours and pushes those prices down, so VF falls as solar grows. A plant lives 25&ndash;30 years: a VF that falls every year means future revenue below today's. <span data-bind="trend_txt"></span></p>
+            <p><b>Price level.</b> Revenue per MWh is \(P_{\mathrm{cap}}=\mathrm{VF}\cdot\overline{\mathrm{PML}}\). Solar's VF rarely exceeds 1, so if \(\overline{\mathrm{PML}}\) itself is below the cost per MWh, no timing can rescue the node. <span data-bind="level_txt"></span></p>
+          </div>
+          <div class="eq-card"><span class="lbl">Profitability test</span>\[ P_{\mathrm{cap}}\ge \mathrm{LCOE}\iff \mathrm{VF}\ge\mathrm{VF}_{\mathrm{req}}=\frac{\mathrm{LCOE}}{\overline{\mathrm{PML}}} \]</div>
+        </div>
+        <div class="stack">
+          <div class="lbl accent">Two different ways solar loses value</div>
+          <div class="scroll-x"><table class="tbl">
+            <thead><tr><th></th><th>Curtailment</th><th>Price cannibalization</th></tr></thead>
+            <tbody>
+              <tr><td>Nature</td><td>Physical limit on output</td><td>Market effect on the price</td></tr>
+              <tr><td>Cause</td><td>Grid congestion, missing transmission, low demand</td><td>Many PV plants producing in the same hours</td></tr>
+              <tr><td>What happens</td><td>Operator orders the plant to reduce output</td><td>Plant keeps producing, sells cheap or below zero</td></tr>
+              <tr><td>Loss</td><td>MWh not produced</td><td>MXN per MWh (lower VF)</td></tr>
+              <tr><td>Remedy</td><td>Transmission, storage</td><td>Storage, PPA, site diversification</td></tr>
+            </tbody></table></div>
+          <p><b>Where they meet:</b> at PML ≤ 0 a merchant plant prefers to curtail itself. <span data-bind="le0_txt"></span></p>
+          <div class="chart" style="height:250px"><canvas id="c-vf-region" role="img" aria-label="Value factor by control region in both years"></canvas></div>
+        </div>
+        <div class="stack minimap">
+          <div class="lbl accent" id="vf-mini-title">VF by control region</div>
+          <div class="mini-host" id="vf-mini" role="img" aria-label="Map of Mexico coloured by solar value factor per control region"></div>
+          <div class="ramp" id="vf-mini-leg"></div>
+          <a class="btn" href="#map">Open the interactive map &rarr;</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MAP ===================== -->
+    <section class="sec" id="map" aria-labelledby="h-map" data-title="Map" data-init="map">
+      <div class="kicker"><b>04</b> · Value factor · map</div>
+      <h2 id="h-map">Value by control region, state and node</h2>
+      <p class="lead">States are filled by value; thick lines are the CENACE control-region outlines. Switch between regions and states, overlay the nodes, hover or click an area or a node.</p>
+      <div id="map-root"></div>
+    </section>
+
+    <section class="sec sub-sec" id="geography" aria-labelledby="h-geo" data-title="Geography" data-init="geography">
+      <div class="kicker">Geography</div>
+      <h2 id="h-geo">Where the map can mislead, and what it shows by state and region</h2>
+      <div id="geo-root"></div>
+    </section>
+
+    <!-- ===================== PROFITABILITY ===================== -->
+    <section class="sec" id="profit" aria-labelledby="h-profit" data-title="Profitability" data-init="profit">
+      <div class="kicker"><b>05</b> · Profitability · merchant plant, energy revenue only</div>
+      <h2 id="h-profit">Does a merchant plant pay for itself?</h2>
+      <p class="lead">A plant pays for itself when every MWh it sells earns more than it costs to produce. That cost per MWh is the LCOE. Every figure below recomputes from the assumption set you choose.</p>
+      <div class="split narrow-left">
+        <div class="stack">
+          <div class="panel"><div class="lbl accent">LCOE in words</div>
+            <p>The <b>levelized cost of energy</b> is the constant price per MWh at which a plant, over its whole life, recovers its investment, its operating costs and the return its investors require.</p>
+            <p class="muted"><b>Why it matters.</b> It turns all project costs into the market's unit, MXN/MWh, so it can be compared directly with the captured price. It is the hurdle every MWh must clear: above it the plant creates value, below it the plant destroys value however much it produces.</p></div>
+          <div class="eq-card"><span class="lbl">LCOE, formally</span>\[ \mathrm{LCOE}=\frac{\sum_{t=0}^{T}(\mathrm{CAPEX}_t+\mathrm{O\&M}_t)\,(1+i)^{-t}}{\sum_{t=1}^{T}E_t\,(1+i)^{-t}} \]</div>
+          <div class="eq-card"><span class="lbl">Break-even condition</span>\[ P_{\mathrm{cap}}\ge\mathrm{LCOE}\iff\mathrm{VF}\ge\mathrm{VF}_{\mathrm{req}}=\frac{\mathrm{LCOE}}{\overline{\mathrm{PML}}} \]</div>
+          <div class="assump-bar" data-assump-bar></div>
+        </div>
+        <div class="stack" id="profit-root"></div>
+      </div>
+    </section>
+
+    <!-- ===================== NODE P&L ===================== -->
+    <section class="sec" id="pnl" aria-labelledby="h-pnl" data-title="Node P&amp;L" data-init="pnl">
+      <div class="kicker"><b>06</b> · Node P&amp;L · one plant, one place, one year</div>
+      <h2 id="h-pnl">One plant at one node: does it make money?</h2>
+      <p class="lead">Margin is energy times the gap between captured price and LCOE. Plant size and yield only scale the result; whether it is a profit or a loss depends on the captured price versus the cost.</p>
+      <div class="split narrow-left">
+        <div class="stack">
+          <div class="eq-card"><span class="lbl">Energy and revenue</span>\[ E=P_{\mathrm{STC}}\,Y_f,\qquad R=E\,P_{\mathrm{cap}}=E\cdot\mathrm{VF}\cdot\overline{\mathrm{PML}} \]</div>
+          <div class="eq-card"><span class="lbl">Cost and margin</span>\[ C=E\cdot\mathrm{LCOE},\qquad \Pi=R-C=E\,\bigl(P_{\mathrm{cap}}-\mathrm{LCOE}\bigr) \]
+            <p class="note">LCOE already includes capex, O&amp;M and the investors' return, so \(\Pi\) is the value created above that return, not an accounting profit.</p></div>
+          <div class="panel"><div class="lbl accent">What the numbers say</div><ol id="pnlNotes" class="notes"></ol></div>
+          <div class="assump-bar" data-assump-bar></div>
+        </div>
+        <div class="stack" id="pnl-root"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CONCLUSIONS ===================== -->
+    <section class="sec" id="conclusions" aria-labelledby="h-con" data-title="Conclusions" data-init="conclusions">
+      <div class="kicker"><b>07</b> · Conclusions</div>
+      <h2 id="h-con">Average prices overstate solar revenue, and the gap is growing</h2>
+      <p class="lead" id="con-lead">Five findings and what they mean for origination.</p>
+      <div id="con-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== NODE SHEET ===================== -->
+    <section class="sec" id="node" aria-labelledby="h-node" data-title="Node sheet" data-init="node">
+      <div class="kicker">Node sheet</div>
+      <h2 id="h-node">One node in detail, for any period</h2>
+      <p class="lead">Typical day, revenue split, monthly series and yearly table, recomputed in your browser from the node's additive sums. Pick a month range; months at the edge of the data are never counted as complete.</p>
+      <div id="node-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== COMPARE ===================== -->
+    <section class="sec" id="compare" aria-labelledby="h-compare" data-title="Compare" data-init="compare">
+      <div class="kicker">Compare</div>
+      <h2 id="h-compare">Two to four nodes side by side</h2>
+      <p class="lead">Add nodes from the search box, the explorer or the map. Figures follow the price basis and mounting you selected.</p>
+      <div id="compare-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== ASSUMPTIONS ===================== -->
+    <section class="sec" id="assumptions" aria-labelledby="h-assump" data-title="Assumptions" data-init="assumptions">
+      <div class="kicker">Assumptions</div>
+      <h2 id="h-assump">Business parameters are yours to set</h2>
+      <p class="lead">REPSA's own assumption file (<code>config/supuestos.yaml</code>) is still <b>pending</b>. Until it is confirmed, this page never shows a verdict on REPSA's behalf: the semaphore appears only under assumptions you enter, and it says so.</p>
+      <div id="assump-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== METHODS ===================== -->
+    <section class="sec" id="methods" aria-labelledby="h-methods" data-title="Methods" data-init="methods">
+      <div class="kicker"><b>A</b> · Appendix · from sun to kWh, and the shortcut</div>
+      <h2 id="h-methods">Methods and appendix</h2>
+      <p class="lead">How production is modelled (A1&ndash;A4), how the shortcut relates to the hourly model (A5), and the formulas this page uses in your browser.</p>
+      <div id="methods-root" class="stack"></div>
+    </section>
+
+    <!-- ===================== SOURCES ===================== -->
+    <section class="sec" id="sources" aria-labelledby="h-sources" data-title="Sources" data-init="sources">
+      <div class="kicker">What the numbers rest on</div>
+      <h2 id="h-sources">Assumptions and sources</h2>
+      <div id="sources-root" class="stack"></div>
+    </section>
+
+    <footer class="foot">
+      <p>Nodal Solar Value · REPSA origination analytics · data contract <span id="foot-schema">1.2.0</span> · generated <span id="foot-gen">—</span> · CENACE MDA reference prices. Not financial advice; <a href="#scope">scope and limits</a>.</p>
+    </footer>
+  </main>
+</div>
+
+<!-- ===================== ASSUMPTIONS PANEL (persistent drawer) ===================== -->
+<aside class="drawer" id="assump" aria-labelledby="assump-h" hidden>
+  <div class="drawer-in">
+    <header class="drawer-h">
+      <h2 id="assump-h">Assumptions</h2>
+      <button type="button" class="btn btn-ghost" id="close-assump" aria-label="Close assumptions">Close</button>
+    </header>
+    <div id="assump-panel"></div>
+  </div>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<datalist id="nodeList"></datalist>
+
+<script type="module" src="assets/js/app.js"></script>
+<noscript><p class="noscript">This page needs JavaScript to draw its charts and recompute figures.</p></noscript>
+</body>
+</html>

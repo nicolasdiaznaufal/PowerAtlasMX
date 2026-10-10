@@ -1,0 +1,23 @@
+# Datos: nunca a git
+data/
+*.duckdb
+*.parquet
+*.csv
+!legacy/outputs/*.csv
+*.xlsx
+# Python / entorno
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+# Sistema / editor
+.DS_Store
+.vscode/
+# Secretos y claves
+.env
+.env.*
+*.key
+*.pem
+secrets*
+# Referencia local no versionada
+docs/referencia/deck.html

@@ -1,0 +1,57 @@
+# config/supuestos.yaml - PLANTILLA (agent kpis). NO contiene decisiones de negocio.
+#
+# Cada valor marcado PENDIENTE lo debe definir el equipo (via orquestador / Nico).
+# Mientras un valor siga PENDIENTE, pipeline/kpis.py NO calcula nada que dependa de el:
+#   - sin veredicto ni semaforo,
+#   - sin TIR, VAN, LCOE ni break-even PPA,
+#   - sin cifras en USD (solo MXN),
+#   - sin escenarios.
+# Formato: solo mapas anidados con sangria de 2 espacios y valores escalares (numero, texto, true/false).
+# Convencion de los flujos (propuesta tecnica, a confirmar): pesos MXN constantes, antes de impuestos,
+# proyecto sin deuda; por eso la tasa debe ser REAL (sin inflacion).
+
+estado: PENDIENTE
+
+financiero:
+  tasa_descuento_real_anual: PENDIENTE   # fraccion: 0.10 = 10 %/ano
+  vida_util_anios: PENDIENTE             # anos de operacion
+  capex:
+    valor: PENDIENTE
+    unidad: PENDIENTE                    # una de: MXN/MWp, USD/MWp, USD/Wp (USD exige tipo_cambio)
+  opex:
+    valor: PENDIENTE
+    unidad: PENDIENTE                    # una de: MXN/MWp-ano, USD/MWp-ano, USD/kWp-ano
+  degradacion_anual: PENDIENTE           # fraccion; referencia tecnica [estimado] en solar.py: 0.005
+  tipo_cambio_mxn_por_usd: PENDIENTE     # MXN por USD; sin este valor no se muestra nada en USD
+
+semaforo:
+  metrica: PENDIENTE                     # p. ej. tir_menos_tasa o van (a decidir)
+  umbral_viable: PENDIENTE               # metrica >= umbral_viable -> viable
+  umbral_no_viable: PENDIENTE            # metrica <  umbral_no_viable -> no viable; en medio -> neutral
+
+# Escenarios: multiplicadores sobre el caso calculado (1.0 = sin cambio). Estructura propuesta, a confirmar.
+escenarios:
+  base:
+    descripcion: PENDIENTE
+    factor_precio_capturado: PENDIENTE
+    factor_produccion: PENDIENTE
+    factor_capex: PENDIENTE
+    factor_opex: PENDIENTE
+  conservador:
+    descripcion: PENDIENTE
+    factor_precio_capturado: PENDIENTE
+    factor_produccion: PENDIENTE
+    factor_capex: PENDIENTE
+    factor_opex: PENDIENTE
+  crisis:
+    descripcion: PENDIENTE
+    factor_precio_capturado: PENDIENTE
+    factor_produccion: PENDIENTE
+    factor_capex: PENDIENTE
+    factor_opex: PENDIENTE
+  optimista:
+    descripcion: PENDIENTE
+    factor_precio_capturado: PENDIENTE
+    factor_produccion: PENDIENTE
+    factor_capex: PENDIENTE
+    factor_opex: PENDIENTE
