@@ -4,6 +4,8 @@
 @font-face { font-family: 'Geist Mono'; src: url('../fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
 :root {
   color-scheme: dark;
+  /* page background for everything except the map canvas */
+  --black: #0A0A0A;
   /* surfaces: tonal steps, no shadows */
   --canvas: #0B100D;
   --surface: #111813;

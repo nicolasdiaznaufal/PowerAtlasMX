@@ -1,70 +1,51 @@
-// Landing: nav, hero, logo strip, Talk to Sales modal.
+// Landing (from the approved mock): black page, eclipse photo right of centre, headline, two pills, muted wordmarks.
 import { CONFIG } from '../../config.js';
 import { eclipseSVG } from './logo.js';
 
-const STAMPS = ['2,431 nodes', 'Hour-by-hour production × price', 'Last 12 months, every region'];
-
 async function clientLogos() {
   try {
-    const r = await fetch('assets/img/clients/manifest.json');
-    const j = await r.json();
+    const j = await (await fetch('assets/img/clients/manifest.json')).json();
     return Array.isArray(j.clients) ? j.clients : [];
   } catch { return []; }
 }
 
-const grain = `<svg class="grain" width="100%" height="100%" aria-hidden="true"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 .8  0 0 0 0 .6  0 0 0 1.4 -.2"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>`;
-
 export function renderLanding(root) {
   const email = CONFIG.CONTACT_EMAIL;
   root.innerHTML = `
-  <header class="nav">
-    <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span><span class="by mono">${CONFIG.BYLINE}</span></a>
-    <span class="spacer"></span>
-    <nav class="nav-links mono" aria-label="Primary"><a href="#/map">Map</a></nav>
-    <button class="btn btn-ghost btn-sm" data-sales ${email ? '' : 'disabled title="Contact address pending"'}>Talk to Sales</button>
-    <a class="btn btn-primary btn-sm" href="#/map">Deploy Analysis</a>
-  </header>
-  <main class="hero">
-    <section class="hero-main" aria-labelledby="h1">
-      <div>
-        <h1 id="h1">Solar value,<br>node by node.</h1>
-        <div class="hero-cta">
-          <a class="btn btn-primary" id="deploy" href="#/map">Deploy Analysis</a>
-          <button class="btn btn-ghost" data-sales ${email ? '' : 'disabled title="Contact address pending"'}>Talk to Sales</button>
-        </div>
+  <div class="landing">
+    <img class="hero-sun" id="sun" src="assets/img/hero-sun.webp" alt="" width="1000" height="900" decoding="async" fetchpriority="high">
+    <header class="nav">
+      <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
+    </header>
+    <main class="land-main">
+      <p class="mono eyebrow">${CONFIG.BYLINE}</p>
+      <h1 id="h1">Mexican Solar Atlas</h1>
+      <div class="hero-cta">
+        <a class="btn btn-cream" id="deploy" href="#/map">Deploy Analysis</a>
+        <button class="btn btn-dark" data-sales ${email ? '' : 'disabled title="Contact address pending"'}>Talk to Sales</button>
       </div>
-      <div class="hero-mark" aria-hidden="true"><div class="glow"></div>${grain}<div class="shadow"></div>${eclipseSVG({ cls: 'mark' })}</div>
-      <ul class="stamps mono" aria-label="Highlights">${STAMPS.map((s) => `<li>${s}</li>`).join('')}</ul>
-    </section>
-    <section class="strip" aria-label="Built with">
-      <div class="strip-label mono">Built with</div>
-      <ul id="logos">
-        <li><img src="assets/img/repsa-logo.png" alt="REPSA Group"></li>
-        <li><span class="word mono">NASA POWER</span></li>
-        <li><img src="assets/img/pvlib-logo.png" alt="pvlib"></li>
-      </ul>
-    </section>
-  </main>
-  <div class="modal" id="sales" hidden role="dialog" aria-modal="true" aria-labelledby="sales-h">
-    <form id="sales-form">
-      <h2 id="sales-h">Talk to Sales</h2>
-      <label><span class="mono">Your name</span><input name="name" autocomplete="name" required></label>
-      <label><span class="mono">Company</span><input name="company" autocomplete="organization"></label>
-      <label><span class="mono">What do you want to look at?</span><textarea name="msg"></textarea></label>
-      <div class="row"><button type="button" class="btn btn-ghost btn-sm" data-close>Cancel</button><button class="btn btn-primary btn-sm" type="submit">Open email</button></div>
-    </form>
+    </main>
+    <footer class="land-strip" aria-label="Built with">
+      <ul id="logos"><li>REPSA</li><li>NASA POWER</li><li>pvlib</li></ul>
+    </footer>
+    <div class="modal" id="sales" hidden role="dialog" aria-modal="true" aria-labelledby="sales-h">
+      <form id="sales-form">
+        <h2 id="sales-h">Talk to Sales</h2>
+        <label><span class="mono">Your name</span><input name="name" autocomplete="name" required></label>
+        <label><span class="mono">Company</span><input name="company" autocomplete="organization"></label>
+        <label><span class="mono">What do you want to look at?</span><textarea name="msg"></textarea></label>
+        <div class="row"><button type="button" class="btn btn-ghost btn-sm" data-close>Cancel</button><button class="btn btn-cream btn-sm" type="submit">Open email</button></div>
+      </form>
+    </div>
   </div>`;
 
-  // append client logos from the manifest (empty until Nico supplies them)
   clientLogos().then((list) => {
     const ul = root.querySelector('#logos');
     if (!ul) return;
     for (const c of list) {
       if (!c || !c.src || !c.name) continue;
-      const li = document.createElement('li');
-      const img = document.createElement('img');
-      img.src = c.src; img.alt = c.name;
-      li.append(img); ul.prepend(li);
+      const li = document.createElement('li'); const img = document.createElement('img');
+      img.src = c.src; img.alt = c.name; li.append(img); ul.prepend(li);
     }
   });
 

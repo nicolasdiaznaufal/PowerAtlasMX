@@ -12,6 +12,15 @@ const c = (n) => { assert.ok(T[n], `token ${n} missing`); return T[n]; };
 
 const TEXT = 4.5, UI = 3;
 const pairs = [
+  ['ink', 'black', TEXT, 'main text on page black'],
+  ['ink-2', 'black', TEXT, 'muted text on page black'],
+  ['ink-3', 'black', TEXT, 'tertiary text on page black'],
+  ['accent', 'black', TEXT, 'accent text on page black'],
+  ['black', 'ink', TEXT, 'cream pill text (black on ink)'],
+  ['ink', 'surface', TEXT, 'cards on black page'],
+  ['s1', 'black', UI, 'series 1 on black'],
+  ['s2', 'black', UI, 'series 2 on black'],
+  ['s3', 'black', UI, 'series 3 on black'],
   ['ink', 'canvas', TEXT, 'main text on canvas'],
   ['ink', 'surface', TEXT, 'main text on surface'],
   ['ink', 'raised', TEXT, 'main text on raised'],
@@ -45,6 +54,9 @@ for (const [fg, bg, min, desc] of pairs) {
 }
 test('series colours are distinct', () => {
   assert.equal(new Set([c('s1'), c('s2'), c('s3')]).size, 3);
+});
+test('black page sits below surface and raised', () => {
+  assert.ok(contrast(c('black'), '#000000') < contrast(c('surface'), '#000000'));
 });
 test('canvas is darker than surface, surface darker than raised', () => {
   assert.ok(contrast(c('canvas'), '#000000') < contrast(c('surface'), '#000000'));
