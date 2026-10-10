@@ -19,7 +19,24 @@ export function domainOf(nodes, key) {
   const vs = nodes.filter((n) => n.has).map((n) => METRICS[key].get(n)).filter((v) => v != null).sort((a, b) => a - b);
   if (!vs.length) return [0, 1];
   const q = (p) => vs[Math.min(vs.length - 1, Math.floor(p * vs.length))];
-  return [q(0.02), q(0.98)];
+  const dom = [q(0.02), q(0.98)];
+  dom.sorted = vs; // quantile scale: colour = share of nodes below, so the ramp is spread evenly
+  return dom;
+}
+
+/** Value at ramp fraction f (0..1) of the quantile scale; falls back to the linear domain. */
+export function valueAt(dom, f) {
+  if (!dom.sorted) return dom[0] + f * (dom[1] - dom[0]);
+  const s = dom.sorted;
+  return s[Math.min(s.length - 1, Math.max(0, Math.round(f * (s.length - 1))))];
+}
+
+function share(sorted, v) {
+  let lo = 0, hi = sorted.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] < v) lo = m + 1; else hi = m; }
+  const a = lo; hi = sorted.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] <= v) lo = m + 1; else hi = m; }
+  return sorted.length > 1 ? ((a + lo - 1) / 2) / (sorted.length - 1) : 1;
 }
 
 /** 0 (low) .. 1 (high). For rank, best (#1) is high. */
@@ -27,6 +44,7 @@ export function position(n, key, dom) {
   const v = METRICS[key].get(n);
   if (v == null) return null;
   if (key === 'rank') return n.rankN > 1 ? 1 - (v - 1) / (n.rankN - 1) : 1;
+  if (dom.sorted) return share(dom.sorted, v);
   return clamp01((v - dom[0]) / (dom[1] - dom[0] || 1));
 }
 

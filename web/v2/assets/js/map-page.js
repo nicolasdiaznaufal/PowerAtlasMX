@@ -3,7 +3,7 @@ import { CONFIG } from '../../config.js';
 import { eclipseSVG } from './logo.js';
 import { loadAtlas, WINDOW } from './atlas.js';
 import { loadGeo } from './geo.js';
-import { METRICS, METRIC_ORDER, RAMP } from './metrics.js';
+import { METRICS, METRIC_ORDER, RAMP, valueAt } from './metrics.js';
 import { createStore, parseSel, serializeSel, MAX_SEL } from './store.js';
 import { createSelector, buildEntries } from './selector.js';
 import { createMapView, loadDeck, webglAvailable } from './map-view.js';
@@ -28,7 +28,7 @@ export function mountMap(root) {
       <p class="hint" id="hint"></p>
       <ul class="chips" id="chips" aria-label="Selection"></ul>
       <p class="live mono" id="live" role="status" aria-live="polite"></p>
-      <div class="legend"><div class="ramp" id="ramp"></div><div class="lg mono"><span id="lg-lo"></span><span id="lg-hi"></span></div></div>
+      <div class="legend"><div class="ramp" id="ramp"></div><div class="lg mono" id="lg"></div><p class="lgnote" id="lgnote"></p></div>
       <dl class="facts mono">
         <div><dt>Window</dt><dd>${WINDOW.label}</dd></div>
         <div><dt>Mounting</dt><dd id="cfg">…</dd></div>
@@ -78,8 +78,12 @@ export function mountMap(root) {
   function legend(dom) {
     q('#ramp').style.background = `linear-gradient(90deg, ${RAMP.dot}, ${RAMP.hi})`;
     const m = METRICS[metric];
-    if (metric === 'rank') { q('#lg-lo').textContent = 'Last in region'; q('#lg-hi').textContent = '#1 in region'; }
-    else if (dom) { const u = m.unit === 'no unit' ? '' : ` ${m.unit}`; q('#lg-lo').textContent = `${m.fmt(dom[0])}${u}`; q('#lg-hi').textContent = `${m.fmt(dom[1])}${u}`; }
+    const lg = q('#lg'), note = q('#lgnote');
+    if (metric === 'rank') { lg.innerHTML = '<span>Last in region</span><span>#1 in region</span>'; note.textContent = ''; return; }
+    if (!dom) return;
+    const u = m.unit === 'no unit' ? '' : ` ${m.unit}`;
+    lg.innerHTML = [0, 0.25, 0.5, 0.75, 1].map((f) => `<span>${m.fmt(valueAt(dom, f))}</span>`).join('');
+    note.textContent = `Colours are spread evenly across nodes (lightest = highest values), so the scale is not linear. Labels are real values${u ? ' in' + u : ''}: lowest, quarter, median, three quarters, highest.`;
   }
 
   // chips

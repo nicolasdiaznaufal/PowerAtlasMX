@@ -24,6 +24,15 @@ test('position: rank 1 is the high end, domain ignores no-data nodes', () => {
   assert.equal(position(nodes[2], 'vf', d), null);
 });
 
+test('quantile scale spreads a skewed metric across the ramp', () => {
+  const nodes = Array.from({ length: 100 }, (_, i) => ({ has: true, vf: i < 90 ? 0.84 + i * 0.0003 : 0.6 + i * 0.001, rank: null, rankN: null }));
+  const d = domainOf(nodes, 'vf');
+  const ts = nodes.map((n) => position(n, 'vf', d));
+  const mid = ts.filter((t) => t > 0.2 && t < 0.8).length;
+  assert.ok(mid >= 40, `only ${mid} nodes in the middle of the ramp`);
+  assert.ok(Math.min(...ts) >= 0 && Math.max(...ts) <= 1);
+});
+
 test('store: max 3, mixed kinds, url round trip', () => {
   const s = createStore();
   assert.ok(s.add({ kind: 'node', id: '01AAN-85' }) && s.add({ kind: 'state', id: 'JALISCO' }) && s.add({ kind: 'national', id: 'ALL' }));
