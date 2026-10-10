@@ -31,6 +31,5 @@ export function mountChoose(root, { go }) {
     else if (e.key === '2') go(hrefFor('/revenue', sel()));
   };
   document.addEventListener('keydown', onKey);
-  root.querySelector('#c-exp').focus({ preventScroll: true });
   return { destroy() { document.removeEventListener('keydown', onKey); chips.destroy(); } };
 }

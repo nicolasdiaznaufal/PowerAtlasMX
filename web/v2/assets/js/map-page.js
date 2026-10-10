@@ -15,6 +15,7 @@ export function mountMap(root) {
   const shell = getShell();
   root.innerHTML = `
   <div class="overlay map-overlay">
+    <h1 class="sr">Map</h1>
     <header class="nav nav-map">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
       <span class="spacer"></span>
@@ -26,7 +27,7 @@ export function mountMap(root) {
       <div class="seg" role="radiogroup" aria-labelledby="metric-lbl" id="seg"></div>
       <p class="hint" id="hint"></p>
       <ul class="chips" id="chips" aria-label="Selection"></ul>
-      <p class="live mono" id="live" role="status" aria-live="polite"></p>
+      <p class="live mono" id="say" role="status" aria-live="polite"></p>
       <a class="btn btn-cream btn-sm cont" id="cont" href="#/choose" aria-disabled="true">Continue</a>
       <div class="legend"><div class="ramp" id="ramp"></div><div class="lg mono" id="lg"></div><p class="lgnote" id="lgnote"></p></div>
       <dl class="facts mono">
@@ -44,8 +45,9 @@ export function mountMap(root) {
     <div class="nogl" id="nogl" hidden><p>The map needs WebGL, which this browser has turned off. You can still search and select places on the left.</p></div>
   </div>`;
   const q = (s) => root.querySelector(s);
+  let dead = false;
   if (!shell.hasGL) { q('#nogl').hidden = false; q('.zoom').hidden = true; }
-  shell.sayFn = (t) => { q('#live').textContent = t; };
+  shell.sayFn = (t) => { q('#say').textContent = t; };
 
   // metric switch
   const seg = q('#seg');
@@ -111,7 +113,7 @@ export function mountMap(root) {
 
   setMetric(shell.metric);
   shell.init().then(() => {
-    if (!q('#sel-slot')) return;
+    if (dead || !q('#sel-slot')) return;
     if (shell.failed && !shell.atlas) { shell.say('Data failed to load.'); return; }
     q('#cfg').textContent = `${shell.atlas.config === 'tracker' ? 'Single-axis tracker' : shell.atlas.config} (only configuration in the analysis)`;
     const sel = createSelector({ entries: buildEntries(shell.geo, shell.atlas.nodes), onPick: (x) => shell.pick(x) });
@@ -121,5 +123,5 @@ export function mountMap(root) {
     legend(shell.domain());
   });
 
-  return { destroy() { shell.hoverFn = null; shell.sayFn = null; offSel(); chips.destroy(); } };
+  return { destroy() { dead = true; shell.hoverFn = null; shell.sayFn = null; offSel(); chips.destroy(); } };
 }

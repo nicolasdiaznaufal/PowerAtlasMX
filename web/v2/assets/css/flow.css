@@ -25,8 +25,11 @@
 .card p { margin: 0; color: var(--ink-2); }
 .card .key { position: absolute; top: 16px; right: 16px; color: var(--ink-3); padding: 2px 8px; border-radius: 4px; box-shadow: var(--ring); }
 .choose .back { color: var(--ink-2); text-decoration: none; }
-.choose-body > *, .cards .card { animation: rise var(--dur) var(--ease) both; }
-.cards .card:nth-child(2) { animation-delay: 40ms; }
+.choose-body > h1, .choose-body > .chips-row, .cards .card { animation: rise var(--dur) var(--ease) both; }
+.choose-body > .chips-row { animation-delay: 40ms; }
+.cards .card:nth-child(1) { animation-delay: 80ms; }
+.cards .card:nth-child(2) { animation-delay: 120ms; }
+h1:focus, main:focus { outline: none; }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 
 .page { min-height: 100vh; background: var(--black); }
@@ -47,7 +50,7 @@
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 350ms; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
-  .choose-body > *, .cards .card { animation: none; }
+  .choose-body > h1, .choose-body > .chips-row, .cards .card { animation: none; }
 }
 @media (max-width: 760px) {
   .cards { grid-template-columns: 1fr; }

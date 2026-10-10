@@ -2,12 +2,25 @@
 export const MAX_SEL = 3;
 const key = (s) => (s.kind === 'national' ? 'national' : s.kind === 'node' ? s.id : `${s.kind}:${s.id}`);
 
-export function parseSel(str) {
-  return (str || '').split(',').map((t) => t.trim()).filter(Boolean).map((t) => {
-    if (t === 'national') return { kind: 'national', id: 'ALL' };
-    const m = /^(state|region):(.+)$/.exec(t);
-    return m ? { kind: m[1], id: decodeURIComponent(m[2]) } : { kind: 'node', id: t };
-  }).slice(0, MAX_SEL);
+/** Parse ?sel=. valid (optional) = { node(id), state(key), region(key) } predicates: unknown ids are dropped.
+ *  Duplicates are dropped and the result is capped at MAX_SEL, in order. */
+export function parseSel(str, valid = null) {
+  const out = [], seen = new Set();
+  for (const t of (str || '').split(',').map((x) => x.trim()).filter(Boolean)) {
+    let s;
+    if (t === 'national') s = { kind: 'national', id: 'ALL' };
+    else {
+      const m = /^(state|region):(.+)$/.exec(t);
+      if (m) { let id = m[2]; try { id = decodeURIComponent(id); } catch { /* keep raw */ } s = { kind: m[1], id }; }
+      else s = { kind: 'node', id: t };
+    }
+    if (valid && valid[s.kind] && !valid[s.kind](s.id)) continue;
+    const k = key(s);
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(s);
+    if (out.length >= MAX_SEL) break;
+  }
+  return out;
 }
 export const serializeSel = (list) => list.map((s) => (s.kind === 'national' ? 'national' : s.kind === 'node' ? s.id : `${s.kind}:${encodeURIComponent(s.id)}`)).join(',');
 
