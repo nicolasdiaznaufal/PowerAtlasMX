@@ -27,9 +27,17 @@ into `web/data/analysis/` (see `web/README.md`). Do not commit data files.
 - Selection (max 3, any mix of node/state/region/national) lives in the hash: `#/map?sel=01AAN-85,state:JALISCO,national`.
 - Without WebGL the map is replaced by a message; the selector and chips keep working.
 
+## Flow (M3)
+- Routes: `#/` landing, `#/map`, `#/choose`, `#/explorer`, `#/revenue`; selection in `?sel=` on every route; routes that need a selection redirect to `#/map`.
+- `assets/js/shell.js` owns the ONE map host (`#maphost`): hidden / full / mini. Views only attach overlays; the canvas is never remounted.
+- Page swaps use `document.startViewTransition` (the map host has its own transition name so it morphs full to mini card); without it, or with reduced motion, swaps are instant or a plain fade.
+- Landing to map: the hero sun scales up and fades while the map fades in beneath.
+- `assets/img/hero-sun.webp` is cropped from the 1x design mock (headline pixels retouched out). A clean full-resolution photo is needed for retina.
+
 ## Placeholders pending Nico
 - Landing copy is a draft pending approval.
-- Client logos (manifest is empty; strip shows REPSA, NASA POWER (text), pvlib).
+- Client logos (manifest is empty; strip shows REPSA, NASA POWER, pvlib as plain text wordmarks).
+- Full-resolution eclipse photo for the landing hero.
 
 ## Tests
 `node --test web/tests/contrast-v2.test.mjs` (and the full suite `node --test web/tests/*.test.mjs`).
