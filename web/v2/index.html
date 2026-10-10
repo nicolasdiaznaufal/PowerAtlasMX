@@ -4,16 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PowerAtlasMx by REPSA Group</title>
-<meta name="description" content="Solar value, node by node. Hour-by-hour production times price for 2,431 nodes in Mexico.">
-<meta name="theme-color" content="#0B100D">
+<meta name="description" content="Mexican Solar Atlas by REPSA Group. Hour-by-hour production times price for 2,431 nodes in Mexico.">
+<meta name="theme-color" content="#0A0A0A">
 <link rel="icon" type="image/svg+xml" href="assets/icons/eclipse.svg">
+<link rel="preload" href="assets/img/hero-sun.webp" as="image" type="image/webp">
 <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/css/tokens.css">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/map.css">
+<link rel="stylesheet" href="assets/css/landing.css">
+<link rel="stylesheet" href="assets/css/flow.css">
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+  <div id="maphost" class="maphost is-hidden"><div class="map-canvas"></div></div>
+  <div id="view"></div>
+</div>
 <script type="module" src="main.js"></script>
 </body>
 </html>

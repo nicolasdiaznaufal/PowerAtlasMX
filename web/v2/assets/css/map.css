@@ -1,7 +1,3 @@
-.map-stage { overflow: hidden; }
-.map-canvas { position: absolute; inset: 0; background: var(--canvas); }
-.map-stage .nav { padding: 0 16px; background: linear-gradient(var(--canvas), rgba(11, 16, 13, 0)); pointer-events: none; }
-.map-stage .nav > * { pointer-events: auto; }
 .scope { color: var(--ink-3); }
 
 .panel { position: absolute; z-index: 10; top: 80px; left: 16px; width: 360px; max-height: calc(100% - 96px); overflow: auto; background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); padding: 16px; display: grid; gap: 12px; }
@@ -61,5 +57,5 @@
   .zoom { bottom: auto; top: 72px; right: 12px; }
   .zoom button { width: 36px; height: 36px; }
   .nogl { inset: 72px 12px 48% 12px; }
-  .map-stage .scope { display: none; }
+  .map-overlay .scope { display: none; }
 }

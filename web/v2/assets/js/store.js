@@ -23,6 +23,7 @@ export function createStore(initial = []) {
     remove(s) { list = list.filter((x) => key(x) !== key(s)); emit(); },
     toggle(s) { return this.has(s) ? (this.remove(s), true) : this.add(s); },
     clear() { list = []; emit(); },
+    set(next) { list = next.slice(0, MAX_SEL); emit(); },
     subscribe(f) { subs.add(f); return () => subs.delete(f); },
   };
 }

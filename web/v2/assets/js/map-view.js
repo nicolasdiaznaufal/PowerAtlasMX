@@ -22,6 +22,8 @@ export function loadDeck() {
   });
 }
 
+const CONTROLLER = { keyboard: true, doubleClickZoom: true, inertia: false, touchRotate: false, dragRotate: false };
+
 export function createMapView({ deck, container, geo, atlas, callbacks }) {
   const { nodes } = atlas;
   const withData = nodes.filter((n) => n.has), noData = nodes.filter((n) => !n.has);
@@ -75,7 +77,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
 
   const nodeOf = (info) => (info && info.object && (info.layer.id === 'nodes' || info.layer.id === 'nodata') ? info.object : null);
   const inst = new deck.Deck({
-    parent: container, views: view, controller: { keyboard: true, doubleClickZoom: true, inertia: false, touchRotate: false, dragRotate: false },
+    parent: container, views: view, controller: CONTROLLER,
     viewState: fit(MEXICO), layers: layers(), useDevicePixels: Math.min(window.devicePixelRatio || 1, 2),
     onViewStateChange: ({ viewState }) => { vs = clamp(viewState); inst.setProps({ viewState: vs }); },
     getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
@@ -97,10 +99,12 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     domain: () => dom,
     setSelection(list) { sel = list; refresh(); },
     setPadding(p) { padding = p; },
+    redraw() { inst.redraw('resize'); },
     zoomBy(d) { setVS({ ...vs, zoom: Math.min(13, Math.max(2.5, vs.zoom + d)) }, 350); },
-    reset() { setVS(fit(MEXICO), 700); },
-    flyToBounds(b) { setVS(fit(b), 700); },
-    flyToNode(n) { setVS({ ...vs, longitude: n.lon, latitude: n.lat, zoom: Math.max(vs.zoom, 7) }, 700); },
+    reset(ms = 700) { setVS(fit(MEXICO), ms); },
+    flyToBounds(b, ms = 700, maxZoom = 12) { setVS(fit(b, padding, { maxZoom }), ms); },
+    flyToNode(n, ms = 700) { setVS({ ...vs, longitude: n.lon, latitude: n.lat, zoom: Math.max(vs.zoom, 7) }, ms); },
+    setInteractive(on) { inst.setProps({ controller: on ? CONTROLLER : false }); },
     flyToArea(kind, id) {
       const col = kind === 'state' ? geo.states : geo.regions;
       const f = col.features.find((x) => x.properties.key === id);
