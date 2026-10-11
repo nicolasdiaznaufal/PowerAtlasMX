@@ -58,8 +58,27 @@ Chart widths follow the container so tick labels stay readable on phones; every 
   share of output at price <= 0, evening-peak minus solar spread, and the monthly/yearly series. A visible "Simulated" badge, deltas vs real and ghost lines of the published profile accompany every simulated view; "Reset to real values" restores everything.
   The price shift moves the typical-day average by exactly the shift; the displayed (published-scaled) average moves by the shift times (published average / typical-day average), within about 2%.
 
+## Mounting and weather (M10)
+- **Routes:** `&cfg=fijo` (fixed tilt; default single-axis tracker, omitted) and `&wx=mean|y2015..y2025|win` (default yearly mean 2015-2025, omitted) join `?sel`, `&real`, `&from/&to`, `&sc`.
+  An explicit entry without them means tracker / yearly mean; a bare hash inherits. Back and Forward restore each entry.
+- **Fixed tilt** is tilted towards the south by 0.76 x |latitude| + 3.1 degrees (shown in words on the page) with the same losses as the tracker. **Weather year**: the
+  typical day of each month is built from that year's NASA POWER weather (or from the real months of the window, `win`) and applied to the real prices.
+  2015 carries the data note (`note_2015`: about -6% vs the mean, likely an input change in MERRA-2/CERES; it stays inside the published yearly mean).
+- **Data** (`web/data/solar_v2/`, git-ignored; build with `web/tools/build_solar_web.py`, documented in `docs/TECNICO.md` section 12 and `docs/SOLAR_V2_PLAN.md`):
+  `variant_scalars_{tracker,fijo}.json` (5 exact fields per variant and window), `variant_extra/{cfg}/{variant}.json` (the other 5 exact fields), `variants/{v}.json`
+  (typical-day production and irradiance per node), `variants/clear.json` (clear-sky reference). Loaded lazily: nothing from `solar_v2` is requested until fixed tilt or
+  another weather is selected (tested). Tracker + yearly mean uses the published files exactly as before.
+- **Areas** (state, region, national) under another configuration or weather are derived in the browser as the mean over member nodes with data, the published
+  definition; they match `analysis.json` to rounding (the node files carry 4 decimals; tested). Node figures are the file values, never approximated.
+- **Irradiance** (Explorer, nodes only): global horizontal and plane of array (per mounting), monthly and typical day, kWh/m2; "Show clear-sky reference" overlays the
+  clear-sky irradiance and production and shows the cloud loss (1 - real / clear). Clear sky is a reference, not a scenario: no KPIs exist for it.
+- **Partial-year nodes** keep the published, un-annualised numbers; the variant's 12-month yield is shown "for information" beside the partial-year note.
+- **Monthly value-factor series and the span slider** stay on the single-axis tracker with yearly-mean weather (the published monthly series); the page says so.
+- **Service worker:** the solar files are network first with a bounded cache (`DATA_MAX` = 16 entries, oldest evicted first); only code and CSS are precached.
+- **Credits:** Solar resource: NASA POWER (MERRA-2 / CERES SYN1deg); PV model: pvlib-python (footer of Explorer and Revenue, `docs/CREDITS.md`).
+
 ## Roadmap (not built)
-Tracker vs fixed tilt, irradiance, typical year and clear sky are held for a later solar brief: no UI beyond the disabled "Fixed tilt" option.
+Nothing pending from the solar brief; NSRDB contrast and a daily NASA refresh are held (see docs/SOLAR_V2_PLAN.md section 7).
 
 ## Numbers
 All figures are published fields (`analysis_nodos.json`, `analysis.json`, `series_*.json`). Explorer, Revenue and compare read the same record
@@ -99,7 +118,6 @@ Hero image: NASA/SDO, AIA 171, 2017-08-21 19:41:46 UT (partial solar eclipse; NA
 `assets/img/hero-sun-{1000,2000}.webp` are composed from it (caption cropped, black lifted to the page black `#0A0A0A`). The credit is in this README and an HTML comment on the landing only.
 
 ## Known limitations
-- Mounting configuration: the analysis files cover the single-axis tracker only; it is shown as a label, not a switch.
 - "Solar output at price <= 0" is energy based (`pct_e0`); an hours-based share is not published in the analysis files.
 - Area records publish no hour count, so the partial-year note applies to nodes only.
 - Not measured on real GPUs or touch devices; the frame-time and paint numbers under "Performance notes" are from software GL and are lower bounds.
