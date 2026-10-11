@@ -6,7 +6,7 @@ import { decompSectionHTML, drawDecomp } from './decomposition.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { compareRows } from './compare-data.js';
 import { columnLabels } from './compare-data.js';
-import { tableHTML, esc } from './compare-ui.js';
+import { tableHTML, esc, NA_HTML } from './compare-ui.js';
 
 export function mountExplorer(host, { shell, side }) {
   let seriesView = 'months';
@@ -19,7 +19,7 @@ export function mountExplorer(host, { shell, side }) {
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
           const L = columnLabels(real, !isNeutral(shell.store.scenario)), rows = compareRows(entries, real);
-          const cols = [{ h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => r.tiles.vf.text }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => r.tiles.vfDay.text }];
+          const cols = [{ h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => (r.na ? NA_HTML : r.tiles.vfDay.text) }];
           root.querySelector('#cmp-table').innerHTML = `<h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}`;
         }
       },

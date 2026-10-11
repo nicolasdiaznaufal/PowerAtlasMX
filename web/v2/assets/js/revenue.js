@@ -7,7 +7,7 @@ import { compareRows, columnLabels } from './compare-data.js';
 import { tableLabels } from './explorer-data.js';
 import { num } from '../../../assets/js/format.js';
 import { pairChart, lineChart, renderChart } from './svg-charts.js';
-import { tableHTML, esc, legendHTML, nameOf } from './compare-ui.js';
+import { tableHTML, esc, legendHTML, nameOf, NA_HTML } from './compare-ui.js';
 
 const mil = (v) => (v === null || v === undefined ? 'n/a' : num(v / 1e6, 2));
 const hh = (i) => String(i).padStart(2, '0');
@@ -51,8 +51,8 @@ export function mountRevenue(host, { shell, side }) {
         }
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
-          const cols = [{ h: L.revenue, get: (r) => mil(r.rev.total) }, { h: L.shortcut, get: (r) => mil(r.rev.shortcut) }, { h: L.over, get: (r) => (r.rev.over === null ? '—' : num(r.rev.over, 0)) },
-            { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => r.tiles.vf.text }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => r.tiles.vfDay.text }];
+          const cols = [{ h: L.revenue, get: (r) => (r.na ? NA_HTML : mil(r.rev.total)) }, { h: L.shortcut, get: (r) => (r.na ? NA_HTML : mil(r.rev.shortcut)) }, { h: L.over, get: (r) => (r.na ? NA_HTML : r.rev.over === null ? '—' : num(r.rev.over, 0)) },
+            { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => (r.na ? NA_HTML : r.tiles.vfDay.text) }];
           root.querySelector('#cmp-table').innerHTML = `<h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}`;
         }
       },

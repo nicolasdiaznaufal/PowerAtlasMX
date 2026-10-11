@@ -28,7 +28,7 @@ export function compareRows(entries, real = false) {
     if (e.error || e.missing) return { k, slot: e.slot, ok: false, error: !!e.error, missing: !!e.missing };
     const t = Object.fromEntries(tilesOf(e.rec, real).map((x) => [x.id, x]));
     const rv = revenueOf(e.rec, real);
-    return { k, slot: e.slot, ok: true, tiles: t, partial: partialNote(e.rec), rev: rv, basis: priceBasis(e.rec, real) };
+    return { k, slot: e.slot, ok: true, tiles: t, partial: partialNote(e.rec), rev: rv, basis: priceBasis(e.rec, real), na: !!e.rec.simNA };
   });
 }
 

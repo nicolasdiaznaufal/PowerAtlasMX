@@ -193,3 +193,38 @@ test('comparison tables mark the unsimulated column; span bounds clamp the URL',
   assert.equal(cur, '#/explorer?sel=A-1&from=2020-01&to=2026-09');
   assert.deepEqual(store.span, { from: '2020-01', to: '2026-09' });
 });
+
+import { indicatorsHTML } from '../v2/assets/js/indicators.js';
+import { tableHTML, NA_HTML } from '../v2/assets/js/compare-ui.js';
+import { compareRows } from '../v2/assets/js/compare-data.js';
+
+const synth = (over = {}) => ({ level: 'node', n: 1, base: 600, cap: 500, vf: 0.83, vfDay: 0.85, spread: 300, z: 1, yf: 2000, ingreso: 1e6, ingresoReal: 1.1e6, atajo: 1.2e6,
+  baseReal: 650, capReal: 540, hours: null, ...over });
+const shellStub = { store: { real: false }, label: (s) => ({ t: `Slot ${s.id}`, k: 'Node' }) };
+
+test('no-baseline slot (no hourly profile): stays published, marked, never shown as simulated (scenario.js + indicators.js)', () => {
+  const entries = scenarioEntries([{ slot: { kind: 'node', id: 'NB' }, rec: synth(), series: null }], { price: 40, dip: 100, yield: 0 });
+  assert.equal(entries[0].noBaseline, true);
+  assert.equal(entries[0].real, undefined);
+  const html = indicatorsHTML(entries, shellStub, 'explorer');
+  assert.match(html, /Not simulated \(no baseline\)/);
+  assert.doesNotMatch(html, />Simulated</);
+  assert.doesNotMatch(html, /vs real/);
+  assert.match(html, />600</);               // the published average price
+});
+
+test('compare tables give the reason when a price is <= 0 under the scenario', { skip }, () => {
+  const s = src();
+  const slots = [{ kind: 'node', id: '04PLD-230' }, { kind: 'national', id: 'ALL' }];
+  const base = slots.map((slot) => ({ slot, rec: recordFor(s, slot, 'Y2'), series: null }));
+  if (base[0].rec.missing) return;
+  const sim = scenarioEntries(base, { price: -300, dip: 100, yield: 0 });
+  const rows = compareRows(sim, false);
+  assert.equal(rows[0].na, true);
+  assert.equal(rows[1].na, false);           // national stays positive at -300
+  const cols = [{ h: 'VF', get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }];
+  const html = tableHTML(rows, sim, shellStub, cols);
+  assert.match(html, /n\/a \(price ≤ 0\)/);
+  assert.match(html, /title="n\/a: price ≤ 0 under this scenario"/);
+  assert.equal((html.match(/n\/a \(price ≤ 0\)/g) || []).length, 1);
+});

@@ -36,3 +36,6 @@ export function tableHTML(rows, entries, shell, columns) {
   return `<div class="tbl cmp"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 export { num };
+
+/** table cell for a figure that is not meaningful under the active scenario (price <= 0): short text, full reason on hover and for readers. */
+export const NA_HTML = '<span title="n/a: price ≤ 0 under this scenario" aria-label="n/a: price ≤ 0 under this scenario">n/a (price ≤ 0)</span>';
