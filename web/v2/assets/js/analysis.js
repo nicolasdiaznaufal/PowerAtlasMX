@@ -7,7 +7,7 @@ import { hrefFor } from './nav.js';
 
 const COPY = {
   explorer: { name: 'Explorer', note: 'Price profile, headline tiles and monthly value factor arrive in the next milestone.' },
-  revenue: { name: 'Revenue', note: 'Hour-by-hour production times price and revenue per MWp arrive in a later milestone.' },
+  revenue: { name: 'Revenue', note: '' },
 };
 
 export function mountAnalysis(root, { view }) {
@@ -19,8 +19,8 @@ export function mountAnalysis(root, { view }) {
     <header class="nav">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
       <nav class="tabs mono" aria-label="Views">
-        <a href="${hrefFor('/explorer', list)}" ${view === 'explorer' ? 'aria-current="page"' : ''}>Explorer</a>
-        <a href="${hrefFor('/revenue', list)}" ${view === 'revenue' ? 'aria-current="page"' : ''}>Revenue</a>
+        <a data-to="/explorer" href="${hrefFor('/explorer', list, shell.store.real)}" ${view === 'explorer' ? 'aria-current="page"' : ''}>Explorer</a>
+        <a data-to="/revenue" href="${hrefFor('/revenue', list, shell.store.real)}" ${view === 'revenue' ? 'aria-current="page"' : ''}>Revenue</a>
       </nav>
     </header>
     <main class="an-body">
@@ -28,14 +28,20 @@ export function mountAnalysis(root, { view }) {
       <h1>${c.name}</h1>
       <ul class="chips chips-row" id="chips" aria-label="Selection"></ul>
       <div id="an-content"></div>
-      <p><a class="btn btn-ghost btn-sm" href="${hrefFor('/' + other, list)}">Open ${COPY[other].name}</a></p>
+      <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real)}">Open ${COPY[other].name}</a></p>
     </main>
-    <a class="mini-hit" href="${hrefFor('/map', list)}" aria-label="Back to the map"><span class="mono">Map</span></a>
+    <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;
   const chips = mountChips(root.querySelector('#chips'), shell, { removable: false });
   const host = root.querySelector('#an-content');
   let child = null, dead = false;
-  if (view === 'explorer') import('./explorer.js').then((m) => { if (!dead) child = m.mountExplorer(host, { shell }); });
-  else host.innerHTML = `<p class="an-note">${c.note}</p>`;
-  return { destroy() { dead = true; chips.destroy(); if (child) child.destroy(); } };
+  const mod = view === 'explorer' ? import('./explorer.js').then((m) => m.mountExplorer) : import('./revenue.js').then((m) => m.mountRevenue);
+  mod.then((mount) => { if (!dead) child = mount(host, { shell }); });
+  // keep tab / map links in step with the price basis (it lives in the URL as &real=1)
+  const links = () => {
+    const l = shell.store.get(), r = shell.store.real;
+    root.querySelectorAll('a[data-to]').forEach((a) => { a.href = hrefFor(a.dataset.to, l, r); });
+  };
+  const offLinks = shell.store.subscribe(links);
+  return { destroy() { dead = true; offLinks(); chips.destroy(); if (child) child.destroy(); } };
 }
