@@ -1,5 +1,6 @@
 // Selection chips (series colour + number + line-style swatch + remove). Shared by map, choose and analysis views.
 import { swatchSVG } from './series-style.js';
+import { announce } from './live.js';
 const SERIES = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -18,8 +19,7 @@ export function mountChips(ul, shell, { removable = true } = {}) {
       if (removable) li.querySelector('button').addEventListener('click', () => {
         shell.store.remove(s); // re-renders synchronously
         const n = shell.store.get().length, j = nextFocusIndex(i, n);
-        const live = document.getElementById('live');
-        if (live) { live.textContent = ''; setTimeout(() => { live.textContent = removedMessage(l.t, n); }, 50); }
+        announce(removedMessage(l.t, n), { priority: true });
         const target = j >= 0 ? ul.querySelectorAll('button')[j] : document.getElementById('add-btn') || document.querySelector('h1');
         if (target) { if (!target.hasAttribute('tabindex') && target.tagName === 'H1') target.tabIndex = -1; target.focus({ preventScroll: true }); }
       });

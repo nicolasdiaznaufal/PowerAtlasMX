@@ -4,7 +4,7 @@ import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
 import { compareRows, yearAxis, columnLabels } from './compare-data.js';
 import { priceBasis } from './explorer-data.js';
-import { lineChart, vfAxisMax } from './svg-charts.js';
+import { lineChart, vfAxis } from './svg-charts.js';
 import { legendHTML, slotHeader, slotNotice, tileHTML, tableHTML, esc } from './compare-ui.js';
 import { segment } from './controls.js';
 
@@ -22,11 +22,11 @@ export function paintExplorerCompare(el, { entries, shell, winId, view, onView }
     const months = ok.length ? ok[0].series.months : [];
     const ser = entries.map((e) => ({ vals: e.series ? e.series.vf : months.map(() => null), label: shell.label(e.slot).t }));
     vfChart = lineChart({ series: ser, labels: months.map(mesCorto), refs: [1],
-      H: 240, yMax: vfAxisMax(ser.flatMap((x) => x.vals)), xEvery: 12, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor' });
+      H: 240, scale: vfAxis(ser.flatMap((x) => x.vals)), xEvery: 12, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor' });
   } else {
     const ya = yearAxis(entries, real);
     const ser = entries.map((e, k) => ({ vals: ya.vals[k], label: shell.label(e.slot).t }));
-    vfChart = lineChart({ series: ser, labels: ya.years, refs: [1], H: 240, yMax: vfAxisMax(ser.flatMap((x) => x.vals)), aria: 'Value factor by calendar year for each selected slot', ytitle: 'Value factor' });
+    vfChart = lineChart({ series: ser, labels: ya.years, refs: [1], H: 240, scale: vfAxis(ser.flatMap((x) => x.vals)), aria: 'Value factor by calendar year for each selected slot', ytitle: 'Value factor' });
   }
   const L = columnLabels(real);
   const cols = [

@@ -117,3 +117,47 @@ test('table headings name the price basis; average-day VF is labelled nominal', 
   assert.match(r.vfDay, /nominal/); assert.match(n.vfDay, /nominal/);
   assert.match(r.heading('Aug 2025 – Jul 2026'), /today's pesos/);
 });
+
+test('bars never leave the plot rectangle, including negative VF (every node and area series)', { skip }, async () => {
+  const { barChart, vfAxis, PAD, W } = await import('../v2/assets/js/svg-charts.js');
+  const s = src(), H = 240;
+  const rects = (svg) => [...svg.matchAll(/<rect x="([\d.-]+)" y="([\d.-]+)" width="([\d.]+)" height="([\d.]+)"/g)].map((m) => ({ x: +m[1], y: +m[2], w: +m[3], h: +m[4] }));
+  let charts = 0, neg = 0;
+  const run = (vals) => {
+    const bars = vals.map((v, i) => ({ v, label: String(i), color: 'x' }));
+    const sc = vfAxis(vals.concat([0.8]));
+    const svg = barChart({ bars, scale: sc, hline: { v: 0.8, label: 'w' }, refs: [1], H, aria: 't' });
+    charts++;
+    if (vals.some((v) => v !== null && v < 0)) neg++;
+    assert.ok(sc.ticks.includes(0), 'axis contains zero');
+    for (const r of rects(svg)) {
+      assert.ok(r.y >= PAD.t - 0.15, `bar above plot: y=${r.y}`);
+      assert.ok(r.y + r.h <= H - PAD.b + 0.15, `bar below plot: ${r.y + r.h} > ${H - PAD.b}`);
+      assert.ok(r.x >= PAD.l - 0.15 && r.x + r.w <= W - PAD.r + 0.15);
+    }
+  };
+  for (const n of Object.values(s.sNodes.nodes)) run(n.m);
+  run(s.sAreas.areas.ALL.m);
+  for (const g of ['region', 'state']) for (const a of Object.values(s.sAreas.areas[g])) run(a.m);
+  assert.ok(charts > 2400 && neg > 0, `${charts} charts, ${neg} with negatives`);
+});
+
+test('nice ticks are round and include 0 (also for negative ranges)', async () => {
+  const { niceTicks, vfAxis } = await import('../v2/assets/js/svg-charts.js');
+  assert.deepEqual(niceTicks(-0.597, 1.36).ticks.includes(0), true);
+  const t = niceTicks(-50, 2100);
+  assert.ok(t.ticks.includes(0) && t.lo <= -50 && t.hi >= 2100);
+  assert.ok(t.ticks.every((v) => Number.isInteger(v)), JSON.stringify(t.ticks));
+  const v = vfAxis([-0.597, 0.9, 1.1]);
+  assert.deepEqual(v.ticks, [-0.8, -0.4, 0, 0.4, 0.8, 1.2]);
+  assert.deepEqual(vfAxis([0.5]).ticks, [0, 0.25, 0.5, 0.75, 1]);
+});
+
+test('route announcement does not overwrite a removal message (it is appended)', async () => {
+  const { mergeAnnouncement } = await import('../v2/assets/js/live.js');
+  const a = mergeAnnouncement(null, 'Removed Jalisco; 0 of 3 slots', 1000, true);
+  const b = mergeAnnouncement(a, 'Map', 1085);
+  assert.equal(b.text, 'Removed Jalisco; 0 of 3 slots. Map');
+  assert.equal(mergeAnnouncement(a, 'Map', 1000 + 5000).text, 'Map');           // later: plain replace
+  assert.equal(mergeAnnouncement(null, 'Explorer', 10).text, 'Explorer');
+});

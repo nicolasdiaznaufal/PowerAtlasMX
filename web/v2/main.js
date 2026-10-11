@@ -3,6 +3,7 @@
 import { renderLanding } from './assets/js/landing.js';
 import { getShell, frames, reducedMotion } from './assets/js/shell.js';
 import { createRouter } from './assets/js/route-logic.js';
+import { announce as say } from './assets/js/live.js';
 
 const view = document.getElementById('view');
 const EASE = 'cubic-bezier(.2, .8, .2, 1)';
@@ -16,7 +17,6 @@ const LOADERS = {
 };
 const go = (href) => { location.hash = href; };
 let cur = null, queue = Promise.resolve();
-const live = document.getElementById('live');
 const NAMES = { '/': 'Home', '/map': 'Map', '/choose': 'Choose a view', '/explorer': 'Explorer', '/revenue': 'Revenue' };
 
 
@@ -97,7 +97,7 @@ const router = createRouter({
 function announce(path) {
   const t = NAMES[path];
   document.title = path === '/' ? 'PowerAtlasMx by REPSA Group' : `${t} · PowerAtlasMx`;
-  if (live) { live.textContent = ''; setTimeout(() => { live.textContent = t; }, 50); }
+  say(t);
   const a = document.activeElement;
   if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
   const h = view.querySelector('h1') || view.querySelector('main');

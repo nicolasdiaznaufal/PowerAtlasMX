@@ -7,7 +7,7 @@ import { loadEntries } from './compare-data.js';
 import { paintExplorerCompare } from './explorer-compare.js';
 import { serializeSel } from './store.js';
 import { mountControls, segment } from './controls.js';
-import { barChart, stackChart, vfAxisMax } from './svg-charts.js';
+import { barChart, stackChart, vfAxis } from './svg-charts.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SAND = 'var(--s1)', MUTED = 'var(--c-energy)';
@@ -108,7 +108,7 @@ export function mountExplorer(host, { shell }) {
       leg = `<span><i style="background:${SAND}"></i>Complete calendar years</span><span><i class="dash"></i>VF of the window: ${num(pb.vf, 2)}</span>`;
     }
     q('#xp-vleg').innerHTML = leg;
-    q('#xp-vf').innerHTML = barChart({ bars, hline: { v: pb.vf, label: `Window ${num(pb.vf, 2)}` }, refs: [1], yMax: vfAxisMax(bars.map((b) => b.v).concat([pb.vf])), H: 240, xEvery: view === 'months' ? 12 : 1, aria: view === 'months' ? 'Value factor by month' : 'Value factor by calendar year', ytitle: 'Value factor' });
+    q('#xp-vf').innerHTML = barChart({ bars, hline: { v: pb.vf, label: `Window ${num(pb.vf, 2)}` }, refs: [1], scale: vfAxis(bars.map((b) => b.v).concat([pb.vf])), H: 240, xEvery: view === 'months' ? 12 : 1, aria: view === 'months' ? 'Value factor by month' : 'Value factor by calendar year', ytitle: 'Value factor' });
     q('#xp-table').innerHTML = `<table><thead><tr><th>${view === 'months' ? 'Month' : 'Year'}</th><th class="n">Value factor</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r[0])}</td><td class="n">${r[1] === null ? '—' : num(r[1], 2)}</td></tr>`).join('')}</tbody></table>`;
     const l = shell.label(slot);
     const gap = rec.vf - rec.vfDay;
