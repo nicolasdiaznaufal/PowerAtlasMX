@@ -12,11 +12,12 @@ function harness() {
   const hist = [];
   let i = -1;
   const replace = (h) => { hist[i] = h; };
-  const router = createRouter({ store, valid: () => valid, replace });
+  const router = createRouter({ store, valid: () => valid, replace, currentHash: () => hist[i] });
   const h = {
     store, hist, router,
     get url() { return hist[i]; },
     push(hash) { hist.length = i + 1; hist.push(hash); i++; return router.resolve(hash); },
+    navigateUnresolved(hash) { hist.length = i + 1; hist.push(hash); i++; },
     back() { i--; return router.resolve(hist[i]); },
     forward() { i++; return router.resolve(hist[i]); },
   };
@@ -69,4 +70,36 @@ test('selection changes on the current route keep that route in the URL', () => 
   h.push('#/map?sel=01AAN-85');
   h.store.add({ kind: 'state', id: 'JALISCO' });
   assert.equal(h.url, '#/map?sel=01AAN-85,state:JALISCO');
+});
+
+test('a hash without sel inherits the current selection and is rewritten to carry it', () => {
+  const h = harness();
+  h.push('#/map?sel=01AAN-85');
+  h.push('#/');
+  assert.equal(h.url, '#/');
+  const r = h.push('#/map');
+  assert.equal(r.path, '/map');
+  assert.equal(h.url, '#/map?sel=01AAN-85');
+  assert.equal(serializeSel(h.store.get()), '01AAN-85');
+  h.push('#/explorer');
+  assert.equal(h.url, '#/explorer?sel=01AAN-85');
+});
+
+test('landing ignores sel in the URL and keeps the held selection', () => {
+  const h = harness();
+  h.push('#/map?sel=01AAN-85');
+  h.push('#/?sel=state:JALISCO');
+  assert.equal(h.url, '#/');
+  assert.equal(serializeSel(h.store.get()), '01AAN-85');
+});
+
+test('a selection change while a navigation is still queued does not overwrite the new URL', () => {
+  const h = harness();
+  h.push('#/map?sel=01AAN-85');
+  h.navigateUnresolved('#/choose?sel=01AAN-85'); // URL already moved, router still on /map (transition running)
+  h.store.add({ kind: 'state', id: 'JALISCO' });
+  assert.equal(h.url, '#/choose?sel=01AAN-85');
+  assert.equal(h.hist[0], '#/map?sel=01AAN-85');
+  h.router.resolve(h.url); // the queued navigation resolves later and wins
+  assert.equal(serializeSel(h.store.get()), '01AAN-85');
 });

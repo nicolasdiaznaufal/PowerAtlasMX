@@ -90,6 +90,7 @@ const router = createRouter({
     return { node: (id) => ids.has(id), state: (k) => st.has(k), region: (k) => rg.has(k) };
   },
   replace: (h) => history.replaceState(null, '', h),
+  currentHash: () => location.hash,
 });
 
 /** move focus to the page heading and announce the route (never while the user is typing). */
@@ -105,9 +106,14 @@ function announce(path) {
 
 async function route() {
   const shell = getShell();
-  if (/sel=/.test(location.hash)) await shell.init(); // ids are validated against the atlas
+  if (/^#\/(map|choose|explorer|revenue)\?.*sel=/.test(location.hash)) await shell.dataReady(); // ids are validated against atlas + geometry only
   const { path, prev, changed } = router.resolve(location.hash);
-  if (prev !== null && !changed) { if (path !== '/map' && path !== '/') await mount(path); return; } // same route, other selection
+  if (prev !== null && !changed) { // same route, other selection (Back/Forward between entries)
+    if (path !== '/map' && path !== '/') await mount(path);
+    if (path === '/choose' && shell.mv) shell.fit(700, 'choose');
+    announce(path);
+    return;
+  }
   if (prev === null) {
     await mount(path); shell.setMode(MODE[path]);
     if (path === '/') (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 1500 }) : (f) => setTimeout(f, 600))(() => { shell.init(); import('./assets/js/explorer-data.js').then((m) => m.prefetch()); });

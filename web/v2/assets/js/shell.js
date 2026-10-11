@@ -25,8 +25,9 @@ export function getShell() {
     /** begin loading data and the map (idempotent). Resolves when the map is usable (or failed). */
     init() {
       if (s.started) return s.started;
-      s.started = Promise.all([loadAtlas(), loadGeo()]).then(async ([a, g]) => {
-        s.atlas = a; s.geo = g; a.nodes.forEach((n) => s.byId.set(n.id, n));
+      s.data = Promise.all([loadAtlas(), loadGeo()]).then(([a, g]) => { s.atlas = a; s.geo = g; a.nodes.forEach((n) => s.byId.set(n.id, n)); return s; });
+      s.started = s.data.then(async () => {
+        const a = s.atlas, g = s.geo;
         if (!s.hasGL) { s.failed = true; return s; }
         try {
           const deck = await loadDeck();
@@ -45,6 +46,8 @@ export function getShell() {
       }).catch((e) => { console.error(e); s.failed = true; s.error = e; return s; });
       return s.started;
     },
+    /** atlas + geometry only (enough to validate ids); does not wait for deck.gl. */
+    dataReady() { s.init(); return s.data.catch(() => s); },
     setMetric(k) { s.metric = k; return s.mv ? s.mv.setMetric(k) : null; },
     domain: () => (s.mv ? s.mv.domain() : s.atlas ? domainOf(s.atlas.nodes, s.metric) : null),
     toggleNode(n) { const r = s.store.toggle({ kind: 'node', id: n.id }); if (!r) s.say(`Up to ${MAX_SEL} selections.`); return r; },
