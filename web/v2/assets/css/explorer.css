@@ -13,7 +13,7 @@
 .tile strong { font-size: 32px; font-weight: 450; letter-spacing: -.04em; line-height: 1.1; }
 .tile .u { color: var(--ink-3); }
 .xp-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
-.xp-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); padding: 16px; display: grid; gap: 10px; align-content: start; }
+.xp-card { min-width: 0; grid-template-columns: minmax(0, 1fr); background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); padding: 16px; display: grid; gap: 10px; align-content: start; }
 .xp-card h2 { margin: 0; color: var(--ink-2); font-weight: 400; }
 .xp-vhead { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
 .xp-vhead .seg { width: 260px; }
@@ -33,8 +33,9 @@
 .xp-text { margin: 0; color: var(--ink-2); }
 .xp-text b { color: var(--ink); font-weight: 500; }
 details summary { cursor: pointer; color: var(--ink-2); }
-.tbl { max-height: 320px; overflow: auto; margin-top: 8px; }
+.tbl { max-height: 320px; max-width: 100%; overflow: auto; margin-top: 8px; }
 .tbl table { border-collapse: collapse; width: 100%; font-size: 13px; }
+@media (max-width: 760px) { .tbl th, .tbl td { padding: 4px 6px; font-size: 12px; } .tbl table { min-width: 420px; } }
 .tbl th, .tbl td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--hairline); }
 .tbl .n { text-align: right; font-variant-numeric: tabular-nums; }
 @media (min-width: 1000px) { .xp-top { max-width: calc(100% - 372px); } }
@@ -44,3 +45,6 @@ details summary { cursor: pointer; color: var(--ink-2); }
 
 .xp-warn { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--raised); box-shadow: 0 0 0 1px var(--accent); color: var(--ink); }
 .xp-warn[hidden] { display: none; }
+
+.xp-ctl .seg button { height: auto; min-height: 32px; padding: 6px 8px; line-height: 1.25; }
+.tiles { margin-bottom: 20px; }
