@@ -2,7 +2,10 @@
 // Same data layer and same record as Explorer, so price, production and VF can never differ between the two views.
 import { WIN } from '../../../assets/js/names.js';
 import { num } from '../../../assets/js/format.js';
-import { loadSources, recordFor, revenueOf, tilesOf, partialNote, tableLabels } from './explorer-data.js';
+import { revenueOf, tilesOf, partialNote, tableLabels } from './explorer-data.js';
+import { loadEntries } from './compare-data.js';
+import { paintRevenueCompare } from './revenue-compare.js';
+import { serializeSel } from './store.js';
 import { mountControls } from './controls.js';
 import { barChart, pairChart, stackChart } from './svg-charts.js';
 
@@ -10,11 +13,12 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const mil = (v) => num(v / 1e6, 2);
 
 export function mountRevenue(host, { shell }) {
-  let ver = 0, dead = false;
+  let ver = 0, dead = false, selKey = serializeSel(shell.store.get());
   const winOf = () => shell.winId || 'Y2';
   host.innerHTML = `
     <div class="xp-ctl" id="rv-ctl"></div>
     <div class="xp-state" id="rv-state" role="status"></div>
+    <div id="rv-cmp" hidden></div>
     <div id="rv-body" hidden>
       <p class="xp-warn" id="rv-warn" hidden></p>
       <div class="tiles" id="rv-tiles"></div>
@@ -38,13 +42,22 @@ export function mountRevenue(host, { shell }) {
   const setState = (kind, html) => { const s = q('#rv-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; q('#rv-body').hidden = kind !== 'ok'; s.setAttribute('aria-busy', String(kind === 'loading')); };
 
   async function load() {
-    const my = ++ver, slot = shell.store.get()[0];
-    if (!slot) return;
+    const my = ++ver, slots = shell.store.get();
+    if (!slots.length) return;
+    selKey = serializeSel(slots);
     setState('loading', 'Loading data…');
+    q('#rv-cmp').hidden = true;
     try {
-      const src = await loadSources(slot);
+      const entries = await loadEntries(slots, winOf());
       if (my !== ver || dead) return;
-      const rec = recordFor(src, slot, winOf());
+      if (slots.length > 1) {
+        if (entries.every((e) => e.error)) throw entries[0].error;
+        setState('ok', ''); q('#rv-body').hidden = true; q('#rv-cmp').hidden = false;
+        paintRevenueCompare(q('#rv-cmp'), { entries, shell, winId: winOf() });
+        return;
+      }
+      const { slot, rec, error } = entries[0];
+      if (error) throw error;
       if (rec.missing) { setState('err', `No data for this selection in ${esc(WIN[winOf()].label)}.`); return; }
       setState('ok', '');
       paint(slot, rec);
@@ -92,5 +105,6 @@ export function mountRevenue(host, { shell }) {
   }
 
   load();
-  return { destroy() { dead = true; ctl.destroy(); } };
+  const off = shell.store.subscribe((l) => { if (serializeSel(l) !== selKey) load(); });
+  return { destroy() { dead = true; off(); ctl.destroy(); } };
 }

@@ -59,3 +59,5 @@
   .nogl { inset: 72px 12px 48% 12px; }
   .map-overlay .scope { display: none; }
 }
+
+.chips .swatch { flex: none; }

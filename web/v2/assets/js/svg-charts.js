@@ -1,5 +1,6 @@
 // Tiny SVG charts (no library): colours come from CSS tokens so they follow the theme and the contrast test.
 import { num } from '../../../assets/js/format.js';
+import { STYLES, markerPath } from './series-style.js';
 
 const W = 640, PAD = { l: 52, r: 12, t: 24, b: 34 };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -79,5 +80,27 @@ export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp',
     });
     if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${hh}</text>`;
   }
+  return frame(H, aria, out);
+}
+
+/** overlay of up to 3 series. series: [{vals, label}] in slot order (style i). nulls break the line. markEvery: marker every n points. */
+export function lineChart({ series, labels, H = 220, yMin = 0, yMax = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '' }) {
+  const all = series.flatMap((s) => s.vals).filter((v) => v !== null && v !== undefined);
+  const hi = yMax || niceMax(Math.max(...all, 0)), lo = Math.min(yMin, ...all, 0) < 0 ? -niceMax(-Math.min(...all)) : yMin;
+  const { g, y } = axis(H, lo, hi, fmt, ytitle);
+  const n = labels.length, iw = W - PAD.l - PAD.r, step = iw / n, X = (i) => PAD.l + step * i + step / 2;
+  let out = g;
+  labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
+  series.forEach((sr, k) => {
+    const st = STYLES[k % 3];
+    let d = '', pen = false;
+    sr.vals.forEach((v, i) => { if (v === null || v === undefined) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    out += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="2" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''} stroke-linejoin="round"/>`;
+    sr.vals.forEach((v, i) => {
+      if (v === null || v === undefined) return;
+      const tip = `<title>${esc(sr.label)} · ${esc(labels[i])}: ${fmt(v)}</title>`;
+      if (i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
+    });
+  });
   return frame(H, aria, out);
 }

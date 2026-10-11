@@ -56,7 +56,7 @@ export function getShell() {
     pick(x) {
       if (!s.store.add({ kind: x.kind, id: x.id })) { s.say(`Up to ${MAX_SEL} selections. Remove one first.`); return false; }
       s.say(`${x.label} added.`);
-      if (!s.mv) return true;
+      if (!s.mv || s.mode === 'mini') return true; // analysis pages refit the mini-map to the whole selection
       if (x.kind === 'node') { const n = s.byId.get(x.id); if (n) s.mv.flyToNode(n); }
       else if (x.kind === 'national') s.mv.reset();
       else s.mv.flyToArea(x.kind, x.id);

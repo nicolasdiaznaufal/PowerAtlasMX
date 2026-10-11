@@ -2,7 +2,10 @@
 // First slot only for now; the data layer is slot-based so compare (M6) adds slots without touching it.
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
-import { loadSources, recordFor, seriesFor, yearRows, tilesOf, priceBasis, partialNote } from './explorer-data.js';
+import { yearRows, tilesOf, priceBasis, partialNote } from './explorer-data.js';
+import { loadEntries } from './compare-data.js';
+import { paintExplorerCompare } from './explorer-compare.js';
+import { serializeSel } from './store.js';
 import { mountControls, segment } from './controls.js';
 import { barChart, stackChart } from './svg-charts.js';
 
@@ -10,11 +13,12 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const SAND = 'var(--s1)', MUTED = 'var(--c-energy)';
 
 export function mountExplorer(host, { shell }) {
-  let view = 'months', ver = 0, dead = false;
+  let view = 'months', ver = 0, dead = false, selKey = serializeSel(shell.store.get());
   const winOf = () => shell.winId || 'Y2';
   host.innerHTML = `
     <div class="xp-ctl" id="xp-ctl"></div>
     <div class="xp-state" id="xp-state" role="status"></div>
+    <div id="xp-cmp" hidden></div>
     <div id="xp-body" hidden>
       <p class="xp-warn" id="xp-warn" hidden></p>
       <div class="tiles" id="xp-tiles"></div>
@@ -42,14 +46,26 @@ export function mountExplorer(host, { shell }) {
   let last = null;
   const setState = (kind, html) => { const s = q('#xp-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; q('#xp-body').hidden = kind !== 'ok'; s.setAttribute('aria-busy', String(kind === 'loading')); };
 
+  const setCmp = (on) => { q('#xp-cmp').hidden = !on; if (on) q('#xp-body').hidden = true; };
+  let cmpEntries = null;
   async function load() {
-    const my = ++ver, slot = shell.store.get()[0];
-    if (!slot) return;
+    const my = ++ver, slots = shell.store.get();
+    if (!slots.length) return;
+    selKey = serializeSel(slots);
     setState('loading', 'Loading data…');
+    setCmp(false);
     try {
-      const src = await loadSources(slot);
+      const entries = await loadEntries(slots, winOf());
       if (my !== ver || dead) return;
-      const rec = recordFor(src, slot, winOf()), series = seriesFor(src, slot);
+      if (slots.length > 1) {
+        if (entries.every((e) => e.error)) throw entries[0].error;
+        last = null; cmpEntries = entries;
+        setState('ok', ''); q('#xp-body').hidden = true; setCmp(true);
+        paintExplorerCompare(q('#xp-cmp'), { entries, shell, winId: winOf(), view, onView: (v) => { view = v; paintCmp(); } });
+        return;
+      }
+      const { slot, rec, series, error } = entries[0];
+      if (error) throw error;
       if (rec.missing) {
         setState('err', `No data for this selection in ${esc(WIN[winOf()].label)}. ${slot.kind === 'node' ? 'The node is outside the analysis universe for that window.' : ''}`);
         return;
@@ -64,6 +80,7 @@ export function mountExplorer(host, { shell }) {
       const r = q('#xp-retry'); if (r) r.addEventListener('click', load);
     }
   }
+  const paintCmp = () => { if (cmpEntries) { paintExplorerCompare(q('#xp-cmp'), { entries: cmpEntries, shell, winId: winOf(), view, onView: (v) => { view = v; paintCmp(); } }); } };
 
   function paint({ slot, rec, series }) {
     const pb = priceBasis(rec, shell.store.real);
@@ -101,5 +118,6 @@ export function mountExplorer(host, { shell }) {
 
   drawView();
   load();
-  return { destroy() { dead = true; ctl.destroy(); } };
+  const off = shell.store.subscribe((l) => { if (serializeSel(l) !== selKey) load(); });
+  return { destroy() { dead = true; off(); ctl.destroy(); } };
 }
