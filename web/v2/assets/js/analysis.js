@@ -6,11 +6,8 @@ import { getShell } from './shell.js';
 import { hrefFor } from './nav.js';
 import { createSelector, buildEntries } from './selector.js';
 import { MAX_SEL } from './store.js';
-
-const COPY = {
-  explorer: { name: 'Explorer', note: 'Price profile, headline tiles and monthly value factor arrive in the next milestone.' },
-  revenue: { name: 'Revenue', note: '' },
-};
+import { COPY } from './copy.js';
+import { mountScope } from './scope.js';
 
 export function mountAnalysis(root, { view, go }) {
   const shell = getShell();
@@ -26,12 +23,18 @@ export function mountAnalysis(root, { view, go }) {
       </nav>
     </header>
     <main class="an-body">
-      <p class="mono eyebrow">${c.name}</p>
-      <h1>${c.name}</h1>
-      <ul class="chips chips-row" id="chips" aria-label="Selection"></ul>
-      <div class="add-row"><button type="button" class="btn btn-ghost btn-sm" id="add-btn" aria-expanded="false">+ Add</button><div id="add-slot"></div><p class="mono xp-scope" id="add-note" role="status"></p></div>
-      <div id="an-content"></div>
-      <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real)}">Open ${COPY[other].name}</a></p>
+      <p class="mono eyebrow">${c.title}</p>
+      <h1>${c.title}</h1>
+      <div class="an-layout">
+        <aside class="an-side" aria-label="Selection, controls and key indicators">
+          <ul class="chips" id="chips" aria-label="Selection"></ul>
+          <div class="add-row"><button type="button" class="btn btn-ghost btn-sm" id="add-btn" aria-expanded="false">+ Add</button><div id="add-slot"></div><p class="mono xp-scope" id="add-note" role="status"></p></div>
+          <div id="scope"></div>
+          <div id="an-side-view"></div>
+        </aside>
+        <div class="an-main" id="an-content"></div>
+      </div>
+      <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real)}">Open ${COPY[other].title}</a></p>
     </main>
     <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;
@@ -39,7 +42,10 @@ export function mountAnalysis(root, { view, go }) {
   const host = root.querySelector('#an-content');
   let child = null, dead = false;
   const mod = view === 'explorer' ? import('./explorer.js').then((m) => m.mountExplorer) : import('./revenue.js').then((m) => m.mountRevenue);
-  mod.then((mount) => { if (!dead) child = mount(host, { shell }); });
+  const sideHost = root.querySelector('#an-side-view');
+  let scope = null;
+  shell.dataReady().then(() => { if (!dead) scope = mountScope(root.querySelector('#scope'), shell); });
+  mod.then((mount) => { if (!dead) child = mount(host, { shell, side: sideHost }); });
   // keep tab / map links in step with the price basis (it lives in the URL as &real=1)
   const links = () => {
     const l = shell.store.get(), r = shell.store.real;
@@ -65,12 +71,14 @@ export function mountAnalysis(root, { view, go }) {
     addBtn.setAttribute('aria-expanded', String(!selector.el.hidden));
     if (!selector.el.hidden) selector.input.focus();
   });
+  const sideEl = root.querySelector('.an-side');
   const onSel = (l) => {
-    links(); syncAdd(l);
+    links(); syncAdd(l); sideEl.classList.toggle('multi', l.length > 1);
     if (!l.length) { go(hrefFor('/map', [], shell.store.real)); return; }
     shell.fit(500); // mini-map follows the selection
   };
   syncAdd(shell.store.get());
+  sideEl.classList.toggle('multi', shell.store.get().length > 1);
   const offLinks = shell.store.subscribe(onSel);
-  return { destroy() { dead = true; offLinks(); chips.destroy(); if (child) child.destroy(); } };
+  return { destroy() { dead = true; offLinks(); chips.destroy(); if (child) child.destroy(); if (scope) scope.destroy(); } };
 }

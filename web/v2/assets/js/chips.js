@@ -14,7 +14,7 @@ export function mountChips(ul, shell, { removable = true } = {}) {
     list.forEach((s, i) => {
       const l = shell.label(s);
       const li = document.createElement('li');
-      li.innerHTML = `<span class="dot" style="background:${SERIES[i]}" aria-hidden="true">${i + 1}</span><span class="ct"><span class="mono">${esc(l.k)}</span>${esc(l.t)}</span>${swatchSVG(i)}`
+      li.innerHTML = `<span class="dot" style="background:${SERIES[i]}" aria-hidden="true">${i + 1}</span><span class="ct"><span class="mono">${esc(l.k)}</span>${esc(l.t)}${l.d ? `<span class="mono det">${esc(l.d)}</span>` : ''}</span>${swatchSVG(i)}`
         + (removable ? `<button type="button" aria-label="Remove ${esc(l.t)}">×</button>` : '');
       if (removable) li.querySelector('button').addEventListener('click', () => {
         shell.store.remove(s); // re-renders synchronously

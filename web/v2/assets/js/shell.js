@@ -64,10 +64,14 @@ export function getShell() {
       return true;
     },
     label(sel) {
-      if (sel.kind === 'national') return { t: 'National', k: 'National' };
-      if (sel.kind === 'region') return { t: title(sel.id), k: 'Region' };
-      if (sel.kind === 'state') { const f = s.geo && s.geo.states.features.find((x) => x.properties.key === sel.id); return { t: f ? f.properties.name : title(sel.id), k: 'State' }; }
-      const n = s.byId.get(sel.id); return { t: n ? n.name : sel.id, k: `Node · ${sel.id}` };
+      if (sel.kind === 'national') return { t: 'National', k: 'National', d: 'All nodes in the analysis' };
+      if (sel.kind === 'region') return { t: title(sel.id), k: 'Region', d: '' };
+      if (sel.kind === 'state') {
+        const f = s.geo && s.geo.states.features.find((x) => x.properties.key === sel.id);
+        return { t: f ? f.properties.name : title(sel.id), k: 'State', d: f ? `${title(f.properties.region)} region` : '' };
+      }
+      const n = s.byId.get(sel.id);
+      return { t: n ? n.name : sel.id, k: `Node · ${sel.id}`, d: n ? `${title(n.state)} · ${title(n.region)} region` : '' };
     },
     /** bounds [w,s,e,n] of the whole selection (national or empty = Mexico). */
     selectionBounds() {

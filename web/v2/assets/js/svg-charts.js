@@ -2,7 +2,16 @@
 import { num } from '../../../assets/js/format.js';
 import { STYLES, markerPath } from './series-style.js';
 
-export const W = 640, PAD = { l: 52, r: 12, t: 24, b: 34 };
+export let W = 640;
+export const PAD = { l: 52, r: 12, t: 24, b: 48 };
+/** the viewBox follows the real pixel width so tick text keeps its size on phones (no shrunken, unreadable labels). */
+export const chartWidth = (el) => Math.max(300, Math.min(1000, Math.round((el && el.clientWidth) || 640)));
+/** label every n-th tick so that labels keep about `per` px apart in a plot of width `width` (multiple of `unit`, e.g. 6 months). */
+export function thin(n, width, per = 54, unit = 1) {
+  const plot = Math.max(120, width - PAD.l - PAD.r), every = Math.max(1, Math.ceil((n * per) / plot));
+  return Math.ceil(every / unit) * unit;
+}
+export function renderChart(el, build) { W = chartWidth(el); el.innerHTML = build(); }
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function niceMax(v) {
@@ -31,10 +40,10 @@ export function vfAxis(values) {
   return { lo, hi: ticks[ticks.length - 1], ticks };
 }
 export const vfAxisMax = (values) => vfAxis(values).hi;
-const frame = (H, aria, inner) => `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}" preserveAspectRatio="xMidYMid meet">${inner}</svg>`;
+export const frame = (H, aria, inner, xtitle = '', vbW = W) => `<svg viewBox="0 0 ${vbW} ${H}" role="img" aria-label="${esc(aria)}" preserveAspectRatio="xMidYMid meet">${inner}${xtitle ? `<text x="${((PAD.l + W - PAD.r) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="atitle xtitle">${esc(xtitle)}</text>` : ''}</svg>`;
 
 /** y grid + labels at the given ticks. */
-function axis(H, ticks, fmt, ytitle) {
+export function axis(H, ticks, fmt, ytitle) {
   const lo = ticks[0], hi = ticks[ticks.length - 1], ih = H - PAD.t - PAD.b, y = (v) => PAD.t + ih * (1 - (v - lo) / (hi - lo));
   let g = '';
   for (const v of ticks) {
@@ -46,7 +55,7 @@ function axis(H, ticks, fmt, ytitle) {
 }
 
 /** bars: [{v, label, color, tip}], hline: {v, label}. xEvery: label every n bars. */
-export function barChart({ bars, hline = null, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '' }) {
+export function barChart({ bars, hline = null, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '', xtitle = '' }) {
   const vals = finite(bars.map((b) => b.v));
   const sc = scale || niceTicks(Math.min(0, ...vals), niceMax(Math.max(...vals, hline ? hline.v : 0, 0)));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
@@ -59,15 +68,15 @@ export function barChart({ bars, hline = null, refs = [], H = 220, scale = null,
       const h = Math.max(0.5, Math.abs(y0 - y1)), top = Math.min(Math.min(y0, y1), H - PAD.b - h);
       out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}"><title>${esc(b.tip || `${b.label}: ${fmt(b.v)}`)}</title></rect>`;
     }
-    if (i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${esc(b.label)}</text>`;
+    if (i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(b.label)}</text>`;
   });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   if (hline && hline.v !== null) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
-  return frame(H, aria, out);
+  return frame(H, aria, out, xtitle);
 }
 
 /** stacked hourly composition: energy + losses + congestion (negative congestion hangs below zero), with two reference lines. */
-export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, aria, ytitle = 'MXN/MWh' }) {
+export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, aria, ytitle = 'MXN/MWh', xtitle = '' }) {
   const parts = [['energia', 'var(--c-energy)', energia], ['perdidas', 'var(--c-losses)', perdidas], ['congestion', 'var(--c-cong)', congestion]];
   const pos = energia.map((_, h) => parts.reduce((s, p) => s + Math.max(0, p[2][h]), 0)), neg = energia.map((_, h) => parts.reduce((s, p) => s + Math.min(0, p[2][h]), 0));
   const sc = niceTicks(Math.min(0, ...neg), Math.max(...pos, base, cap));
@@ -83,15 +92,15 @@ export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, 
       if (v >= 0) up = b; else dn = b;
       out += `<rect x="${x.toFixed(1)}" y="${Math.min(y(a), y(b)).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, Math.abs(y(a) - y(b))).toFixed(1)}" fill="${col}"><title>${String(h).padStart(2, '0')}:00 ${nm}: ${num(v, 1)} MXN/MWh</title></rect>`;
     }
-    if (h % 3 === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${String(h).padStart(2, '0')}</text>`;
+    if (h % 3 === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${String(h).padStart(2, '0')}</text>`;
   }
   out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(base)}" y2="${y(base)}" class="hline"><title>Average price ${num(base, 0)} MXN/MWh</title></line>`;
   out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(cap)}" y2="${y(cap)}" class="cline"><title>Captured price ${num(cap, 0)} MXN/MWh</title></line>`;
-  return frame(H, aria, out);
+  return frame(H, aria, out, xtitle);
 }
 
 /** two bars per hour (a = left, b = right). Used for shortcut vs hour-by-hour revenue. */
-export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN' }) {
+export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN', xtitle = '' }) {
   const vals = finite([...a, ...b]);
   const sc = niceTicks(Math.min(0, ...vals), Math.max(...vals, 1e-9));
   const { g, y } = axis(H, sc.ticks, (v) => num(v, 0), ytitle);
@@ -104,19 +113,19 @@ export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp',
       const y1 = y(v), top = Math.min(y0, y1), hgt = Math.max(0.5, Math.abs(y0 - y1));
       out += `<rect x="${(x + k * (bw + 1)).toFixed(1)}" y="${Math.min(top, H - PAD.b - hgt).toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${c}"><title>${hh}:00 ${nm}: ${num(v, 0)} ${unit}</title></rect>`;
     });
-    if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${hh}</text>`;
+    if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${hh}</text>`;
   }
-  return frame(H, aria, out);
+  return frame(H, aria, out, xtitle);
 }
 
 /** overlay of up to 3 series. series: [{vals, label}] in slot order (style i). nulls break the line. markEvery: marker every n points. */
-export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '' }) {
+export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '', xtitle = '' }) {
   const all = finite(series.flatMap((s) => s.vals));
   const sc = scale || niceTicks(Math.min(0, ...all), Math.max(...all, 1e-9));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
   const n = labels.length, iw = W - PAD.l - PAD.r, step = iw / n, X = (i) => PAD.l + step * i + step / 2;
   let out = g;
-  labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
+  labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   series.forEach((sr, k) => {
     const st = STYLES[k % 3];
@@ -129,5 +138,5 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
       if (i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
     });
   });
-  return frame(H, aria, out);
+  return frame(H, aria, out, xtitle);
 }

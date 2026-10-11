@@ -37,6 +37,18 @@ Back/Forward restore each entry exactly. Explorer and Revenue overlay up to 3 sl
 
 v1 pure modules are reused by import (`format.js`, `names.js`, `geomap.js`, `contrast.js`); nothing is recomputed differently from v1.
 
+## Analysis pages (Explorer, Revenue)
+Left column (sticky; stacked above the plots at 390): selected slots with name, id, state and region, "+ Add", the analysis level (Node | State | Region | National,
+applied to the first slot; going up and back remembers the node), window, price basis, mounting (single-axis tracker; Fixed tilt is shown disabled) and the key indicators per slot.
+Centre: the PML decomposition by hour of the typical day (system energy, losses, congestion, price line, solar hours shaded, solar output on the right axis, average and captured
+price lines, 24-value table), Revenue's production x price chart, the value factor by month or by year (years also carry average and captured price), the comparison table for
+several slots and, at the National level, sortable tables of all states and all regions (published area fields; a row click sets the slot).
+Intro texts and labels live in `assets/js/copy.js` and are a **draft** pending Nico's approval.
+Chart widths follow the container so tick labels stay readable on phones; every chart has x tick labels and an x axis title (tested).
+
+## Roadmap (not built)
+Tracker vs fixed tilt, irradiance, typical year and clear sky are held for a later solar brief: no UI beyond the disabled "Fixed tilt" option.
+
 ## Numbers
 All figures are published fields (`analysis_nodos.json`, `analysis.json`, `series_*.json`). Explorer, Revenue and compare read the same record
 (`explorer-data.js`), so a number cannot differ between views. Revenue bars follow the typical day and are scaled to the published yearly `ingreso`;
