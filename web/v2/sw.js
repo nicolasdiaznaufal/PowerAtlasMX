@@ -6,7 +6,7 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m9-2-e2c10377';
+const VERSION = 'v2-m9-2-f1f5dac2';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 const DATA_MAX = 16; // bound of the data cache: the data files are 1 to 3 MB each, variants add up; oldest entries leave first

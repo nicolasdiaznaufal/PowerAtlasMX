@@ -2,7 +2,7 @@
 // reference (a reference line, not a scenario: no KPIs exist for it) and cloud loss. Areas have no irradiance files.
 import { num } from '../../../assets/js/format.js';
 import { irradianceOf } from './solar-data.js';
-import { groupChart, lineChart, renderChart } from './svg-charts.js';
+import { groupChart, lineChart, renderChart, chartWidth, thin } from './svg-charts.js';
 import { COPY } from './copy.js';
 import { esc, nameOf } from './compare-ui.js';
 
@@ -63,7 +63,7 @@ export function paintIrradiance(root, { entries, shell, winId, cfg, wx, data, cl
     sum.innerHTML = `Yearly total${esc(wxNote)}: <b>${num(s.annual.ghi, 0)}</b> kWh/m² global horizontal · <b>${num(s.annual.poa, 0)}</b> kWh/m² ${plane}`
       + (s.loss ? ` · cloud loss vs clear sky: <b>${s.loss.poa === null ? '—' : num(s.loss.poa, 1)}%</b> of irradiance, <b>${s.loss.prod === null ? '—' : num(s.loss.prod, 1)}%</b> of production` : '');
     const ghost = clearOn && s.c;
-    renderChart(body.querySelector(`[data-m="${k}"]`), () => groupChart({ labels: s.mGhi.labels, H: 230, fmt: (v) => num(v, 0),
+    renderChart(body.querySelector(`[data-m="${k}"]`), () => groupChart({ labels: s.mGhi.labels, H: 230, fmt: (v) => num(v, 0), xEvery: thin(12, chartWidth(body.querySelector(`[data-m="${k}"]`)), 44),
       series: [{ vals: s.mGhi.vals, color: 'var(--s2)', label: 'GHI' }, { vals: s.mPoa.vals, color: 'var(--s1)', label: 'POA' }, ...(ghost ? [{ vals: s.mGhiClear, ghost: true, label: 'GHI, clear sky' }, { vals: s.mPoaClear, ghost: true, label: 'POA, clear sky' }] : [])],
       aria: 'Monthly irradiance in kWh per square metre: global horizontal and plane of array', ytitle: 'kWh/m² per month', xtitle: wx === 'win' ? 'Month of the window' : 'Month (typical year)' }));
     const hrs = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
