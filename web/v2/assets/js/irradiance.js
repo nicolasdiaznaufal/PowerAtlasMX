@@ -42,7 +42,7 @@ export function nodeSolar({ id, cfg, wx, winId, vfile, clear }) {
 export function irradianceCardHTML(slots, clearOn) {
   return `<section class="xp-card irr" id="irr-card"><div class="xp-vhead"><h2 class="mono">Solar resource: irradiance and production</h2>
     <label class="chk"><input type="checkbox" id="irr-clear"${clearOn ? ' checked' : ''}> <span>Show clear-sky reference</span></label></div>
-    <p class="xp-text">${esc(COPY.irrNote)}</p><div id="irr-body">${slots.some((s) => s.kind === 'node') ? '<p class="xp-text">Irradiance loads when this section comes into view.</p>' : '<p class="xp-text">Irradiance is available for nodes only: pick a node to see it.</p>'}</div></section>`;
+    <p class="xp-text">${esc(COPY.ghiNote)}</p><p class="xp-text">${esc(COPY.poaNote)}</p><p class="xp-text">${esc(COPY.irrNote)}</p><div id="irr-body">${slots.some((s) => s.kind === 'node') ? '<p class="xp-text">Irradiance loads when this section comes into view.</p>' : '<p class="xp-text">Irradiance is available for nodes only: pick a node to see it.</p>'}</div></section>`;
 }
 
 /** body: fills #irr-body once the files are loaded. data = {vfile, clear}; entries = scenario/real entries with slots. */
@@ -63,16 +63,16 @@ export function paintIrradiance(root, { entries, shell, winId, cfg, wx, data, cl
     sum.innerHTML = `Yearly total${esc(wxNote)}: <b>${num(s.annual.ghi, 0)}</b> kWh/m² global horizontal · <b>${num(s.annual.poa, 0)}</b> kWh/m² ${plane}`
       + (s.loss ? ` · cloud loss vs clear sky: <b>${s.loss.poa === null ? '—' : num(s.loss.poa, 1)}%</b> of yearly plane-of-array irradiance, <b>${s.loss.prod === null ? '—' : num(s.loss.prod, 1)}%</b> of typical-day production (1 − real ÷ clear)` : '');
     const ghost = clearOn && s.c;
-    renderChart(body.querySelector(`[data-m="${k}"]`), () => groupChart({ labels: s.mGhi.labels, H: 230, fmt: (v) => num(v, 0), xEvery: thin(12, chartWidth(body.querySelector(`[data-m="${k}"]`)), 44),
+    renderChart(body.querySelector(`[data-m="${k}"]`), () => groupChart({ labels: s.mGhi.labels, H: 230, fmt: (v) => num(v, 0), unit: 'kWh/m²', xEvery: thin(12, chartWidth(body.querySelector(`[data-m="${k}"]`)), 44),
       series: [{ vals: s.mGhi.vals, color: 'var(--s2)', label: 'GHI' }, { vals: s.mPoa.vals, color: 'var(--s1)', label: 'POA' }, ...(ghost ? [{ vals: s.mGhiClear, ghost: true, label: 'GHI, clear sky' }, { vals: s.mPoaClear, ghost: true, label: 'POA, clear sky' }] : [])],
       aria: 'Monthly irradiance in kWh per square metre: global horizontal and plane of array', ytitle: 'kWh/m² per month', xtitle: wx === 'win' ? 'Month of the window' : 'Month (typical year)' }));
     const hrs = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
     const hs = [{ vals: s.r.poa[winId], label: 'POA' }, { vals: s.r.ghi[winId], label: 'GHI', style: { color: 'var(--s2)', dash: '7 4', marker: 'square' } }];
     if (ghost) hs.push({ vals: s.c.poa[winId], label: 'POA, clear sky', style: { color: 'var(--s1)', dash: '2 4', marker: 'triangle' } }, { vals: s.c.ghi[winId], label: 'GHI, clear sky', style: { color: 'var(--s2)', dash: '2 4', marker: 'triangle' } });
-    renderChart(body.querySelector(`[data-h="${k}"]`), () => lineChart({ series: hs, labels: hrs, H: 230, xEvery: 2, markEvery: 2, fmt: (v) => num(v, 2), aria: 'Typical day irradiance by hour in kWh per square metre', ytitle: 'kWh/m² per hour', xtitle: 'Hour of day, CDMX clock (start of hour)' }));
+    renderChart(body.querySelector(`[data-h="${k}"]`), () => lineChart({ series: hs, labels: hrs, H: 230, xEvery: 2, markEvery: 2, fmt: (v) => num(v, 2), unit: 'kWh/m²', hoverTitle: (l) => `${l}:00 CDMX`, aria: 'Typical day irradiance by hour in kWh per square metre', ytitle: 'kWh/m² per hour', xtitle: 'Hour of day, Mexico City time (CDMX), hour beginning' }));
     const ps = [{ vals: s.r.y && s.r.y[winId], label: 'Production' }];
     if (ghost && s.c.y) ps.push({ vals: s.c.y[winId], label: 'Production, clear sky', style: { color: 'var(--s1)', dash: '2 4', marker: 'triangle' } });
-    renderChart(body.querySelector(`[data-p="${k}"]`), () => lineChart({ series: ps, labels: hrs, H: 200, xEvery: 2, markEvery: 2, fmt: (v) => num(v, 2), aria: 'Typical day production by hour in megawatt hours per megawatt peak', ytitle: 'MWh per MWp', xtitle: 'Hour of day, CDMX clock (start of hour)' }));
+    renderChart(body.querySelector(`[data-p="${k}"]`), () => lineChart({ series: ps, labels: hrs, H: 200, xEvery: 2, markEvery: 2, fmt: (v) => num(v, 2), unit: 'MWh/MWp', hoverTitle: (l) => `${l}:00 CDMX`, aria: 'Typical day production by hour in megawatt hours per megawatt peak', ytitle: 'MWh per MWp', xtitle: 'Hour of day, Mexico City time (CDMX), hour beginning' }));
   }
 }
 

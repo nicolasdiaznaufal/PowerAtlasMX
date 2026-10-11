@@ -38,14 +38,12 @@ test('Revenue and Explorer agree for nodes, national, a region and a state, both
       // hourly bars (production x price shape) add up to the yearly figure within rounding
       const day = rv.hours.real.reduce((a, b) => a + b, 0) * 365;
       assert.ok(near(day, rv.total, 1e-9), `${tag}: hours ${day} vs ingreso ${rv.total}`);
-      const sday = rv.hours.shortcut.reduce((a, b) => a + b, 0) * 365;
-      assert.ok(near(sday, rv.shortcut, 1e-9), `${tag}: shortcut hours`);
       // shape inputs are the Explorer's own profile arrays (same object)
       assert.equal(rec.hours.pml.length, 24);
     }
     // yearly revenue ties to production x captured price: exact for nodes
     if (slot.kind === 'node') assert.ok(near(rec.ingreso, rec.yf * rec.cap, 1e-6), `${tag}: ingreso = yf x cap`);
-    assert.ok(rv.total > 0 && rv.shortcut >= rv.total * 0.9);
+    assert.ok(rv.total > 0);
   }
   assert.ok(checked >= 30, `only ${checked} combinations checked`);
 });
@@ -90,9 +88,9 @@ test('typical-day gap and scale factor are derived from the published ingreso', 
 
 test("table labels name the basis; the real-mode footnote says the factor includes the today's-pesos adjustment", () => {
   const n = tableLabels(false, 0.819), r = tableLabels(true, 0.861);
-  assert.match(n.shortcut, /nominal/); assert.match(n.hour, /nominal/);
+  assert.match(n.hour, /nominal/);
   assert.doesNotMatch(n.note, /today's pesos/);
-  assert.match(r.shortcut, /today's pesos/); assert.match(r.hour, /today's pesos/);
+  assert.match(r.hour, /today's pesos/);
   assert.match(r.note, /includes the adjustment from nominal to today's pesos/);
   assert.match(r.note, /0\.861/); assert.match(n.note, /0\.819/);
 });

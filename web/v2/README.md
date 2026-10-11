@@ -54,7 +54,7 @@ Chart widths follow the container so tick labels stay readable on phones; every 
   Typical day and revenue always use the 12-month windows. Months without complete data are gaps, not zeros.
 - **Scenarios** (`&sc=p:50,m:100,y:0`; the default load is always real values): three levers on the typical-day hourly profile, applied as midday dip, then price shift, then yield.
   Every simulated figure is `published value x (scenario typical-day result / baseline typical-day result)`, so neutral sliders reproduce the published numbers exactly.
-  Simulated: average price, captured price, value factor (and VF of the average day), revenue per MWp and the shortcut revenue. Not simulated (shown unchanged and marked):
+  Simulated: average price, captured price, value factor (and VF of the average day), revenue per MWp. Not simulated (shown unchanged and marked):
   share of output at price <= 0, evening-peak minus solar spread, and the monthly/yearly series. A visible "Simulated" badge, deltas vs real and ghost lines of the published profile accompany every simulated view; "Reset to real values" restores everything.
   The price shift moves the typical-day average by exactly the shift; the displayed (published-scaled) average moves by the shift times (published average / typical-day average), within about 2%.
 

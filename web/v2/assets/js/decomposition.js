@@ -11,7 +11,7 @@ const hh = (h) => String(h).padStart(2, '0');
 export function decompTable(rec) {
   const h = rec.hours;
   const rows = h.pml.map((p, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(h.energia[i], 1)}</td><td class="n">${num(h.perdidas[i], 1)}</td><td class="n">${num(h.congestion[i], 1)}</td><td class="n">${num(p, 1)}</td><td class="n">${num(h.y[i], 3)}</td></tr>`).join('');
-  return `<table><thead><tr><th>Hour</th><th class="n">System energy (= price − losses − congestion)</th><th class="n">Losses</th><th class="n">Congestion</th><th class="n">Price (PML)</th><th class="n">Solar output, MWh/MWp</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table><thead><tr><th>Hour (CDMX)</th><th class="n">System energy (= price − losses − congestion)</th><th class="n">Losses</th><th class="n">Congestion</th><th class="n">Price (PML)</th><th class="n">Solar output, MWh/MWp</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 export function decompSectionHTML(entries, shell) {
@@ -25,7 +25,7 @@ export function decompSectionHTML(entries, shell) {
   return `<section class="xp-card decomp"><h2 class="mono">${esc(COPY.decomp.title)}</h2>
     <div class="legend mono"><span><i style="background:var(--c-energy)"></i>System energy</span><span><i style="background:var(--c-losses)"></i>Losses</span><span><i style="background:var(--c-cong)"></i>Congestion</span>
     <span><i class="line ink"></i>Price (PML)</span><span><i class="dash"></i>Average price</span><span><i class="dot"></i>Captured price</span><span><i class="line prod"></i>Solar output</span><span><i class="band"></i>Solar hours</span></div>
-    <p class="xp-text">${esc(COPY.decomp.note)}</p>${cards}</section>`;
+    <p class="xp-text">${esc(COPY.decomp.note)}</p><p class="xp-text">${esc(COPY.clockNote)}</p>${cards}</section>`;
 }
 
 /** draw the charts after the HTML is in the DOM (they need the real width). */

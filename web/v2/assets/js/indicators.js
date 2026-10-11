@@ -14,7 +14,7 @@ export function indicatorItems(row, view, real, base = null) {
     ['Value factor', t.vf.text, `captured ÷ average, ${pesos}`, d(t.vf.value, base && base.tiles.vf.value, 2)]];
   const sim = base ? ' · not simulated' : '';
   const rest = [['Solar output at price ≤ 0', t.z.text, `% of energy${sim}`], ['Value factor, average day', t.vfDay.text, 'nominal', d(t.vfDay.value, base && base.tiles.vfDay.value, 2)]];
-  if (view === 'revenue') return [['Revenue per MWp per year', mil(r.total), `M MXN, ${pesos}`, base && r.total !== null && base.rev.total !== null ? d(r.total / 1e6, base.rev.total / 1e6, 2) : ''], ['Shortcut overstates by', r.over === null ? '—' : num(r.over, 0), '%', ''], ...prices, ...rest];
+  if (view === 'revenue') return [['Revenue per MWp per year', mil(r.total), `M MXN, ${pesos}`, base && r.total !== null && base.rev.total !== null ? d(r.total / 1e6, base.rev.total / 1e6, 2) : ''], ...prices, ...rest];
   return [...prices, ...rest, ['Evening peak minus solar hours', t.spread.text, `MXN/MWh, nominal${sim}`, '']];
 }
 

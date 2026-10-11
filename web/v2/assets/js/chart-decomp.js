@@ -2,6 +2,7 @@
 // shaded solar hours, solar output on a right axis, average and captured price lines. (v1 section 02, restyled.)
 import { num } from '../../../assets/js/format.js';
 import { W, PAD, axis, frame, niceMax, niceTicks } from './svg-charts.js';
+import { setHover } from './hover.js';
 
 const RIGHT = 50; // extra viewBox width for the output axis
 
@@ -54,5 +55,10 @@ export function decompChart({ energia, perdidas, congestion, pml, y, base, cap, 
   out += `<path d="${y.map((v, h) => `${h ? 'L' : 'M'}${X(h).toFixed(1)},${R(v).toFixed(1)}`).join('')}" class="out-line" fill="none"><title>Solar output (right axis)</title></path>`;
   for (const v of [0, ymax / 2, ymax]) out += `<text x="${W - PAD.r + 8}" y="${(R(v) + 4).toFixed(1)}" class="tick prodtick">${num(v, 2)}</text>`;
   out += `<text x="${W - PAD.r + 8}" y="11" class="atitle prodtick">MWh/MWp</text>`;
-  return frame(H, aria, out, 'Hour of day, CDMX clock (start of hour)', W + RIGHT);
+  const f1 = (v) => `${num(v, 1)} MXN/MWh`;
+  setHover({ vbW: W + RIGHT, H, xs: Array.from({ length: 24 }, (_, h) => X(h)), at: (h) => ({ title: `${String(h).padStart(2, '0')}:00 CDMX`, items: [
+    { name: 'System energy', color: 'var(--c-energy)', text: f1(energia[h]) }, { name: 'Losses', color: 'var(--c-losses)', text: f1(perdidas[h]) },
+    { name: 'Congestion', color: 'var(--c-cong)', text: f1(congestion[h]) }, { name: 'Price (PML)', color: 'var(--ink)', text: f1(pml[h]) },
+    { name: 'Solar output', color: 'var(--c-prod)', text: `${num(y[h], 3)} MWh/MWp` }] }) });
+  return frame(H, aria, out, 'Hour of day, Mexico City time (CDMX), hour beginning', W + RIGHT);
 }

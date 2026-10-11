@@ -47,6 +47,6 @@ export function columnLabels(real, sim = false, ctx = null) {
     heading: (win) => `Comparison, ${win} · prices in ${b}${ctx ? ` · ${ctx.cfg === 'fijo' ? 'fixed tilt' : 'single-axis tracker'} · ${ctx.wx === 'mean' ? 'yearly mean weather' : ctx.wx === 'win' ? 'window weather' : `${ctx.wx.slice(1)} weather`}` : ''}`,
     base: `Average price, MXN/MWh (${b})`, cap: `Captured price, MXN/MWh (${b})`, vf: `Value factor (${b})`,
     z: `Output at price ≤ 0, % of energy${sim ? ' (not simulated)' : ''}`, vfDay: 'VF, average day (nominal)',
-    revenue: `Revenue per MWp per year, M MXN (${b})`, shortcut: `Shortcut, M MXN (${b})`, over: 'Shortcut overstates, %',
+    revenue: `Revenue per MWp per year, M MXN (${b})`,
   };
 }

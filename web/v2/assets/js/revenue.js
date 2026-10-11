@@ -14,7 +14,7 @@ const hh = (i) => String(i).padStart(2, '0');
 
 function revenueCardHTML(entries) {
   return `<section class="xp-card"><h2 class="mono">Production × price, hour by hour (typical day, 1 MWp)</h2>
-    ${entries.length > 1 ? `<div class="legend mono" id="rv-leg"></div>` : '<div class="legend mono"><span><i style="background:var(--ink-3)"></i>Shortcut: every hour at the average price</span><span><i style="background:var(--s1)"></i>Hour by hour</span></div>'}
+    ${entries.length > 1 ? `<div class="legend mono" id="rv-leg"></div>` : '<div class="legend mono"><span><i style="background:var(--s1)"></i>Revenue by hour</span></div>'}
     <div class="chart" id="rv-hours"></div><div id="rv-notes" class="xp-text"></div>
     <details><summary class="mono">Hour-by-hour values</summary><div class="tbl" id="rv-table"></div></details></section>`;
 }
@@ -35,23 +35,23 @@ export function mountRevenue(host, { shell, side }) {
         if (entries.length === 1) {
           const r = rows[0], e = entries[0];
           if (r.ok && r.rev.hours) {
-            renderChart(hours, () => pairChart({ a: r.rev.hours.shortcut, b: r.rev.hours.real, ca: 'var(--ink-3)', cb: 'var(--s1)', H: 300, aria: 'Typical day: revenue of 1 MWp by hour, shortcut versus hour by hour', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, CDMX clock (start of hour)', unit: 'MXN per MWp', ghost: e.real && realRows[0].ok && realRows[0].rev.hours ? realRows[0].rev.hours.real : null }));
+            renderChart(hours, () => pairChart({ b: r.rev.hours.real, cb: 'var(--s1)', H: 300, aria: 'Typical day: revenue of 1 MWp by hour', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, Mexico City time (CDMX), hour beginning', unit: 'MXN per MWp', ghost: e.real && realRows[0].ok && realRows[0].rev.hours ? realRows[0].rev.hours.real : null }));
             const lab = tableLabels(real, r.rev.scale);
-            root.querySelector('#rv-notes').innerHTML = `<b>${esc(nameOf(shell, e))}</b>: 1 MWp earns ${mil(r.rev.total)} M MXN a year (${pesos}); every hour at the average price would give ${mil(r.rev.shortcut)} M MXN${r.rev.over === null ? '' : `, ${num(r.rev.over, 0)}% more`}. ${esc(lab.note)}${esc(gapText(r))}`;
+            root.querySelector('#rv-notes').innerHTML = `<b>${esc(nameOf(shell, e))}</b>: 1 MWp earns ${mil(r.rev.total)} M MXN a year (${pesos}). ${esc(lab.note)}${esc(gapText(r))}`;
             const h = e.rec.hours;
-            root.querySelector('#rv-table').innerHTML = `<table><thead><tr><th>Hour</th><th class="n">Output, MWh/MWp</th><th class="n">Price (nominal), MXN/MWh</th><th class="n">Output × price, MXN</th><th class="n">${lab.shortcut}</th><th class="n">${lab.hour}</th></tr></thead><tbody>${h.y.map((y, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(y, 3)}</td><td class="n">${num(h.pml[i], 0)}</td><td class="n">${num(r.rev.raw[i], 0)}</td><td class="n">${num(r.rev.hours.shortcut[i], 0)}</td><td class="n">${num(r.rev.hours.real[i], 0)}</td></tr>`).join('')}</tbody></table>`;
+            root.querySelector('#rv-table').innerHTML = `<table><thead><tr><th>Hour (CDMX)</th><th class="n">Output, MWh/MWp</th><th class="n">Price (nominal), MXN/MWh</th><th class="n">Output × price, MXN</th><th class="n">${lab.hour}</th></tr></thead><tbody>${h.y.map((y, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(y, 3)}</td><td class="n">${num(h.pml[i], 0)}</td><td class="n">${num(r.rev.raw[i], 0)}</td><td class="n">${num(r.rev.hours.real[i], 0)}</td></tr>`).join('')}</tbody></table>`;
           } else hours.innerHTML = '<p class="xp-text">No hourly profile for this selection.</p>';
         } else {
           root.querySelector('#rv-leg').innerHTML = legendHTML(entries, shell);
           const series = rows.map((r, k) => ({ vals: r.ok && r.rev.hours ? r.rev.hours.real : Array(24).fill(null), label: nameOf(shell, entries[k]) }));
-          renderChart(hours, () => lineChart({ series, labels, H: 300, xEvery: 2, fmt: (v) => num(v, 0), aria: 'Typical day: hour-by-hour revenue of 1 MWp for each selected slot', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, CDMX clock (start of hour)' }));
+          renderChart(hours, () => lineChart({ series, labels, H: 300, xEvery: 2, fmt: (v) => num(v, 0), unit: 'MXN', hoverTitle: (l) => `${l}:00 CDMX`, aria: 'Typical day: hour-by-hour revenue of 1 MWp for each selected slot', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, Mexico City time (CDMX), hour beginning' }));
           root.querySelector('#rv-notes').innerHTML = `<ul class="scale-notes">${rows.filter((r) => r.ok && r.rev.scale !== null).map((r) => `<li><b>${esc(nameOf(shell, r.slot ? entries[r.k] : entries[0]))}</b>: ${mil(r.rev.total)} M MXN a year (${pesos}); ${esc(tableLabels(real, r.rev.scale).note)}${esc(gapText(r))}</li>`).join('')}</ul>`;
           root.querySelector('#rv-table').innerHTML = '';
           root.querySelector('#rv-table').closest('details').hidden = true;
         }
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
-          const cols = [{ h: L.revenue, get: (r) => (r.na ? NA_HTML : mil(r.rev.total)) }, { h: L.shortcut, get: (r) => (r.na ? NA_HTML : mil(r.rev.shortcut)) }, { h: L.over, get: (r) => (r.na ? NA_HTML : r.rev.over === null ? '—' : num(r.rev.over, 0)) },
+          const cols = [{ h: L.revenue, get: (r) => (r.na ? NA_HTML : mil(r.rev.total)) }, 
             { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => (r.na ? NA_HTML : r.tiles.vfDay.text) }];
           root.querySelector('#cmp-table').innerHTML = `<h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}`;
         }

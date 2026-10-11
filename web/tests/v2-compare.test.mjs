@@ -40,7 +40,7 @@ test('every number for slot k equals the single-slot value (mixes, both windows,
       if (rec.missing) { assert.equal(rows[k].ok, false); return; }
       const t = tilesOf(rec, real), rv = revenueOf(rec, real);
       for (const x of t) { assert.equal(rows[k].tiles[x.id].value, x.value, `${tag} ${x.id}`); assert.equal(rows[k].tiles[x.id].text, x.text); }
-      assert.equal(rows[k].rev.total, rv.total, tag); assert.equal(rows[k].rev.shortcut, rv.shortcut); assert.equal(rows[k].rev.scale, rv.scale);
+      assert.equal(rows[k].rev.total, rv.total, tag); assert.equal(rows[k].rev.scale, rv.scale);
       assert.equal(rows[k].partial, partialNote(rec));
       assert.deepEqual(entries[k].series, seriesFor(s, slot));
       const own = yearRows(seriesFor(s, slot), real);
@@ -113,7 +113,7 @@ test('table headings name the price basis; average-day VF is labelled nominal', 
   const n = columnLabels(false), r = columnLabels(true);
   assert.match(n.base, /nominal/); assert.match(n.cap, /nominal/); assert.match(n.revenue, /nominal/);
   assert.match(r.base, /today's pesos/); assert.match(r.cap, /today's pesos/); assert.match(r.vf, /today's pesos/);
-  assert.match(r.revenue, /today's pesos/); assert.match(r.shortcut, /today's pesos/);
+  assert.match(r.revenue, /today's pesos/);
   assert.match(r.vfDay, /nominal/); assert.match(n.vfDay, /nominal/);
   assert.match(r.heading('Aug 2025 – Jul 2026'), /today's pesos/);
 });

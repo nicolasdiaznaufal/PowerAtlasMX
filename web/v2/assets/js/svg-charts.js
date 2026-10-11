@@ -1,6 +1,7 @@
 // Tiny SVG charts (no library): colours come from CSS tokens so they follow the theme and the contrast test.
 import { num } from '../../../assets/js/format.js';
 import { STYLES, markerPath } from './series-style.js';
+import { setHover, takeHover, attachHover } from './hover.js';
 
 export let W = 640;
 export const PAD = { l: 52, r: 12, t: 24, b: 48 };
@@ -11,7 +12,11 @@ export function thin(n, width, per = 54, unit = 1) {
   const plot = Math.max(120, width - PAD.l - PAD.r), every = Math.max(1, Math.ceil((n * per) / plot));
   return Math.ceil(every / unit) * unit;
 }
-export function renderChart(el, build) { W = chartWidth(el); el.innerHTML = build(); }
+export function renderChart(el, build) {
+  W = chartWidth(el); setHover(null); el.innerHTML = build();
+  const spec = takeHover();
+  if (spec && typeof document !== 'undefined' && el && typeof el.querySelector === 'function') attachHover(el, spec);
+}
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function niceMax(v) {
@@ -72,6 +77,7 @@ export function barChart({ bars, hline = null, refs = [], H = 220, scale = null,
   });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   if (hline && hline.v !== null) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
+  setHover({ vbW: W, H, xs: bars.map((_, i) => PAD.l + step * i + step / 2), at: (i) => ({ title: bars[i].label, items: [{ name: ytitle || 'Value', color: bars[i].color, text: bars[i].v === null || bars[i].v === undefined ? 'no data' : fmt(bars[i].v) }] }) });
   return frame(H, aria, out, xtitle);
 }
 
@@ -99,33 +105,35 @@ export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, 
   return frame(H, aria, out, xtitle);
 }
 
-/** two bars per hour (a = left, b = right). Used for shortcut vs hour-by-hour revenue. */
-export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN', xtitle = '', ghost = null }) {
-  const vals = finite([...a, ...b, ...(ghost || [])]);
+/** one bar per hour (b) in the real/published revenue, optionally with the published value as an outline (ghost). */
+export function pairChart({ b, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN', xtitle = '', ghost = null }) {
+  const vals = finite([...b, ...(ghost || [])]);
   const sc = niceTicks(Math.min(0, ...vals), Math.max(...vals, 1e-9));
   const { g, y } = axis(H, sc.ticks, (v) => num(v, 0), ytitle);
-  const iw = W - PAD.l - PAD.r, step = iw / 24, bw = step * 0.38, y0 = y(0);
+  const iw = W - PAD.l - PAD.r, step = iw / 24, bw = step * 0.7, y0 = y(0);
   let out = g;
   for (let h = 0; h < 24; h++) {
-    const x = PAD.l + step * h + step * 0.08, hh = String(h).padStart(2, '0');
-    [[a[h], ca, 'shortcut'], [b[h], cb, 'hour by hour']].forEach(([v, c, nm], k) => {
-      if (v === null || v === undefined) return;
+    const x = PAD.l + step * h + (step - bw) / 2, hh = String(h).padStart(2, '0');
+    const v = b[h];
+    if (v !== null && v !== undefined) {
       const y1 = y(v), top = Math.min(y0, y1), hgt = Math.max(0.5, Math.abs(y0 - y1));
-      out += `<rect x="${(x + k * (bw + 1)).toFixed(1)}" y="${Math.min(top, H - PAD.b - hgt).toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${c}"><title>${hh}:00 ${nm}: ${num(v, 0)} ${unit}</title></rect>`;
-    });
-    if (ghost && ghost[h] !== null && ghost[h] !== undefined) { const g1 = y(ghost[h]), gt = Math.min(y0, g1); out += `<rect x="${(x + bw + 1).toFixed(1)}" y="${gt.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, Math.abs(y0 - g1)).toFixed(1)}" class="ghost-bar"><title>${hh}:00 published: ${num(ghost[h], 0)} ${unit}</title></rect>`; }
-    if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${hh}</text>`;
+      out += `<rect x="${x.toFixed(1)}" y="${Math.min(top, H - PAD.b - hgt).toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${cb}"><title>${hh}:00 CDMX: ${num(v, 0)} ${unit}</title></rect>`;
+    }
+    if (ghost && ghost[h] !== null && ghost[h] !== undefined) { const g1 = y(ghost[h]), gt = Math.min(y0, g1); out += `<rect x="${x.toFixed(1)}" y="${gt.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, Math.abs(y0 - g1)).toFixed(1)}" class="ghost-bar"><title>${hh}:00 CDMX published: ${num(ghost[h], 0)} ${unit}</title></rect>`; }
+    if (h % 3 === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${hh}</text>`;
   }
+  setHover({ vbW: W, H, xs: Array.from({ length: 24 }, (_, h) => PAD.l + step * h + step / 2), at: (h) => ({ title: `${String(h).padStart(2, '0')}:00 CDMX`, items: [{ name: 'Revenue', color: cb, text: b[h] == null ? 'n/a' : `${num(b[h], 0)} ${unit}` }, ...(ghost && ghost[h] != null ? [{ name: 'Published', color: 'var(--ink-2)', text: `${num(ghost[h], 0)} ${unit}` }] : [])] }) });
   return frame(H, aria, out, xtitle);
 }
 
 /** overlay of up to 3 series. series: [{vals, label}] in slot order (style i). nulls break the line. markEvery: marker every n points. */
-export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '', xtitle = '' }) {
+export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '', xtitle = '', unit = '', hline = null, bands = [], hoverTitle = (l) => l }) {
   const all = finite(series.flatMap((s) => s.vals));
   const sc = scale || niceTicks(Math.min(0, ...all), Math.max(...all, 1e-9));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
   const n = labels.length, iw = W - PAD.l - PAD.r, step = iw / n, X = (i) => PAD.l + step * i + step / 2;
   let out = g;
+  for (const [a, b] of bands) out += `<rect x="${(PAD.l + step * a).toFixed(1)}" y="${PAD.t}" width="${(step * (b - a + 1)).toFixed(1)}" height="${H - PAD.t - PAD.b}" class="win-band"/>`;
   labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   series.forEach((sr, k) => {
@@ -139,11 +147,14 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
       if (i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
     });
   });
+  if (hline && hline.v !== null && hline.v !== undefined) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
+  const u = unit ? ` ${unit}` : '';
+  setHover({ vbW: W, H, xs: labels.map((_, i) => X(i)), at: (i) => ({ title: hoverTitle(labels[i]), items: series.map((sr, k) => ({ name: sr.label, color: (sr.style || STYLES[k % 3]).color, text: sr.vals[i] === null || sr.vals[i] === undefined ? 'no data' : `${fmt(sr.vals[i])}${u}` })) }) });
   return frame(H, aria, out, xtitle);
 }
 
 /** grouped bars: labels x series [{vals, color, ghost: bool}] (ghost = outline only, e.g. the clear-sky reference). */
-export function groupChart({ labels, series, H = 240, fmt = (v) => num(v, 0), xEvery = 1, aria, ytitle = '', xtitle = '' }) {
+export function groupChart({ labels, series, H = 240, fmt = (v) => num(v, 0), xEvery = 1, aria, ytitle = '', xtitle = '', unit = '' }) {
   const all = finite(series.flatMap((s) => s.vals)), sc = niceTicks(0, Math.max(...all, 1e-9));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
   const iw = W - PAD.l - PAD.r, step = iw / labels.length, n = series.length, bw = Math.max(2, (step * 0.8) / n), y0 = y(0);
@@ -158,5 +169,7 @@ export function groupChart({ labels, series, H = 240, fmt = (v) => num(v, 0), xE
     });
     if (i % xEvery === 0) out += `<text x="${(PAD.l + step * i + step / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`;
   });
+  const u = unit ? ` ${unit}` : '';
+  setHover({ vbW: W, H, xs: labels.map((_, i) => PAD.l + step * i + step / 2), at: (i) => ({ title: labels[i], items: series.map((sr) => ({ name: sr.label || '', color: sr.ghost ? 'var(--ink-2)' : sr.color, text: sr.vals[i] == null ? 'no data' : `${fmt(sr.vals[i])}${u}` })) }) });
   return frame(H, aria, out, xtitle);
 }

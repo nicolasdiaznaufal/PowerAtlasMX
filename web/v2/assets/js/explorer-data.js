@@ -78,9 +78,9 @@ export function tilesOf(rec, real = false) {
 export function tableLabels(real, scale) {
   const f = num(scale, 3);
   return real
-    ? { shortcut: "Shortcut, MXN (today's pesos)", hour: "Hour by hour (scaled), MXN (today's pesos)",
+    ? { hour: "Hour by hour (scaled), MXN (today's pesos)",
         note: `Output × price is the typical-day product in nominal pesos. The "hour by hour (scaled)" column multiplies it by ${f}, which includes the adjustment from nominal to today's pesos, so that the day adds up to the published yearly revenue in today's pesos ÷ 365.` }
-    : { shortcut: 'Shortcut, MXN (nominal)', hour: 'Hour by hour (scaled), MXN (nominal)',
+    : { hour: 'Hour by hour (scaled), MXN (nominal)',
         note: `Output × price is the typical-day product. The "hour by hour (scaled)" column multiplies it by ${f} so that the day adds up to the published yearly revenue ÷ 365.` };
 }
 
@@ -99,22 +99,18 @@ export function annualEquivNote(rec) {
 
 /** Revenue per MWp per year, from the SAME record (same price, production and profile as Explorer).
  *  Headline figures are the published `ingreso` fields; hourly bars use the typical-day shape (production x price)
- *  scaled so that the day adds up to ingreso / 365 exactly. Shortcut = production x the all-hours average price. */
+ *  scaled so that the day adds up to ingreso / 365 exactly. */
 export function revenueOf(rec, real = false) {
   const b = priceBasis(rec, real);
   const total = b.real && rec.ingresoReal != null ? rec.ingresoReal : rec.ingreso;
-  const shortcut = rec.atajo != null && rec.base ? rec.atajo * (b.base / rec.base) : null; // published shortcut revenue, re-based when real
-  const out = { total, shortcut, over: total ? (shortcut / total - 1) * 100 : null, real: b.real, base: b.base, cap: b.cap, vf: b.vf, yf: rec.yf, hours: null, raw: null, scale: null, gap: null };
+  const out = { total, real: b.real, base: b.base, cap: b.cap, vf: b.vf, yf: rec.yf, hours: null, raw: null, scale: null, gap: null };
   const h = rec.hours;
   if (h) {
-    const wr = h.y.map((y, k) => y * h.pml[k]), sr = wr.reduce((a, c) => a + c, 0), sy = h.y.reduce((a, c) => a + c, 0);
+    const wr = h.y.map((y, k) => y * h.pml[k]), sr = wr.reduce((a, c) => a + c, 0);
     out.raw = wr;                                          // typical-day output x price, MXN per MWp per day (nominal)
     out.scale = sr > 0 && total != null ? total / 365 / sr : null; // factor that makes the day add up to the yearly figure
     out.gap = sr > 0 && rec.ingreso ? (sr * 365 / rec.ingreso - 1) * 100 : null; // typical day x 365 vs published nominal ingreso, %
-    out.hours = {
-      real: wr.map((v) => (sr > 0 && total != null ? (total / 365) * (v / sr) : null)),
-      shortcut: h.y.map((y) => (sy > 0 && shortcut != null ? (shortcut / 365) * (y / sy) : null)),
-    };
+    out.hours = { real: wr.map((v) => (sr > 0 && total != null ? (total / 365) * (v / sr) : null)) };
   }
   return out;
 }

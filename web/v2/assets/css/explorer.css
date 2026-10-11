@@ -159,3 +159,15 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .credits { color: var(--ink-3); margin: 8px 0 0; text-transform: none; letter-spacing: .02em; }
 .legend i.outline { background: none; border: 1.25px solid var(--ink-2); width: 14px; height: 10px; }
 .legend i.outline-dot { width: 18px; height: 0; border-top: 2px dotted var(--ink-2); border-radius: 0; }
+/* shared chart hover readout */
+.chart.hv-host { position: relative; }
+.chart .hv-svg { touch-action: pan-y; outline-offset: 2px; }
+.chart .hv-guide { stroke: var(--ink-2); stroke-width: 1; pointer-events: none; }
+.hv-box { position: absolute; top: 4px; transform: translateX(10px); z-index: 3; pointer-events: none; min-width: 150px; max-width: 280px; padding: 8px 10px; border: 1px solid var(--line, rgba(240,232,210,.25)); border-radius: 8px; background: var(--raised, #18211B); color: var(--ink); font: 11px/1.5 var(--font-mono) ; }
+.hv-box.flip { transform: translateX(calc(-100% - 10px)); }
+.hv-box b { display: block; margin-bottom: 4px; font-weight: 600; }
+.hv-box .hv-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.hv-box .hv-row i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.hv-box .hv-row em { font-style: normal; color: var(--ink-2); margin-right: auto; padding-right: 10px; }
+.hv-box .hv-row strong { font-weight: 500; }
+.chart .win-band { fill: var(--s1); opacity: .12; }
