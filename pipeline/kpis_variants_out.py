@@ -61,6 +61,13 @@ def variant_scalars(var: dict, ids: list, config_web: str, campos: list, gen: st
             "rounding": "4 decimals (as analysis_nodos.json); None = node outside the window universe"}
 
 
+def variant_extra(wins: dict, ids: list, config_web: str, variant: str, campos: list, gen: str) -> dict:
+    """Campos fuera del nucleo para UNA variante (Y1/Y2), mismos ids y redondeo que variant_scalars."""
+    return {"generated_at": gen, "schema_version": SCHEMA_VS, "config": config_web, "variant": variant,
+            "ids_ref": "variant_scalars_%s.json ids" % config_web, "n_ids": len(ids), "fields": campos,
+            "data": {w: {c: _col(t.reindex(ids)[c]) for c in campos} for w, t in wins.items()}}
+
+
 def perfiles_fijo(com_y: pd.DataFrame, tablas: pd.DataFrame, ids: list) -> dict:
     """Mismo calculo que web/tools/build_derived.py (node_profiles.json) con y = solar_v2 mean, config fixed."""
     ag = KV.combinar_variante(com_y, KV.tabla_larga(tablas, "fixed", "mean"), "mean")
@@ -133,7 +140,8 @@ def construir(root: Path = KV.DATA_ROOT) -> dict:
     tablas = tablas[tablas["nodo"].isin(set(ids))]
     sc = pd.read_parquet(r["scalars"])
     com_full = KV.cargar_comunes(r["comunes"], ids)
-    com_y = com_full[com_full["anio"] * 100 + com_full["mes"] >= 202408].reset_index(drop=True)
+    ym = com_full["anio"] * 100 + com_full["mes"]
+    com_y = com_full[(ym >= 202408) & (ym <= 202607)].reset_index(drop=True)      # meses de Y1 + Y2
     rep: dict = {"gates": {}, "files": {}}
     nod, var = {}, {}
     for cfg in ("tracker", "fixed"):
@@ -147,7 +155,8 @@ def construir(root: Path = KV.DATA_ROOT) -> dict:
             KV.comparar(var[cfg]["mean"][w], mean_t[v], KV.CAMPOS9, tol=1e-12)
         rep["gates"][f"y_f_vs_solar_scalars_{cfg}"] = KV.comparar_scalars(var[cfg], sc, cfg)
     errs = KV.comparar_json(nod["tracker"], pub)
-    rep["gates"]["tracker_json_vs_publicado_max_abs"] = max(errs.values())
+    rep["gates"]["tracker_json_vs_publicado"] = {"max_abs": max(e[0] for e in errs.values()),
+                                                 "max_rel": max(e[1] for e in errs.values())}
     KV.n_horas_identico(var)
     rep["gates"]["n_horas_identico"] = True
     rep["vf_fijo_menos_tracker"] = vf_stats(var)
@@ -156,15 +165,21 @@ def construir(root: Path = KV.DATA_ROOT) -> dict:
     gen = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
     campos = KV.CAMPOS9 + ["yf_annual_equiv"]
     vs = {c: _dump(variant_scalars(var[c], ids, KV.CFG_WEB[c], campos, gen)) for c in var}
+    extra: dict = {}
     if max(_gz(b) for b in vs.values()) > PRESUPUESTO_GZ:
         vs = {c: _dump(variant_scalars(var[c], ids, KV.CFG_WEB[c], KV.CORE, gen)) for c in var}
-        rep["layout"] = "core: 5 campos exactos; resto perezoso por variante seleccionada"
+        rep["layout"] = ("core: p_cap, vf, y_f, ingreso, yf_annual_equiv exactos en variant_scalars; el resto, exacto, "
+                         "en variant_extra/{config}/{variant}.json (carga perezosa por variante seleccionada)")
+        resto = [c for c in KV.CAMPOS9 if c not in KV.CORE]
+        extra = {f"variant_extra/{KV.CFG_WEB[c]}/{v}.json": _dump(variant_extra(var[c][v], ids, KV.CFG_WEB[c], v, resto, gen))
+                 for c in var for v in var[c]}
     else:
         rep["layout"] = "all: 9 campos + yf_annual_equiv exactos"
     fijo = {"generated_at": gen, **nod["fixed"]}
     files = {"analysis_nodos_tracker.json": pub_bytes, "analysis_nodos_fijo.json": _dump(fijo),
              "variant_scalars_tracker.json": vs["tracker"], "variant_scalars_fijo.json": vs["fixed"],
              "node_profiles_fijo.json": _dump(prof)}
+    files.update(extra)
     for k, b in files.items():
         rep["files"][k] = {"bytes": len(b), "gz": _gz(b)}
     rep["generated_at"] = gen
@@ -174,6 +189,7 @@ def construir(root: Path = KV.DATA_ROOT) -> dict:
 def escribir(res: dict, out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     for k, b in res["files"].items():
+        (out / k).parent.mkdir(parents=True, exist_ok=True)
         (out / k).write_bytes(b)
     (out / "reconciliation.json").write_bytes(_dump(res["report"]))
 
@@ -182,4 +198,8 @@ if __name__ == "__main__":
     res = construir()
     out = KV.rutas()["out"]
     escribir(res, out)
-    print(json.dumps({k: v for k, v in res["report"].items() if k != "vf_fijo_menos_tracker"}, indent=1)[:3000])
+    rp = res["report"]
+    print("layout:", rp["layout"])
+    print("tracker vs publicado:", rp["gates"]["tracker_json_vs_publicado"])
+    for k, v in rp["files"].items():
+        print(f"{k:45s} {v['bytes']:>9d} B  {v['gz']:>8d} B gz")

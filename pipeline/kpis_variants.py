@@ -145,7 +145,8 @@ def comparar(mio: pd.DataFrame, ref: pd.DataFrame, campos, tol: float = TOL_REL,
 
 
 def comparar_json(nod: dict, pub: dict) -> dict:
-    """analysis_nodos (4 decimales) contra el publicado: |a-b| <= 5e-5 (redondeo) + 1e-6*|b|."""
+    """analysis_nodos (4 decimales) contra el publicado: |a-b| <= 5e-5 (redondeo) + 1e-6*|b|.
+    Devuelve {ventana.campo: (max error absoluto, max error relativo)}."""
     if nod["ids"] != pub["ids"]:
         raise AssertionError("ids distintos al publicado")
     res = {}
@@ -161,13 +162,13 @@ def comparar_json(nod: dict, pub: dict) -> dict:
             d = np.abs(aa - bb)
             if (d > 5e-5 * (1 + 1e-9) + TOL_REL * np.abs(bb)).any():
                 raise AssertionError(f"{v}.{c}: {int((d > 5e-5 + TOL_REL * np.abs(bb)).sum())} valores fuera")
-            res[f"{v}.{c}"] = float(d.max()) if len(d) else 0.0
+            res[f"{v}.{c}"] = ((float(d.max()), float(_err_rel(aa, bb).max())) if len(d) else (0.0, 0.0))
     return res
 
 
 def comparar_scalars(var: dict, sc: pd.DataFrame, config: str) -> dict:
     """y_f y n_horas por variante y ventana Y1/Y2 contra solar_v2/scalars.parquet."""
-    s = sc[sc["config"] == config].set_index(["variant", "window", "nodo"])
+    s = sc[sc["config"] == config].set_index(["variant", "window", "nodo"]).sort_index()
     peor = 0.0
     for v, wins in var.items():
         for w, t in wins.items():
