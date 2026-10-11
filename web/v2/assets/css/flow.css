@@ -62,3 +62,6 @@ h1:focus, main:focus { outline: none; }
   .maphost.is-mini, .mini-hit { width: 140px; height: 100px; top: 64px; right: 12px; }
   .chips-row li { min-width: 0; }
 }
+
+/* deck.gl sets inline outline:none on its canvas: draw the keyboard focus ring on the host instead */
+.maphost:not(.is-mini):has(canvas:focus-visible)::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; outline: 3px solid var(--accent); outline-offset: -6px; border-radius: 2px; }

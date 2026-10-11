@@ -43,6 +43,7 @@ export function mountMap(root) {
       <button type="button" id="zreset" aria-label="Reset view">⌖</button>
     </div>
     <div class="tip" id="tip" hidden></div>
+    <div class="map-loading mono" id="map-loading" role="status">Loading nodes…</div>
     <div class="nogl" id="nogl" hidden><p>The map needs WebGL, which this browser has turned off. You can still search and select places on the left.</p></div>
     </main>
   </div>`;
@@ -113,8 +114,12 @@ export function mountMap(root) {
   q('#zout').addEventListener('click', () => shell.mv && shell.mv.zoomBy(-1));
   q('#zreset').addEventListener('click', () => shell.mv && shell.mv.reset());
 
+  const loading = q('#map-loading');
+  if (shell.mv || !shell.hasGL) loading.hidden = true;
+  shell.dataReady().then(() => { if (!dead && !shell.mv) loading.textContent = 'Loading map…'; });
   setMetric(shell.metric);
   shell.init().then(() => {
+    loading.hidden = true;
     if (dead || !q('#sel-slot')) return;
     if (shell.failed && !shell.atlas) { shell.say('Data failed to load.'); return; }
     q('#cfg').textContent = `${shell.atlas.config === 'tracker' ? 'Single-axis tracker' : shell.atlas.config} (only configuration in the analysis)`;

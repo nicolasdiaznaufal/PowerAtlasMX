@@ -1,6 +1,7 @@
 // Landing (from the approved mock): black page, eclipse photo right of centre, headline, two pills, muted wordmarks.
 import { CONFIG } from '../../config.js';
 import { eclipseSVG } from './logo.js';
+import { getShell } from './shell.js';
 
 async function clientLogos() {
   try {
@@ -49,6 +50,11 @@ export function renderLanding(root) {
       img.src = c.src; img.alt = c.name; li.append(img); ul.prepend(li);
     }
   });
+
+  // start loading the map data and deck.gl as soon as the visitor shows intent (hover, focus or touch of Deploy Analysis)
+  const warm = () => { getShell().init(); import('./explorer-data.js').then((m) => m.prefetch()); };
+  const deploy = root.querySelector('#deploy');
+  ['pointerenter', 'focus', 'touchstart'].forEach((ev) => deploy.addEventListener(ev, warm, { once: true, passive: true }));
 
   const modal = root.querySelector('#sales');
   let opener = null;

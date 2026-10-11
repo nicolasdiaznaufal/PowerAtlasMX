@@ -142,7 +142,18 @@ async function route() {
 window.addEventListener('hashchange', () => { queue = queue.then(route).catch(console.error); });
 queue = queue.then(route).catch(console.error);
 
-// service worker (scope /v2/): registered after load so it never competes with first paint
+// service worker (scope /v2/): registered after load so it never competes with first paint.
+// A new release waits; at this safe point (a freshly loaded page) it is told to take over and the page reloads once,
+// so the shell files of one release are never mixed with another's.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker not registered', e)); });
+  const had = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // a release that finished installing in an earlier session is waiting: apply it now (fresh page load = safe point).
+      // A release found during this session just waits and is applied at the next load.
+      if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage('SKIP_WAITING');
+    }).catch((e) => console.warn('service worker not registered', e));
+  });
 }

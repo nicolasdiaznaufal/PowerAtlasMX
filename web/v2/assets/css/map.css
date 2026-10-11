@@ -61,3 +61,7 @@
 }
 
 .chips .swatch { flex: none; }
+
+.map-loading { pointer-events: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); color: var(--ink-2); }
+.map-loading[hidden] { display: none; }
+@media (min-width: 761px) { .map-loading { left: calc(50% + 190px); } }

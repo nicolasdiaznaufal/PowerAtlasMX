@@ -44,9 +44,20 @@ the page states the gap. Prices are the MDA reference price (CENACE): no capacit
 "Partial year" note; nothing is annualised.
 
 ## Service worker
-`/v2/sw.js`, scope `/v2/`, registered after load. App shell, fonts and hero: stale-while-revalidate. Data JSON: network first, the cached copy is used only offline.
-Navigations: network first (with navigation preload), cached shell or `offline.html` offline. Bump `VERSION` in `sw.js` on every shell release; old caches are deleted on activate.
-v1's `web/sw.js` ignores `/v2/` URLs. During development, unregister via DevTools > Application > Service Workers, or bump the version.
+`/v2/sw.js`, scope `/v2/`, registered after load.
+- One release = one cache `v2-shell-<VERSION>`. `install` precaches the whole shell (all-or-nothing; the list `precache.js` is generated from the real import graph by
+  `node web/v2/tools/precache-manifest.mjs --write`, and a test fails when it is stale). Files are served cache-first inside the release, so module versions never mix.
+- A new release waits and is applied on the next fresh page load (the page asks it to skip waiting, then reloads once). Bump `VERSION` in `sw.js` on every shell change and regenerate `precache.js`.
+- Data JSON (`/data/...`): network first; the cached copy is only an offline fallback (cache `v2-data`).
+- Navigations: the cached shell of the release; if it is missing the worker goes to the network and re-fills it; offline with nothing cached it answers with an inline "You are offline" page (never undefined).
+- v1's `web/sw.js` deletes every cache that does not start with its own `VERSION`, including v2's. v1 is frozen, so v2 copes: the shell is re-filled on the next online v2 visit.
+- Development: unregister via DevTools > Application > Service Workers, or bump `VERSION`.
+
+## Performance notes (headless Chrome, software GL: lower bounds)
+- Map during pan and zoom: median frame 16.7 ms (60 fps cadence), p95 83 ms, max 383 ms over 373 frames (SwiftShader).
+- Landing: DOMContentLoaded 20 to 300 ms; first contentful paint 60 to 900 ms across runs, about 1.2 s for the very first page load of a fresh browser (browser start-up, not app work).
+  WebGL probing, the JSON data and deck.gl start only after first contentful paint (or when Deploy Analysis is hovered, focused or touched).
+- Not measured on a real GPU or on touch devices.
 
 ## Vendored assets
 - deck.gl 9.4.0 UMD, `assets/vendor/deckgl/` (MIT, README with the reproduce command; about 2 MB, loaded lazily after first paint). A custom esbuild core+layers bundle
@@ -67,7 +78,7 @@ Hero image: NASA/SDO, AIA 171, 2017-08-21 19:41:46 UT (partial solar eclipse; NA
 - Mounting configuration: the analysis files cover the single-axis tracker only; it is shown as a label, not a switch.
 - "Solar output at price <= 0" is energy based (`pct_e0`); an hours-based share is not published in the analysis files.
 - Area records publish no hour count, so the partial-year note applies to nodes only.
-- Not measured on real GPUs or touch devices; frame times in the notes below are from software GL.
+- Not measured on real GPUs or touch devices; the frame-time and paint numbers under "Performance notes" are from software GL and are lower bounds.
 - Baja California systems have no analysis data in the current window (dim "no data" dots).
 
 ## Placeholders pending Nico

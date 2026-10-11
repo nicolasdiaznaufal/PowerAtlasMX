@@ -36,6 +36,7 @@ export function getShell() {
             onPickNode: (n) => s.toggleNode(n),
             onPickState: (k) => s.pick({ kind: 'state', id: k, label: k }),
           } });
+          s.mv.setInteractive(s.mode === 'full'); // a direct load of an analysis route starts in mini mode
           s.mv.setPadding(PAD[s.mode === 'mini' ? 'mini' : 'full']());
           s.mv.reset(0);
           s.mv.setMetric(s.metric);

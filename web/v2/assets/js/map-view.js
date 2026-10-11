@@ -101,7 +101,8 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     const c = container.querySelector('canvas');
     if (!c) return false;
     c.tabIndex = interactive ? 0 : -1;
-    c.setAttribute('role', 'application');
+    if (interactive) c.removeAttribute('aria-hidden'); else c.setAttribute('aria-hidden', 'true'); // the mini card is a link, not a map
+    if (interactive) c.setAttribute('role', 'application'); else c.removeAttribute('role');
     c.setAttribute('aria-label', 'Map of Mexico. Arrow keys pan, plus and minus zoom.');
     return true;
   };
@@ -117,7 +118,12 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     reset(ms = 700) { setVS(fit(MEXICO), ms); },
     flyToBounds(b, ms = 700, maxZoom = 12) { setVS(fit(b, padding, { maxZoom }), ms); },
     flyToNode(n, ms = 700) { setVS({ ...vs, longitude: n.lon, latitude: n.lat, zoom: Math.max(vs.zoom, 7) }, ms); },
-    setInteractive(on) { interactive = on; prepCanvas(); inst.setProps({ controller: on ? CONTROLLER : false }); },
+    setInteractive(on) {
+      interactive = on;
+      inst.setProps({ controller: on ? CONTROLLER : false });
+      prepCanvas();
+      requestAnimationFrame(prepCanvas); // deck re-applies canvas attributes when the controller changes
+    },
     flyToArea(kind, id) {
       const col = kind === 'state' ? geo.states : geo.regions;
       const f = col.features.find((x) => x.properties.key === id);

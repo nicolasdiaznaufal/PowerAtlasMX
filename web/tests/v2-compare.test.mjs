@@ -161,3 +161,32 @@ test('route announcement does not overwrite a removal message (it is appended)',
   assert.equal(mergeAnnouncement(a, 'Map', 1000 + 5000).text, 'Map');           // later: plain replace
   assert.equal(mergeAnnouncement(null, 'Explorer', 10).text, 'Explorer');
 });
+
+test('pairChart keeps negative bars inside the plot rect and draws the zero line', async () => {
+  const { pairChart, PAD } = await import('../v2/assets/js/svg-charts.js');
+  const a = Array.from({ length: 24 }, (_, h) => (h < 12 ? -150 + h * 10 : h * 20)), b = a.map((v) => v * 0.7);
+  const svg = pairChart({ a, b, ca: 'x', cb: 'y', H: 220, aria: 't' });
+  for (const m of svg.matchAll(/<rect x="[\d.-]+" y="([\d.-]+)" width="[\d.]+" height="([\d.]+)"/g)) {
+    assert.ok(+m[1] >= PAD.t - 0.15 && +m[1] + +m[2] <= 220 - PAD.b + 0.15, `${m[1]} ${m[2]}`);
+  }
+  assert.match(svg, /class="zero"/);
+});
+
+test('without WebGL the shell reports failure but still loads the atlas (selector keeps working)', async () => {
+  const mk = () => ({ id: '', hidden: false, classList: { toggle() {}, add() {}, remove() {} }, querySelector: () => ({}), setAttribute() {}, appendChild() {} });
+  const host = mk();
+  globalThis.document = { getElementById: () => host, createElement: () => ({ getContext: () => null }) };
+  globalThis.window = { matchMedia: () => ({ matches: false }), innerWidth: 1440, devicePixelRatio: 1 };
+  const index = { pesos_reales: { base_mes: '2026-09' }, nodos: [{ id: 'A-1', nombre: 'A', entidad: 'JALISCO', municipio: 'X', region: 'OCCIDENTAL', lat: 20, lon: -103 }] };
+  const analysis = { ids: ['A-1'], region: ['OCCIDENTAL'], entidad: ['JALISCO'], config: 'tracker', ventanas: { deck_2025_26: { pml_medio: [1], p_cap: [1], vf: [0.9] } } };
+  const geo = { vb: [1, 1], scale: 10, proj: { x0: 0, sx: 36.5, lon0: -118.6, sy: 40, lat0: 32.9 }, states: [{ k: 'JALISCO', n: 'Jalisco', ab: 'JAL', c: 'OCCIDENTAL', r: [[0, 0, 10, 0, 0, 10]] }], regions: { OCCIDENTAL: [[0, 0, 10, 0, 0, 10]] } };
+  globalThis.fetch = async (u) => ({ ok: true, status: 200, json: async () => (String(u).includes('index.json') ? index : String(u).includes('analysis_nodos') ? analysis : geo) });
+  const { getShell } = await import('../v2/assets/js/shell.js');
+  const s = getShell();
+  assert.equal(s.hasGL, false);
+  await s.init();
+  assert.equal(s.failed, true);
+  assert.equal(s.mv, null);
+  assert.ok(s.atlas && s.atlas.nodes.length === 1 && s.geo, 'atlas and geometry are loaded for the selector');
+  delete globalThis.document; delete globalThis.window; delete globalThis.fetch;
+});
