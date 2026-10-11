@@ -32,12 +32,11 @@ into `web/data/analysis/` (see `web/README.md`). Do not commit data files.
 - `assets/js/shell.js` owns the ONE map host (`#maphost`): hidden / full / mini. Views only attach overlays; the canvas is never remounted.
 - Page swaps use `document.startViewTransition` (the map host has its own transition name so it morphs full to mini card); without it, or with reduced motion, swaps are instant or a plain fade.
 - Landing to map: the hero sun scales up and fades while the map fades in beneath.
-- `assets/img/hero-sun.webp` is cropped from the 1x design mock (headline pixels retouched out). A clean full-resolution photo is needed for retina.
+- Hero image: NASA/SDO, AIA 171, 2017-08-21 19:41:46 UT (partial solar eclipse; NASA imagery, public domain). Source kept at `docs/referencia/sun_full.jpeg`; `assets/img/hero-sun-{1000,2000}.webp` are composed from it (caption cropped, black lifted to the page black #0A0A0A so there is no visible rectangle).
 
 ## Placeholders pending Nico
 - Landing copy is a draft pending approval.
 - Client logos (manifest is empty; strip shows REPSA, NASA POWER, pvlib as plain text wordmarks).
-- Full-resolution eclipse photo for the landing hero.
 
 ## Tests
 `node --test web/tests/contrast-v2.test.mjs` (and the full suite `node --test web/tests/*.test.mjs`).

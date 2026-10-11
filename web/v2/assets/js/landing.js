@@ -13,7 +13,8 @@ export function renderLanding(root) {
   const email = CONFIG.CONTACT_EMAIL;
   root.innerHTML = `
   <div class="landing">
-    <img class="hero-sun" id="sun" src="assets/img/hero-sun.webp" alt="" width="1000" height="900" decoding="async" fetchpriority="high">
+    <!-- Hero image: NASA/SDO, AIA 171, 2017-08-21 19:41 UT (public domain), caption cropped. -->
+    <img class="hero-sun" id="sun" src="assets/img/hero-sun-1000.webp" srcset="assets/img/hero-sun-1000.webp 1000w, assets/img/hero-sun-2000.webp 2000w" sizes="(max-width: 900px) 560px, 1000px" alt="" width="1000" height="900" decoding="async" fetchpriority="high">
     <header class="nav">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
     </header>
