@@ -2,9 +2,9 @@
 // Every figure comes from the same tilesOf / recordFor values Explorer shows for a single slot.
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
-import { compareRows, yearAxis } from './compare-data.js';
+import { compareRows, yearAxis, columnLabels } from './compare-data.js';
 import { priceBasis } from './explorer-data.js';
-import { lineChart } from './svg-charts.js';
+import { lineChart, vfAxisMax } from './svg-charts.js';
 import { legendHTML, slotHeader, slotNotice, tileHTML, tableHTML, esc } from './compare-ui.js';
 import { segment } from './controls.js';
 
@@ -20,15 +20,18 @@ export function paintExplorerCompare(el, { entries, shell, winId, view, onView }
   let vfChart;
   if (view === 'months') {
     const months = ok.length ? ok[0].series.months : [];
-    vfChart = lineChart({ series: entries.map((e) => ({ vals: e.series ? e.series.vf : months.map(() => null), label: shell.label(e.slot).t })), labels: months.map(mesCorto),
-      H: 240, yMax: 1, xEvery: 12, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor' });
+    const ser = entries.map((e) => ({ vals: e.series ? e.series.vf : months.map(() => null), label: shell.label(e.slot).t }));
+    vfChart = lineChart({ series: ser, labels: months.map(mesCorto), refs: [1],
+      H: 240, yMax: vfAxisMax(ser.flatMap((x) => x.vals)), xEvery: 12, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor' });
   } else {
     const ya = yearAxis(entries, real);
-    vfChart = lineChart({ series: entries.map((e, k) => ({ vals: ya.vals[k], label: shell.label(e.slot).t })), labels: ya.years, H: 240, yMax: 1, aria: 'Value factor by calendar year for each selected slot', ytitle: 'Value factor' });
+    const ser = entries.map((e, k) => ({ vals: ya.vals[k], label: shell.label(e.slot).t }));
+    vfChart = lineChart({ series: ser, labels: ya.years, refs: [1], H: 240, yMax: vfAxisMax(ser.flatMap((x) => x.vals)), aria: 'Value factor by calendar year for each selected slot', ytitle: 'Value factor' });
   }
+  const L = columnLabels(real);
   const cols = [
-    { h: 'Average price', get: (r) => r.tiles.base.text }, { h: 'Captured price', get: (r) => r.tiles.cap.text }, { h: 'Value factor', get: (r) => r.tiles.vf.text },
-    { h: 'Output at price ≤ 0, % of energy', get: (r) => r.tiles.z.text }, { h: 'VF, average day', get: (r) => r.tiles.vfDay.text },
+    { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => r.tiles.vf.text },
+    { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => r.tiles.vfDay.text },
   ];
   el.innerHTML = `${tiles}
     <div class="xp-cols">
@@ -38,7 +41,7 @@ export function paintExplorerCompare(el, { entries, shell, winId, view, onView }
         <div class="legend mono">${legendHTML(entries, shell)}</div><div class="chart">${vfChart}</div>
         <p class="xp-text">${esc(w.label)}. Same figures as Explorer shows for each slot on its own.</p></section>
     </div>
-    <section class="xp-card"><h2 class="mono">Comparison, ${esc(w.label)}${real ? " · today's pesos" : ' · nominal MXN'}</h2>${tableHTML(rows, entries, shell, cols)}</section>`;
+    <section class="xp-card"><h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}</section>`;
   segment(el.querySelector('#cx-view'), [['months', 'Months'], ['years', 'Calendar years']], view, onView);
   void priceBasis;
 }

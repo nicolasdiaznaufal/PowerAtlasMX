@@ -66,3 +66,4 @@ details summary { cursor: pointer; color: var(--ink-2); }
 #xp-cmp:not([hidden]), #rv-cmp:not([hidden]) { display: grid; gap: 20px; }
 .xp-vhead .seg[id="cx-view"] { grid-template-columns: repeat(2, 1fr); }
 .chart.narrow svg { max-width: 760px; }
+.chart .refline { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 1 4; }

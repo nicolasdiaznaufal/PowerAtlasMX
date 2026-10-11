@@ -78,3 +78,42 @@ test('URL round trip with 3 slots, removing a chip, Back and Forward', () => {
   assert.equal(store.add({ kind: 'region', id: 'NORTE' }), false);        // cap of 3
   assert.equal(hist[i], '#/revenue?sel=01AAN-85,national,state:JALISCO&real=1');
 });
+
+test('chip removal: focus moves to the next chip, then to + Add; the announcement names the slot and the count', async () => {
+  const { nextFocusIndex, removedMessage } = await import('../v2/assets/js/chips.js');
+  assert.equal(nextFocusIndex(0, 2), 0);   // first removed: the chip that moved up
+  assert.equal(nextFocusIndex(2, 2), 1);   // last removed: the new last chip
+  assert.equal(nextFocusIndex(0, 0), -1);  // nothing left: caller falls back to + Add / heading
+  assert.equal(removedMessage('Jalisco', 2), 'Removed Jalisco; 2 of 3 slots');
+});
+
+test('VF axis max never clips: >= 1, covers every plotted value, round steps', async () => {
+  const { vfAxisMax } = await import('../v2/assets/js/svg-charts.js');
+  assert.equal(vfAxisMax([0.5, 0.9, null]), 1);
+  assert.equal(vfAxisMax([1.0]), 1);
+  assert.equal(vfAxisMax([1.01]), 1.2);
+  assert.equal(vfAxisMax([1.36]), 1.6);
+  assert.equal(vfAxisMax([2.0]), 2);
+});
+
+test('no plotted VF value exceeds the axis max (all node series, all areas)', { skip }, async () => {
+  const { vfAxisMax } = await import('../v2/assets/js/svg-charts.js');
+  const s = src();
+  let over = 0, maxSeen = 0;
+  const check = (vals) => { const m = vfAxisMax(vals); for (const v of vals) { if (v !== null && v > m) over++; if (v !== null && v > maxSeen) maxSeen = v; } };
+  for (const n of Object.values(s.sNodes.nodes)) check(n.m);
+  check(s.sAreas.areas.ALL.m);
+  for (const g of ['region', 'state']) for (const a of Object.values(s.sAreas.areas[g])) check(a.m);
+  assert.equal(over, 0);
+  assert.ok(maxSeen > 1, 'expected at least one VF above 1 in the data');
+});
+
+test('table headings name the price basis; average-day VF is labelled nominal', async () => {
+  const { columnLabels } = await import('../v2/assets/js/compare-data.js');
+  const n = columnLabels(false), r = columnLabels(true);
+  assert.match(n.base, /nominal/); assert.match(n.cap, /nominal/); assert.match(n.revenue, /nominal/);
+  assert.match(r.base, /today's pesos/); assert.match(r.cap, /today's pesos/); assert.match(r.vf, /today's pesos/);
+  assert.match(r.revenue, /today's pesos/); assert.match(r.shortcut, /today's pesos/);
+  assert.match(r.vfDay, /nominal/); assert.match(n.vfDay, /nominal/);
+  assert.match(r.heading('Aug 2025 – Jul 2026'), /today's pesos/);
+});

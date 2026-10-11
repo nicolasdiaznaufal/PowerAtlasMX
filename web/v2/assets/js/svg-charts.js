@@ -25,7 +25,7 @@ function axis(H, lo, hi, fmt, ytitle) {
 }
 
 /** bars: [{v, label, color, tip}], hline: {v, label}. xEvery: label every n bars. */
-export function barChart({ bars, hline = null, H = 220, yMax = null, yMin = 0, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '' }) {
+export function barChart({ bars, hline = null, refs = [], H = 220, yMax = null, yMin = 0, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '' }) {
   const vals = bars.map((b) => b.v).filter((v) => v !== null && v !== undefined);
   const hi = yMax || niceMax(Math.max(...vals, hline ? hline.v : 0)), lo = yMin;
   const { g, y } = axis(H, lo, hi, fmt, ytitle);
@@ -39,6 +39,7 @@ export function barChart({ bars, hline = null, H = 220, yMax = null, yMin = 0, f
     }
     if (i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${esc(b.label)}</text>`;
   });
+  for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   if (hline && hline.v !== null) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
   return frame(H, aria, out);
 }
@@ -84,13 +85,14 @@ export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp',
 }
 
 /** overlay of up to 3 series. series: [{vals, label}] in slot order (style i). nulls break the line. markEvery: marker every n points. */
-export function lineChart({ series, labels, H = 220, yMin = 0, yMax = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '' }) {
+export function lineChart({ series, labels, refs = [], H = 220, yMin = 0, yMax = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '' }) {
   const all = series.flatMap((s) => s.vals).filter((v) => v !== null && v !== undefined);
   const hi = yMax || niceMax(Math.max(...all, 0)), lo = Math.min(yMin, ...all, 0) < 0 ? -niceMax(-Math.min(...all)) : yMin;
   const { g, y } = axis(H, lo, hi, fmt, ytitle);
   const n = labels.length, iw = W - PAD.l - PAD.r, step = iw / n, X = (i) => PAD.l + step * i + step / 2;
   let out = g;
   labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
+  for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   series.forEach((sr, k) => {
     const st = STYLES[k % 3];
     let d = '', pen = false;
@@ -103,4 +105,10 @@ export function lineChart({ series, labels, H = 220, yMin = 0, yMax = null, fmt 
     });
   });
   return frame(H, aria, out);
+}
+
+/** VF axis: at least 1, otherwise the next multiple of 0.4 so four grid intervals stay round (1.2, 1.6, 2.0 ...). */
+export function vfAxisMax(values) {
+  const m = Math.max(0, ...values.filter((v) => v !== null && v !== undefined && Number.isFinite(v)));
+  return m <= 1 ? 1 : Math.round(Math.ceil(m / 0.4 - 1e-9) * 0.4 * 10) / 10;
 }

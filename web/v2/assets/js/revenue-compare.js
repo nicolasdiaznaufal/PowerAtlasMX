@@ -1,7 +1,7 @@
 // Revenue with 2-3 slots: revenue per MWp per slot, hour-by-hour revenue overlay, comparison table, scaling disclosure per slot.
 import { WIN } from '../../../assets/js/names.js';
 import { num } from '../../../assets/js/format.js';
-import { compareRows } from './compare-data.js';
+import { compareRows, columnLabels } from './compare-data.js';
 import { tableLabels } from './explorer-data.js';
 import { lineChart } from './svg-charts.js';
 import { legendHTML, slotHeader, slotNotice, tileHTML, tableHTML, esc } from './compare-ui.js';
@@ -21,11 +21,12 @@ export function paintRevenueCompare(el, { entries, shell, winId }) {
   const labels = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const series = rows.map((r, k) => ({ vals: r.ok && r.rev.hours ? r.rev.hours.real : Array(24).fill(null), label: shell.label(entries[k].slot).t }));
   const chart = lineChart({ series, labels, H: 250, xEvery: 3, fmt: (v) => num(v, 0), aria: 'Typical day: hour-by-hour revenue of 1 MWp for each selected slot', ytitle: `MXN per MWp, per day (${pesos})` });
+  const L = columnLabels(real);
   const cols = [
-    { h: `Revenue per MWp per year, M MXN (${pesos})`, get: (r) => mil(r.rev.total) }, { h: `Shortcut, M MXN (${pesos})`, get: (r) => mil(r.rev.shortcut) },
-    { h: 'Shortcut overstates, %', get: (r) => (r.rev.over === null ? '—' : num(r.rev.over, 0)) },
-    { h: 'Average price', get: (r) => r.tiles.base.text }, { h: 'Captured price', get: (r) => r.tiles.cap.text }, { h: 'Value factor', get: (r) => r.tiles.vf.text },
-    { h: 'Output at price ≤ 0, % of energy', get: (r) => r.tiles.z.text }, { h: 'VF, average day', get: (r) => r.tiles.vfDay.text },
+    { h: L.revenue, get: (r) => mil(r.rev.total) }, { h: L.shortcut, get: (r) => mil(r.rev.shortcut) },
+    { h: L.over, get: (r) => (r.rev.over === null ? '—' : num(r.rev.over, 0)) },
+    { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => r.tiles.vf.text },
+    { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => r.tiles.vfDay.text },
   ];
   const notes = rows.filter((r) => r.ok && r.rev.scale !== null).map((r, k) => {
     const lab = tableLabels(real, r.rev.scale), gap = r.rev.gap === null ? '' : ` Typical day × 365 is ${num(Math.abs(r.rev.gap), 1)}% ${r.rev.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`;
@@ -34,5 +35,5 @@ export function paintRevenueCompare(el, { entries, shell, winId }) {
   el.innerHTML = `${blocks}
     <section class="xp-card"><h2 class="mono">Typical day, hour-by-hour revenue of 1 MWp (scaled to the published yearly figure)</h2><div class="legend mono">${legendHTML(entries, shell)}</div><div class="chart narrow">${chart}</div>
       <details><summary class="mono">How the bars are scaled</summary><ul class="xp-text scale-notes">${notes}</ul></details></section>
-    <section class="xp-card"><h2 class="mono">Comparison, ${esc(w.label)}</h2>${tableHTML(rows, entries, shell, cols)}</section>`;
+    <section class="xp-card"><h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}</section>`;
 }
