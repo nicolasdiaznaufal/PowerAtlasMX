@@ -27,3 +27,10 @@ export function parseScenario(str) {
 export const isNeutral = (sc) => !sc || (sc.price === NEUTRAL.price && sc.dip === NEUTRAL.dip && sc.yield === NEUTRAL.yield);
 export const serializeScenario = (sc) => (isNeutral(sc) ? '' : `p:${sc.price},m:${sc.dip},y:${sc.yield}`);
 export const scenarioEquals = (a, b) => serializeScenario(a) === serializeScenario(b);
+
+// Mounting configuration (&cfg=fijo) and weather variant (&wx=y2019|win); defaults (tracker, mean) are omitted from the URL.
+export const WEATHER_YEARS = Array.from({ length: 11 }, (_, i) => 2015 + i);
+export const WX_DEFAULT = 'mean', CFG_DEFAULT = 'tracker';
+const WX_RE = /^(mean|win|y20(1[5-9]|2[0-5]))$/;
+export const parseCfg = (v) => (v === 'fijo' ? 'fijo' : CFG_DEFAULT);
+export const parseWx = (v) => (WX_RE.test(v || '') ? v : WX_DEFAULT);

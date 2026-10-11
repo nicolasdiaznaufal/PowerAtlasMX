@@ -83,5 +83,6 @@ test('intro copy lives in copy.js, is short plain English and has no equations',
     assert.doesNotMatch(t, /[=∑√×÷^]|\\\(|\$\$/);
     assert.ok((t.match(/\. /g) || []).length >= 2, 'at least three sentences');
   }
-  assert.equal(COPY.fixedTip, 'Not in the analysis yet');
+  assert.match(COPY.fixedTip, /fixed facing south/i);
+  assert.doesNotMatch(COPY.fixedTip + COPY.mountNote, /[=∑√×÷^]/);
 });

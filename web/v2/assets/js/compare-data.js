@@ -1,12 +1,13 @@
 // Compare data layer: one entry per selected slot, built with the SAME functions Explorer and Revenue use for a single slot.
-import { loadSources, recordFor, seriesFor, tilesOf, revenueOf, partialNote, priceBasis, yearRows } from './explorer-data.js';
+import { seriesFor, tilesOf, revenueOf, partialNote, priceBasis, yearRows } from './explorer-data.js';
+import { loadSourcesCtx, recordForCtx } from './solar-data.js';
 
 /** load every slot independently (a failing slot does not block the others). */
-export async function loadEntries(slots, winId) {
+export async function loadEntries(slots, winId, ctx = null) {
   return Promise.all(slots.map(async (slot) => {
     try {
-      const src = await loadSources(slot);
-      const rec = recordFor(src, slot, winId);
+      const src = await loadSourcesCtx(slot, ctx);
+      const rec = recordForCtx(src, slot, winId, ctx);
       return rec.missing ? { slot, rec, series: null, missing: true } : { slot, rec, series: seriesFor(src, slot) };
     } catch (error) {
       return { slot, error };
@@ -15,9 +16,9 @@ export async function loadEntries(slots, winId) {
 }
 
 /** same entries from already loaded sources (used by tests and by loadEntries callers that hold the sources). */
-export function buildEntries(src, slots, winId) {
+export function buildEntries(src, slots, winId, ctx = null) {
   return slots.map((slot) => {
-    const rec = recordFor(src, slot, winId);
+    const rec = recordForCtx(src, slot, winId, ctx);
     return rec.missing ? { slot, rec, series: null, missing: true } : { slot, rec, series: seriesFor(src, slot) };
   });
 }
@@ -40,10 +41,10 @@ export function yearAxis(entries, real = false) {
 }
 
 /** table column headings per price basis (average/captured/VF follow the toggle; spread, <= 0 share and average-day VF are nominal figures). */
-export function columnLabels(real, sim = false) {
+export function columnLabels(real, sim = false, ctx = null) {
   const b = real ? "today's pesos" : 'nominal';
   return {
-    heading: (win) => `Comparison, ${win} · prices in ${b}`,
+    heading: (win) => `Comparison, ${win} · prices in ${b}${ctx ? ` · ${ctx.cfg === 'fijo' ? 'fixed tilt' : 'single-axis tracker'} · ${ctx.wx === 'mean' ? 'yearly mean weather' : ctx.wx === 'win' ? 'window weather' : `${ctx.wx.slice(1)} weather`}` : ''}`,
     base: `Average price, MXN/MWh (${b})`, cap: `Captured price, MXN/MWh (${b})`, vf: `Value factor (${b})`,
     z: `Output at price ≤ 0, % of energy${sim ? ' (not simulated)' : ''}`, vfDay: 'VF, average day (nominal)',
     revenue: `Revenue per MWp per year, M MXN (${b})`, shortcut: `Shortcut, M MXN (${b})`, over: 'Shortcut overstates, %',

@@ -53,6 +53,7 @@ self.PRECACHE = [
  "assets/js/series-card.js",
  "assets/js/series-style.js",
  "assets/js/shell.js",
+ "assets/js/solar-data.js",
  "assets/js/span-data.js",
  "assets/js/span-summary.js",
  "assets/js/store.js",

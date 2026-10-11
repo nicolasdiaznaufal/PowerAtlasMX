@@ -27,7 +27,7 @@ export function mountRevenue(host, { shell, side }) {
       mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${revenueCardHTML(entries)}${seriesCardHTML()}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
       draw(root, { entries, winId, real, w }, { repaint }) {
         drawDecomp(root, entries);
-        const rows = compareRows(entries, real), L = columnLabels(real, !isNeutral(shell.store.scenario)), pesos = real ? "today's pesos" : 'nominal';
+        const rows = compareRows(entries, real), L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), pesos = real ? "today's pesos" : 'nominal';
         const realRows = compareRows(entries.map((e) => (e.real ? { ...e, rec: e.real } : e)), real);
         const gapText = (r) => (r.rev.gap === null || r.rev.total === null ? '' : ` Typical day × 365 is ${num(Math.abs(r.rev.gap), 1)}% ${r.rev.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`);
         const labels = Array.from({ length: 24 }, (_, i) => hh(i));

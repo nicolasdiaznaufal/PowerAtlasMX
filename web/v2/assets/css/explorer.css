@@ -148,3 +148,6 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .scn { margin-top: 12px; }
 .scn-help { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; line-height: 1.35; }
 .badge.off { background: var(--raised); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hairline); }
+.ctxline { margin: 0; color: var(--ink-3); }
+.wx { display: grid; gap: 4px; }
+.wx select { height: 38px; background: var(--canvas); color: var(--ink); border: 0; border-radius: var(--radius); box-shadow: var(--ring-strong); padding: 0 10px; font: 450 14px var(--font-sans); }

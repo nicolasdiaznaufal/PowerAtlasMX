@@ -1,6 +1,6 @@
 // Pure routing logic (no DOM): hash -> {path, list, canonical hash}; selection sync that never writes a stale path.
 import { parseSel, serializeSel } from './store.js';
-import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals } from './query-extras.js';
+import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals, parseCfg, parseWx } from './query-extras.js';
 
 export const ROUTES = ['/', '/map', '/choose', '/explorer', '/revenue'];
 const NEEDS_SEL = new Set(['/choose', '/explorer', '/revenue']);
@@ -8,7 +8,7 @@ const NEEDS_SEL = new Set(['/choose', '/explorer', '/revenue']);
 export const hrefFor = (path, list, real = false, extras = null) => {
   if (path === '/' || !(list && list.length)) return `#${path}`;
   const x = extras || {}, sc = serializeScenario(x.sc);
-  return `#${path}?sel=${serializeSel(list)}${real ? '&real=1' : ''}${x.span ? `&from=${x.span.from}&to=${x.span.to}` : ''}${sc ? `&sc=${sc}` : ''}`;
+  return `#${path}?sel=${serializeSel(list)}${real ? '&real=1' : ''}${x.span ? `&from=${x.span.from}&to=${x.span.to}` : ''}${sc ? `&sc=${sc}` : ''}${x.cfg === 'fijo' ? '&cfg=fijo' : ''}${x.wx && x.wx !== 'mean' ? `&wx=${x.wx}` : ''}`;
 };
 
 /** valid: null (unknown yet) or { node, state, region } predicates.
@@ -28,7 +28,9 @@ export function resolveHash(hash, valid = null, current = [], currentReal = fals
   const inherit = path === '/' || !raw;
   const span = path === '/' ? cur.span || null : params.has('from') || params.has('to') ? parseSpan(params.get('from'), params.get('to'), valid && valid.months) : inherit ? cur.span || null : null;
   const sc = path === '/' ? cur.sc || null : params.has('sc') ? parseScenario(params.get('sc')) : inherit ? cur.sc || null : null;
-  return { path, list, real, span, sc, hadSel: !!raw, hash: hrefFor(path, list, real, { span, sc }) };
+  const cfg = path === '/' ? cur.cfg || 'tracker' : params.has('cfg') ? parseCfg(params.get('cfg')) : inherit ? cur.cfg || 'tracker' : 'tracker';
+  const wx = path === '/' ? cur.wx || 'mean' : params.has('wx') ? parseWx(params.get('wx')) : inherit ? cur.wx || 'mean' : 'mean';
+  return { path, list, real, span, sc, cfg, wx, hadSel: !!raw, hash: hrefFor(path, list, real, { span, sc, cfg, wx }) };
 }
 
 /** Router state: `cur` is updated BEFORE the store is synced, so the store subscriber always writes the new route. */
@@ -54,6 +56,8 @@ export function createRouter({ store, valid = () => null, replace, currentHash =
         if (r.path !== '/' && store.real !== r.real) store.setReal(r.real);
         if (r.path !== '/' && !spanEquals(store.span, r.span)) store.setSpan(r.span);
         if (r.path !== '/' && !scenarioEquals(store.scenario, r.sc)) store.setScenario(r.sc);
+        if (r.path !== '/' && store.cfg !== r.cfg) store.setCfg(r.cfg);
+        if (r.path !== '/' && store.wx !== r.wx) store.setWx(r.wx);
         if (r.hadSel && serializeSel(store.get()) !== serializeSel(r.list)) store.set(r.list);
       } finally { applying = false; }
       return { path: r.path, prev, changed: prev !== r.path };

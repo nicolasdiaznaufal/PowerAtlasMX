@@ -1,5 +1,5 @@
 // Selection store: up to 3 slots, any mix of node / state / region / national. Synced to the hash query (?sel=).
-import { spanEquals, scenarioEquals, isNeutral } from './query-extras.js';
+import { spanEquals, scenarioEquals, isNeutral, parseCfg, parseWx } from './query-extras.js';
 export const MAX_SEL = 3;
 const key = (s) => (s.kind === 'national' ? 'national' : s.kind === 'node' ? s.id : `${s.kind}:${s.id}`);
 
@@ -30,6 +30,8 @@ export function createStore(initial = []) {
   let real = false; // price basis: false = nominal MXN, true = today's pesos
   let span = null;  // {from, to} months, or null = the 12-month window
   let scenario = null; // {price, dip, yield} or null = real values
+  let cfg = 'tracker'; // mounting: 'tracker' | 'fijo'
+  let wx = 'mean';     // weather: 'mean' | 'y2015'..'y2025' | 'win'
   const subs = new Set();
   const emit = () => subs.forEach((f) => f(list));
   return {
@@ -40,8 +42,12 @@ export function createStore(initial = []) {
     setSpan(v) { const n = v && v.from && v.to ? { from: v.from, to: v.to } : null; if (!spanEquals(n, span)) { span = n; emit(); } },
     get scenario() { return scenario; },
     setScenario(v) { const n = isNeutral(v) ? null : { ...v }; if (!scenarioEquals(n, scenario)) { scenario = n; emit(); } },
+    get cfg() { return cfg; },
+    setCfg(v) { v = parseCfg(v); if (v !== cfg) { cfg = v; emit(); } },
+    get wx() { return wx; },
+    setWx(v) { v = parseWx(v); if (v !== wx) { wx = v; emit(); } },
     /** the URL extras of this store, for hrefFor */
-    get extras() { return { span, sc: scenario }; },
+    get extras() { return { span, sc: scenario, cfg, wx }; },
     has: (s) => list.some((x) => key(x) === key(s)),
     /** returns false when full */
     add(s) { if (list.some((x) => key(x) === key(s))) return true; if (list.length >= MAX_SEL) return false; list = [...list, s]; emit(); return true; },

@@ -8,6 +8,8 @@ import { mountControls } from './controls.js';
 import { indicatorsHTML } from './indicators.js';
 import { areaTablesHTML, wireAreaTables } from './area-tables.js';
 import { COPY } from './copy.js';
+import { getJSON } from './json.js';
+import { solarUrls, isDefaultCtx } from './solar-data.js';
 import { scenarioEntries } from './scenario.js';
 import { isNeutral } from './query-extras.js';
 import { mountScenarioPanel } from './scenario-panel.js';
@@ -17,7 +19,7 @@ import { summaryRows, summaryHTML } from './span-summary.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function mountView({ host, side, shell, view, build }) {
-  let ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), spanMounted = false, sumVer = 0;
+  let ctxKey = `${shell.store.cfg}|${shell.store.wx}`, ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), spanMounted = false, sumVer = 0;
   const sorts = { state: { key: 'vf', dir: -1 }, region: { key: 'vf', dir: -1 } };
   const winOf = () => shell.winId || 'Y2';
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
@@ -53,7 +55,9 @@ export function mountView({ host, side, shell, view, build }) {
     const body = q('#vb-body');
     const national = shell.store.get()[0] && shell.store.get()[0].kind === 'national' && ctxExtra.analysis;
     const banner = isNeutral(shell.store.scenario) ? '' : '<div class="sim-banner" role="note"><span class="badge">Simulated</span><span>These values are a what-if on the typical day, not published data. Published values are shown as ghost lines and as the change next to each indicator.</span></div>';
-    body.innerHTML = banner + build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
+    const note15 = shell.store.wx === 'y2015' && ctxExtra.note2015 ? `<p class="xp-warn" role="note">${esc(ctxExtra.note2015)}</p>` : '';
+    const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))}</p>`;
+    body.innerHTML = ctxLine + note15 + banner + build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
     build.draw(body, ctx, { repaint: paint, state: ctxExtra });
     paintSummary(real, w);
     if (national) {
@@ -70,13 +74,17 @@ export function mountView({ host, side, shell, view, build }) {
     const my = ++ver, slots = shell.store.get();
     if (!slots.length) return;
     selKey = serializeSel(slots);
+    ctxKey = `${shell.store.cfg}|${shell.store.wx}`;
     spanMounted = false; // the presets depend on the window
-    state('loading', 'Loading data…');
+    state('loading', shell.store.cfg === 'fijo' || shell.store.wx !== 'mean' ? 'Loading fixed-tilt / weather-variant data…' : 'Loading data…');
     try {
-      const [list, src] = await Promise.all([loadEntries(slots, winOf()), slots[0].kind === 'national' ? loadSources({ kind: 'national', id: 'ALL' }) : Promise.resolve(null)]);
+      const ctx = { cfg: shell.store.cfg, wx: shell.store.wx };
+      const [list, src] = await Promise.all([loadEntries(slots, winOf(), ctx), slots[0].kind === 'national' ? loadSources({ kind: 'national', id: 'ALL' }) : Promise.resolve(null)]);
       if (my !== ver || dead) return;
       if (list.every((e) => e.error)) throw list[0].error;
       raw = list; ctxExtra.analysis = src && src.analysis;
+      ctxExtra.note2015 = null;
+      if (!isDefaultCtx(ctx) && ctx.wx === 'y2015') { try { ctxExtra.note2015 = (await getJSON(solarUrls(ctx).vs)).note_2015 || null; } catch { /* note is informative */ } }
       mountSpan();
       if (list.length === 1 && list[0].missing) {
         entries = null;
@@ -96,7 +104,7 @@ export function mountView({ host, side, shell, view, build }) {
 
   load();
   const off = shell.store.subscribe((l) => {
-    if (serializeSel(l) !== selKey) load();
+    if (serializeSel(l) !== selKey || `${shell.store.cfg}|${shell.store.wx}` !== ctxKey) load();
     else paint();
   });
   let timer = 0, lastW = host.clientWidth;
