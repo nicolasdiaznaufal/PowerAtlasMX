@@ -6,7 +6,7 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m7-4';
+const VERSION = 'v2-m7-5-7c12428e';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 importScripts('sw-strategy.js', 'precache.js');
@@ -25,8 +25,7 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('message', (e) => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
 
-// cache.put rejects for partial (206) and opaque responses: ignore those, they are simply not stored
-const store = (name, req, res) => (res && res.ok && res.status === 200 ? caches.open(name).then((c) => c.put(req, res.clone())).catch(() => null) : Promise.resolve());
+const store = (name, req, res) => self.swStrategy.storeResponse(caches, name, req, res, console.warn.bind(console));
 
 const handlers = {
   navigate: (req, e) => caches.open(SHELL).then((c) => c.match('./')).then((hit) => {

@@ -47,7 +47,7 @@ the page states the gap. Prices are the MDA reference price (CENACE): no capacit
 `/v2/sw.js`, scope `/v2/`, registered after load.
 - One release = one cache `v2-shell-<VERSION>`. `install` precaches the whole shell (all-or-nothing; the list `precache.js` is generated from the real import graph by
   `node web/v2/tools/precache-manifest.mjs --write`, and a test fails when it is stale). Files are served cache-first inside the release, so module versions never mix.
-- A new release waits and is applied on the next fresh page load (the page asks it to skip waiting, then reloads once). Bump `VERSION` in `sw.js` on every shell change and regenerate `precache.js`.
+- A new release waits and is applied on the next fresh page load (the page asks it to skip waiting, then reloads once). After any shell change run `node web/v2/tools/precache-manifest.mjs --write`: it regenerates `precache.js` and puts the content hash into `VERSION` (a test fails when they disagree). Bump the release part of `VERSION` (`v2-m7-N`) when you want a new release number.
 - Data JSON (`/data/...`): network first; the cached copy is only an offline fallback (cache `v2-data`).
 - Navigations: the cached shell of the release; if it is missing the worker goes to the network and re-fills it; offline with nothing cached it answers with an inline "You are offline" page (never undefined).
 - v1's `web/sw.js` deletes every cache that does not start with its own `VERSION`, including v2's. v1 is frozen, so v2 copes: the shell is re-filled on the next online v2 visit.

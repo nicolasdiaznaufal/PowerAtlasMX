@@ -13,6 +13,19 @@
   function staleCaches(keys, shell, data) {
     return keys.filter(function (k) { return k.indexOf('v2-') === 0 && k !== shell && k !== data; });
   }
-  const api = { strategyFor: strategyFor, staleCaches: staleCaches };
+  var warned = false;
+  /** put a copy of res into cache `name`. The clone is taken synchronously, BEFORE any async work, because the page
+   *  reads the original body as soon as it is returned. Never throws; warns once per worker lifetime. */
+  function storeResponse(cachesApi, name, req, res, warn) {
+    if (!res || !res.ok || res.status !== 200) return Promise.resolve(false);
+    var copy;
+    try { copy = res.clone(); } catch (e) { return report(warn, e); }
+    return cachesApi.open(name).then(function (c) { return c.put(req, copy); }).then(function () { return true; }, function (e) { return report(warn, e); });
+  }
+  function report(warn, e) {
+    if (!warned) { warned = true; if (warn) warn('v2 service worker: could not cache a response', e); }
+    return Promise.resolve(false);
+  }
+  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.swStrategy = api;
 })(typeof self !== 'undefined' ? self : this);
