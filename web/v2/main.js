@@ -104,6 +104,17 @@ function announce(path) {
   if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
 
+/** run fn once first contentful paint has happened (idle, never in the way of first paint); falls back to a timer. */
+function afterFirstPaint(fn) {
+  let done = false;
+  const go = () => { if (done) return; done = true; (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 2000 }) : (f) => setTimeout(f, 200))(fn); };
+  try {
+    const po = new PerformanceObserver((l) => { if (l.getEntries().some((e) => e.name === 'first-contentful-paint')) { po.disconnect(); setTimeout(go, 100); } });
+    po.observe({ type: 'paint', buffered: true });
+  } catch { /* unsupported: timer below */ }
+  setTimeout(go, 3000);
+}
+
 async function route() {
   const shell = getShell();
   if (/^#\/(map|choose|explorer|revenue)\?.*sel=/.test(location.hash)) await shell.dataReady(); // ids are validated against atlas + geometry only
@@ -116,7 +127,7 @@ async function route() {
   }
   if (prev === null) {
     await mount(path); shell.setMode(MODE[path]);
-    if (path === '/') (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 1500 }) : (f) => setTimeout(f, 600))(() => { shell.init(); import('./assets/js/explorer-data.js').then((m) => m.prefetch()); });
+    if (path === '/') afterFirstPaint(() => { shell.init(); import('./assets/js/explorer-data.js').then((m) => m.prefetch()); });
     else shell.init().then(() => shell.fit(0, path === '/choose' ? 'choose' : null));
     announce(path);
     return;

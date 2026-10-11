@@ -3,7 +3,7 @@
 //  - data JSON: network first, the cached copy is only an offline fallback (never served while online)
 //  - navigations: network first, cached shell or offline.html when offline
 // Bump VERSION on every release that changes the shell; old caches are deleted on activate.
-const VERSION = 'v2-m7-1';
+const VERSION = 'v2-m7-3';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = `v2-data-${VERSION}`;
 importScripts('sw-strategy.js');
@@ -14,14 +14,16 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('v2-') && k !== SHELL && k !== DATA).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  // navigation preload: the page request starts while the worker boots, so a cold worker does not delay first paint
+  const preload = self.registration.navigationPreload ? self.registration.navigationPreload.enable().catch(() => null) : null;
+  e.waitUntil(Promise.all([preload, caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('v2-') && k !== SHELL && k !== DATA).map((k) => caches.delete(k))))]).then(() => self.clients.claim()));
 });
 
 const put = (name, req, res) => { if (res && res.ok) { const cp = res.clone(); caches.open(name).then((c) => c.put(req, cp)); } return res; };
 const offline = () => caches.match('offline.html');
 
 const handlers = {
-  navigate: (req) => fetch(req).then((r) => put(SHELL, req, r)).catch(() => caches.match(req).then((h) => h || caches.match('./')).then((h) => h || offline())),
+  navigate: (req, e) => Promise.resolve(e.preloadResponse).then((p) => p || fetch(req)).then((r) => put(SHELL, req, r)).catch(() => caches.match(req).then((h) => h || caches.match('./')).then((h) => h || offline())),
   static: (req) => caches.match(req).then((hit) => {
     const net = fetch(req).then((r) => put(SHELL, req, r)).catch(() => hit || Response.error());
     return hit || net;
@@ -36,5 +38,5 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
   const s = self.swStrategy.strategyFor(url.pathname, req.mode);
   if (s === 'bypass') return;
-  e.respondWith(handlers[s](req));
+  e.respondWith(handlers[s](req, e));
 });

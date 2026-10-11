@@ -15,12 +15,13 @@ export function mountMap(root) {
   const shell = getShell();
   root.innerHTML = `
   <div class="overlay map-overlay">
-    <h1 class="sr">Map</h1>
     <header class="nav nav-map">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
       <span class="spacer"></span>
       <span class="mono scope">MDA reference price (CENACE)</span>
     </header>
+    <main class="map-main">
+    <h1 class="sr">Map</h1>
     <aside class="panel" aria-label="Map controls">
       <div id="sel-slot"></div>
       <div class="mono lbl" id="metric-lbl">Colour nodes by</div>
@@ -29,7 +30,7 @@ export function mountMap(root) {
       <ul class="chips" id="chips" aria-label="Selection"></ul>
       <p class="live mono" id="say" role="status" aria-live="polite"></p>
       <a class="btn btn-cream btn-sm cont" id="cont" href="#/choose" aria-disabled="true">Continue</a>
-      <div class="legend"><div class="ramp" id="ramp"></div><div class="lg mono" id="lg"></div><p class="lgnote" id="lgnote"></p></div>
+      <div class="map-legend"><div class="ramp" id="ramp"></div><div class="lg mono" id="lg"></div><p class="lgnote" id="lgnote"></p></div>
       <dl class="facts mono">
         <div><dt>Window</dt><dd>${WINDOW.label}</dd></div>
         <div><dt>Mounting</dt><dd id="cfg">…</dd></div>
@@ -43,6 +44,7 @@ export function mountMap(root) {
     </div>
     <div class="tip" id="tip" hidden></div>
     <div class="nogl" id="nogl" hidden><p>The map needs WebGL, which this browser has turned off. You can still search and select places on the left.</p></div>
+    </main>
   </div>`;
   const q = (s) => root.querySelector(s);
   let dead = false;

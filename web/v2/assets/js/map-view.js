@@ -47,6 +47,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   const setVS = (next, ms = 0) => {
     vs = clamp(next);
     callbacks.onHover(null);
+    if (ms && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ms = 0;
     inst.setProps({ viewState: ms ? { ...vs, transitionDuration: ms, transitionInterpolator: new deck.FlyToInterpolator() } : vs });
   };
 
@@ -94,8 +95,17 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   vs = inst.props.viewState;
   const refresh = () => inst.setProps({ layers: layers() });
 
-  const canvas = container.querySelector('canvas');
-  if (canvas) { canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Map of Mexico. Arrow keys pan, plus and minus zoom.'); }
+  // the canvas is created by deck/luma asynchronously: label and make it focusable (arrow keys pan, +/- zoom) once it exists
+  let interactive = true;
+  const prepCanvas = () => {
+    const c = container.querySelector('canvas');
+    if (!c) return false;
+    c.tabIndex = interactive ? 0 : -1;
+    c.setAttribute('role', 'application');
+    c.setAttribute('aria-label', 'Map of Mexico. Arrow keys pan, plus and minus zoom.');
+    return true;
+  };
+  if (!prepCanvas()) { const mo = new MutationObserver(() => { if (prepCanvas()) mo.disconnect(); }); mo.observe(container, { childList: true, subtree: true }); }
 
   const inst2 = {
     setMetric(m) { metric = m; dom = domainOf(atlas.nodes, m); refresh(); return dom; },
@@ -107,7 +117,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     reset(ms = 700) { setVS(fit(MEXICO), ms); },
     flyToBounds(b, ms = 700, maxZoom = 12) { setVS(fit(b, padding, { maxZoom }), ms); },
     flyToNode(n, ms = 700) { setVS({ ...vs, longitude: n.lon, latitude: n.lat, zoom: Math.max(vs.zoom, 7) }, ms); },
-    setInteractive(on) { inst.setProps({ controller: on ? CONTROLLER : false }); },
+    setInteractive(on) { interactive = on; prepCanvas(); inst.setProps({ controller: on ? CONTROLLER : false }); },
     flyToArea(kind, id) {
       const col = kind === 'state' ? geo.states : geo.regions;
       const f = col.features.find((x) => x.properties.key === id);

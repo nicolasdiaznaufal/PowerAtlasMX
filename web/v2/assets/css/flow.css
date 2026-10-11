@@ -6,6 +6,8 @@
 .maphost.is-mini .map-canvas { pointer-events: none; }
 .overlay { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
 .overlay > * { pointer-events: auto; }
+.map-main { position: absolute; inset: 0; pointer-events: none; }
+.map-main > * { pointer-events: auto; }
 .overlay .nav { pointer-events: none; }
 .overlay .nav > * { pointer-events: auto; }
 .nav-map { padding: 0 16px; background: linear-gradient(var(--canvas), rgba(11, 16, 13, 0)); }
@@ -51,6 +53,7 @@ h1:focus, main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .choose-body > h1, .choose-body > .chips-row, .cards .card { animation: none; }
+  .card { transition: none; }
 }
 @media (max-width: 760px) {
   .cards { grid-template-columns: 1fr; }

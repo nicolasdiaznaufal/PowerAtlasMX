@@ -52,13 +52,22 @@ export function renderLanding(root) {
 
   const modal = root.querySelector('#sales');
   let opener = null;
-  const close = () => { modal.hidden = true; if (opener) opener.focus(); };
+  const bg = () => [...root.querySelectorAll('.landing > header, .landing > main, .landing > footer, .landing > img')];
+  const close = () => { modal.hidden = true; bg().forEach((n) => n.removeAttribute('inert')); if (opener) opener.focus(); };
   root.querySelectorAll('[data-sales]').forEach((b) => b.addEventListener('click', () => {
     if (!email) return;
-    opener = b; modal.hidden = false; modal.querySelector('input').focus();
+    opener = b; modal.hidden = false; bg().forEach((n) => n.setAttribute('inert', '')); modal.querySelector('input').focus();
   }));
   modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('[data-close]')) close(); });
-  const onKey = (e) => { if (e.key === 'Escape' && !modal.hidden) close(); };
+  const onKey = (e) => {
+    if (modal.hidden) return;
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab') return;
+    const f = [...modal.querySelectorAll('input, textarea, button:not([disabled])')];
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   document.addEventListener('keydown', onKey);
   modal.querySelector('form').addEventListener('submit', (e) => {
     e.preventDefault();

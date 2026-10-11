@@ -94,6 +94,9 @@ export function getShell() {
       if (s.mv) s.mv.setInteractive(m === 'full');
     },
   };
+  // creating a WebGL context is expensive (software GL: ~1 s), so it is probed on first use, never on the landing path
+  let gl;
+  Object.defineProperty(s, 'hasGL', { get() { if (gl === undefined) gl = webglAvailable(); return gl; } });
   return s;
 }
 export const frames = (n = 2) => new Promise((r) => { const f = (k) => (k <= 0 ? r() : requestAnimationFrame(() => f(k - 1))); f(n); });
