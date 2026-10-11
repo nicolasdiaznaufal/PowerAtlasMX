@@ -130,3 +130,8 @@ async function route() {
 
 window.addEventListener('hashchange', () => { queue = queue.then(route).catch(console.error); });
 queue = queue.then(route).catch(console.error);
+
+// service worker (scope /v2/): registered after load so it never competes with first paint
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker not registered', e)); });
+}

@@ -21,7 +21,7 @@ export function getShell() {
   const box = host.querySelector('.map-canvas');
   const s = shell = {
     host, store: createStore(), metric: 'vf', mv: null, atlas: null, geo: null, byId: new Map(), mode: 'hidden',
-    hasGL: webglAvailable(), hoverFn: null, metricFns: new Set(), failed: false, started: null,
+    hoverFn: null, metricFns: new Set(), failed: false, started: null,
     /** begin loading data and the map (idempotent). Resolves when the map is usable (or failed). */
     init() {
       if (s.started) return s.started;
