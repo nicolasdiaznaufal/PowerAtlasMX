@@ -12,7 +12,7 @@ import { createStore } from '../v2/assets/js/store.js';
 import { createRouter, hrefFor } from '../v2/assets/js/route-logic.js';
 import { parseCfg, parseWx } from '../v2/assets/js/query-extras.js';
 import { groupChart, lineChart } from '../v2/assets/js/svg-charts.js';
-import { monthly, cloudLoss, nodeSolar } from '../v2/assets/js/irradiance.js';
+import { monthly, cloudLoss, nodeSolar, shouldLoadIrradiance } from '../v2/assets/js/irradiance.js';
 
 const W = join(dirname(fileURLToPath(import.meta.url)), '..');
 const S = join(W, 'data', 'solar_v2');
@@ -231,4 +231,21 @@ test('series card: under fixed tilt / another weather the window VF is not drawn
   assert.match(f.leg, /VF of the window, fixed tilt, 2020 weather: 0\.83/);
   assert.match(f.note, /single-axis tracker with yearly-mean weather/);
   delete globalThis.document; delete globalThis.window;
+});
+
+test('irradiance gate: area-only selections never load solar_v2; nodes load when visible or non-default', () => {
+  const def = { cfg: 'tracker', wx: 'mean' }, fij = { cfg: 'fijo', wx: 'mean' };
+  assert.equal(shouldLoadIrradiance(def, true, false), false);
+  assert.equal(shouldLoadIrradiance(fij, true, false), false);
+  assert.equal(shouldLoadIrradiance(def, false, true), false);
+  assert.equal(shouldLoadIrradiance(def, true, true), true);
+  assert.equal(shouldLoadIrradiance(fij, false, true), true);
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../v2/assets/js/explorer.js'), 'utf8');
+  assert.match(src, /if \(!hasNode\)[^\n]*\n\s*else if \(shouldLoadIrradiance\(ctx, false, hasNode\)/);
+});
+
+test('2015 note keeps the 2,431-node statement and states window counts separately', () => {
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../v2/assets/js/view-base.js'), 'utf8');
+  assert.ok(!/replace\(\/the 2,431 KPI nodes/.test(src));
+  assert.match(src, /nodes have data in Y1 and/);
 });

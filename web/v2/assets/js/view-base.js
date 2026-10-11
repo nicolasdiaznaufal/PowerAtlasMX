@@ -89,7 +89,7 @@ export function mountView({ host, side, shell, view, build }) {
         try {
           const v = await getJSON(solarUrls(ctx).vs), cnt = (win) => v.data.y2015[win].p_cap.filter((x) => x !== null && x !== undefined).length;
           const raw15 = v.note_2015 || '';
-          ctxExtra.note2015 = raw15.replace(/the 2,431 KPI nodes/, `the nodes with data in the window (${cnt('Y1').toLocaleString('en-US')} in Y1, ${cnt('Y2').toLocaleString('en-US')} in Y2)`) || null;
+          ctxExtra.note2015 = raw15 ? `${raw15} ${cnt('Y1').toLocaleString('en-US')} nodes have data in Y1 and ${cnt('Y2').toLocaleString('en-US')} in Y2.` : null;
         } catch { /* note is informative */ }
       }
       mountSpan();

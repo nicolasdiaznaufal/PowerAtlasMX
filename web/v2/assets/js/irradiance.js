@@ -42,7 +42,7 @@ export function nodeSolar({ id, cfg, wx, winId, vfile, clear }) {
 export function irradianceCardHTML(slots, clearOn) {
   return `<section class="xp-card irr" id="irr-card"><div class="xp-vhead"><h2 class="mono">Solar resource: irradiance and production</h2>
     <label class="chk"><input type="checkbox" id="irr-clear"${clearOn ? ' checked' : ''}> <span>Show clear-sky reference</span></label></div>
-    <p class="xp-text">${esc(COPY.irrNote)}</p><div id="irr-body">${slots.some((s) => s.kind === 'node') ? '<p class="xp-text">Irradiance loads when this section comes into view.</p>' : '<p class="xp-text">Irradiance is available for nodes: pick a node to see it.</p>'}</div></section>`;
+    <p class="xp-text">${esc(COPY.irrNote)}</p><div id="irr-body">${slots.some((s) => s.kind === 'node') ? '<p class="xp-text">Irradiance loads when this section comes into view.</p>' : '<p class="xp-text">Irradiance is available for nodes only: pick a node to see it.</p>'}</div></section>`;
 }
 
 /** body: fills #irr-body once the files are loaded. data = {vfile, clear}; entries = scenario/real entries with slots. */
@@ -53,7 +53,7 @@ export function paintIrradiance(root, { entries, shell, winId, cfg, wx, data, cl
   if (!nodes.length) { body.innerHTML = `<p class="xp-text">${esc(COPY.irrNote)}</p>`; return; }
   const plane = cfg === 'fijo' ? 'plane of array, fixed tilt' : 'plane of array, tracker';
   body.innerHTML = nodes.map(({ e, k }) => `<div class="irr-slot"><h3 class="mono sub">${esc(nameOf(shell, e))}</h3><div class="irr-sum" data-sum="${k}"></div>
-    <div class="legend mono"><span><i style="background:var(--s1)"></i>Plane of array (solid)</span><span><i style="background:var(--s2)"></i>Global horizontal (dashed)</span>${clearOn ? '<span><i class="outline"></i>Clear sky: outline bars, dotted lines</span>' : ''}</div>
+    <div class="legend mono"><span><i style="background:var(--s1)"></i>Plane of array (solid)</span><span><i style="background:var(--s2)"></i>Global horizontal (dashed)</span>${clearOn ? '<span><i class="outline"></i><i class="outline-dot"></i>Clear sky: outline bars, dotted lines</span>' : ''}</div>
     <div class="chart" data-m="${k}"></div><div class="chart" data-h="${k}"></div><div class="chart" data-p="${k}"></div></div>`).join('');
   for (const { e, k } of nodes) {
     const s = nodeSolar({ id: e.slot.id, cfg, wx, winId, vfile: data.vfile, clear: clearOn ? data.clear : null });
@@ -76,5 +76,5 @@ export function paintIrradiance(root, { entries, shell, winId, cfg, wx, data, cl
   }
 }
 
-/** the irradiance files (4-5 MB) are fetched only when the card is visible, or when a non-default option already fetched that file. */
-export const shouldLoadIrradiance = (ctx, visible) => !!visible || !isDefaultCtx(ctx);
+/** the irradiance files (4-5 MB) are fetched only for node selections, when the card is visible, or when a non-default option already fetched that file. */
+export const shouldLoadIrradiance = (ctx, visible, hasNode = true) => !!hasNode && (!!visible || !isDefaultCtx(ctx));

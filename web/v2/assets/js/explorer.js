@@ -40,7 +40,9 @@ export function mountExplorer(host, { shell, side }) {
         const chk = root.querySelector('#irr-clear');
         if (chk) chk.addEventListener('change', () => { shell.showClear = chk.checked; irr(); });
         const card = root.querySelector('#irr-card');
-        if (shouldLoadIrradiance(ctx, false) || !card || typeof IntersectionObserver === 'undefined') irr();
+        const hasNode = entries.some((e) => e.slot.kind === 'node' && !e.error && !e.missing);
+        if (!hasNode) { /* area-only selection: no solar_v2 request */ }
+        else if (shouldLoadIrradiance(ctx, false, hasNode) || !card || typeof IntersectionObserver === 'undefined') irr();
         else {
           const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); irr(); } }, { rootMargin: '0px' });
           io.observe(card);

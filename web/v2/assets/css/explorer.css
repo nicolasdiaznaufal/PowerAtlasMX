@@ -157,4 +157,5 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .irr-sum { color: var(--ink-2); }
 .irr-sum b { color: var(--ink); font-weight: 500; }
 .credits { color: var(--ink-3); margin: 8px 0 0; text-transform: none; letter-spacing: .02em; }
-.legend i.outline { background: none; border: 1.5px dotted var(--ink-2); width: 14px; height: 10px; }
+.legend i.outline { background: none; border: 1.25px solid var(--ink-2); width: 14px; height: 10px; }
+.legend i.outline-dot { width: 18px; height: 0; border-top: 2px dotted var(--ink-2); border-radius: 0; }
