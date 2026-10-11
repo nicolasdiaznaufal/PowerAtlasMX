@@ -2,7 +2,7 @@
 // First slot only for now; the data layer is slot-based so compare (M6) adds slots without touching it.
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
-import { loadSources, recordFor, seriesFor, yearRows, tilesOf, priceBasis } from './explorer-data.js';
+import { loadSources, recordFor, seriesFor, yearRows, tilesOf, priceBasis, partialNote } from './explorer-data.js';
 import { mountControls, segment } from './controls.js';
 import { barChart, stackChart } from './svg-charts.js';
 
@@ -16,6 +16,7 @@ export function mountExplorer(host, { shell }) {
     <div class="xp-ctl" id="xp-ctl"></div>
     <div class="xp-state" id="xp-state" role="status"></div>
     <div id="xp-body" hidden>
+      <p class="xp-warn" id="xp-warn" hidden></p>
       <div class="tiles" id="xp-tiles"></div>
       <div class="xp-cols">
         <section class="xp-card"><h2 class="mono">Typical day, price by hour (nominal MXN)</h2>
@@ -24,7 +25,7 @@ export function mountExplorer(host, { shell }) {
           <h2 class="mono">Typical day, solar output by hour</h2>
           <div class="chart" id="xp-prod"></div>
         </section>
-        <section class="xp-card"><div class="xp-vhead"><h2 class="mono">Value factor over time</h2>
+        <section class="xp-card"><div class="xp-vhead"><h2 class="mono">Value factor over time (months in nominal MXN)</h2>
           <div class="seg" role="radiogroup" aria-label="Time view" id="xp-view" style="grid-template-columns:repeat(2,1fr)"></div></div>
           <div class="legend mono" id="xp-vleg"></div>
           <div class="chart" id="xp-vf"></div>
@@ -66,6 +67,7 @@ export function mountExplorer(host, { shell }) {
 
   function paint({ slot, rec, series }) {
     const pb = priceBasis(rec, shell.store.real);
+    const pn = partialNote(rec), wn = q('#xp-warn'); wn.hidden = !pn; wn.textContent = pn || '';
     q('#xp-tiles').innerHTML = tilesOf(rec, shell.store.real).map((t) => `<div class="tile"><span class="mono">${esc(t.label)}</span><strong>${t.text}</strong><span class="mono u">${esc(t.unit)}</span></div>`).join('');
     const h = rec.hours;
     q('#xp-lb').textContent = `Average ${num(rec.base, 0)}`; q('#xp-lc').textContent = `Captured ${num(rec.cap, 0)}`; // hourly profiles are nominal
@@ -81,7 +83,7 @@ export function mountExplorer(host, { shell }) {
         return { v, label: mesCorto(m), color: inWin ? SAND : MUTED, tip: `${mesCorto(m)}: ${v === null ? 'no data' : num(v, 2)}${inWin ? ' (in window)' : ''}` };
       });
       rows = series.months.map((m, i) => [mesCorto(m), series.vf[i]]);
-      leg = `<span><i style="background:${SAND}"></i>${esc(w.label)}</span><span><i style="background:${MUTED}"></i>Other months</span><span><i class="dash"></i>VF of the window: ${num(pb.vf, 2)}</span>`;
+      leg = `<span><i style="background:${SAND}"></i>${esc(w.label)}</span><span><i style="background:${MUTED}"></i>Other months</span><span><i class="dash"></i>VF of the window: ${num(pb.vf, 2)}${pb.real ? " (today's pesos)" : ' (nominal)'}</span>`;
     } else {
       const ys = yearRows(series, shell.store.real);
       bars = ys.map((y) => ({ v: y.vf, label: y.label, color: SAND, tip: `${y.label}: VF ${num(y.vf, 2)}` }));

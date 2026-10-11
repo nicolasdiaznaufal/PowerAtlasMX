@@ -19,7 +19,7 @@ export function recordFor(src, slot, winId) {
     const i = idxOf(src.nodos).get(key), w = src.nodos.ventanas[wk], p = src.profiles.nodes[key] && src.profiles.nodes[key][winId];
     if (i === undefined || !w || w.p_cap[i] === null || !p) return { level, key, missing: true };
     const [pml, perdidas, congestion, y] = p;
-    return { level, key, n: 1, base: w.pml_medio[i], cap: w.p_cap[i], vf: w.vf[i], vfDay: w.vf_dia_promedio[i], spread: w.spread_punta_solar[i], z: w.pct_e0[i],
+    return { level, key, n: 1, nHoras: w.n_horas[i], base: w.pml_medio[i], cap: w.p_cap[i], vf: w.vf[i], vfDay: w.vf_dia_promedio[i], spread: w.spread_punta_solar[i], z: w.pct_e0[i],
       baseReal: w.pml_medio_real[i], capReal: w.p_cap_real[i], ingreso: w.ingreso[i], ingresoReal: w.ingreso_real[i], atajo: w.ingreso_atajo[i],
       yf: w.y_f[i], region: src.nodos.region[i], entidad: src.nodos.entidad[i],
       hours: { pml, perdidas, congestion, y, energia: pml.map((v, h) => v - perdidas[h] - congestion[h]) } };
@@ -68,10 +68,17 @@ export function tilesOf(rec, real = false) {
     { id: 'base', label: 'Average price', unit, value: b.base, text: num(b.base, 0) },
     { id: 'cap', label: 'Captured price', unit, value: b.cap, text: num(b.cap, 0) },
     { id: 'vf', label: 'Value factor', unit: 'captured ÷ average', value: b.vf, text: num(b.vf, 2) },
-    { id: 'vfDay', label: 'Value factor, average day', unit: 'captured ÷ average', value: rec.vfDay, text: num(rec.vfDay, 2) },
+    { id: 'vfDay', label: 'Value factor, average day', unit: 'captured ÷ average, nominal', value: rec.vfDay, text: num(rec.vfDay, 2) },
     { id: 'z', label: 'Solar output at price ≤ 0', unit: '% of energy', value: rec.z, text: num(rec.z, 1) },
-    { id: 'spread', label: 'Evening peak minus solar hours', unit: 'MXN/MWh', value: rec.spread, text: num(rec.spread, 0) },
+    { id: 'spread', label: 'Evening peak minus solar hours', unit: 'MXN/MWh, nominal', value: rec.spread, text: num(rec.spread, 0) },
   ];
+}
+
+export const FULL_YEAR_HOURS = 8760;
+/** Visible note for node-windows with fewer priced hours than a full year (nothing is annualised). Areas publish no hour count. */
+export function partialNote(rec) {
+  if (rec.nHoras == null || rec.nHoras >= FULL_YEAR_HOURS) return null;
+  return `Partial year: ${num(rec.nHoras, 0)} priced hours of ${num(FULL_YEAR_HOURS, 0)}. Revenue covers priced hours only and is understated.`;
 }
 
 /** Revenue per MWp per year, from the SAME record (same price, production and profile as Explorer).
@@ -81,10 +88,13 @@ export function revenueOf(rec, real = false) {
   const b = priceBasis(rec, real);
   const total = b.real && rec.ingresoReal != null ? rec.ingresoReal : rec.ingreso;
   const shortcut = rec.atajo != null && rec.base ? rec.atajo * (b.base / rec.base) : null; // published shortcut revenue, re-based when real
-  const out = { total, shortcut, over: total ? (shortcut / total - 1) * 100 : null, real: b.real, base: b.base, cap: b.cap, vf: b.vf, yf: rec.yf, hours: null };
+  const out = { total, shortcut, over: total ? (shortcut / total - 1) * 100 : null, real: b.real, base: b.base, cap: b.cap, vf: b.vf, yf: rec.yf, hours: null, raw: null, scale: null, gap: null };
   const h = rec.hours;
   if (h) {
     const wr = h.y.map((y, k) => y * h.pml[k]), sr = wr.reduce((a, c) => a + c, 0), sy = h.y.reduce((a, c) => a + c, 0);
+    out.raw = wr;                                          // typical-day output x price, MXN per MWp per day (nominal)
+    out.scale = sr > 0 && total != null ? total / 365 / sr : null; // factor that makes the day add up to the yearly figure
+    out.gap = sr > 0 && rec.ingreso ? (sr * 365 / rec.ingreso - 1) * 100 : null; // typical day x 365 vs published nominal ingreso, %
     out.hours = {
       real: wr.map((v) => (sr > 0 && total != null ? (total / 365) * (v / sr) : null)),
       shortcut: h.y.map((y) => (sy > 0 && shortcut != null ? (shortcut / 365) * (y / sy) : null)),

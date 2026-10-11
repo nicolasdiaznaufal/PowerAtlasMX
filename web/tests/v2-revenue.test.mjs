@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { recordFor, revenueOf, tilesOf, priceBasis } from '../v2/assets/js/explorer-data.js';
+import { recordFor, revenueOf, tilesOf, priceBasis, partialNote } from '../v2/assets/js/explorer-data.js';
 
 const W = join(dirname(fileURLToPath(import.meta.url)), '..');
 const f = (p) => join(W, 'data', p);
@@ -56,5 +56,34 @@ test('typical-day production x price is within a few percent of the exact yearly
     const rec = recordFor(s, slot, 'Y2');
     const raw = rec.hours.y.reduce((a, y, k) => a + y * rec.hours.pml[k], 0) * 365;
     assert.ok(Math.abs(raw / rec.ingreso - 1) < 0.08, `${slot.id}: raw typical day ${raw} vs ${rec.ingreso}`);
+  }
+});
+
+test('partial-year note appears for nodes with fewer than 8,760 priced hours and not for full-year nodes', { skip }, () => {
+  const s = src();
+  const cases = [['Y1', ['03MMN-230', '03ZSU-115', '03AMX-69', '06BRL-115']], ['Y2', ['03RIC-115', '06IPR-115', '08DZY-115', '08SIK-115']]];
+  for (const [win, ids] of cases) for (const id of ids) {
+    const rec = recordFor(s, { kind: 'node', id }, win);
+    assert.ok(!rec.missing && rec.nHoras < 8760, `${id} ${win}`);
+    const n = partialNote(rec);
+    assert.match(n, /^Partial year: [\d,]+ priced hours of 8,760\. Revenue covers priced hours only and is understated\.$/);
+    assert.ok(n.includes(rec.nHoras.toLocaleString('en-US')));
+    // nothing is annualised: the published figure is untouched
+    assert.equal(revenueOf(rec, false).total, rec.ingreso);
+  }
+  const full = recordFor(s, { kind: 'node', id: s.nodos.ids[0] }, 'Y2');
+  assert.equal(full.nHoras, 8760); assert.equal(partialNote(full), null);
+  assert.equal(partialNote(recordFor(s, { kind: 'national', id: 'ALL' }, 'Y2')), null);
+});
+
+test('typical-day gap and scale factor are derived from the published ingreso', { skip }, () => {
+  const s = src();
+  for (const slot of [{ kind: 'node', id: s.nodos.ids[0] }, { kind: 'node', id: '03MMN-230' }, { kind: 'region', id: 'CENTRAL' }, { kind: 'national', id: 'ALL' }]) {
+    const rec = recordFor(s, slot, slot.id === '03MMN-230' ? 'Y1' : 'Y2');
+    const rv = revenueOf(rec, false);
+    const raw = rec.hours.y.reduce((a, y, k) => a + y * rec.hours.pml[k], 0);
+    assert.ok(near(rv.gap, (raw * 365 / rec.ingreso - 1) * 100, 1e-9));
+    assert.ok(near(rv.scale * raw * 365, rec.ingreso, 1e-9));
+    assert.ok(Math.abs(rv.gap) < 60, `${slot.id}: gap ${rv.gap}`);
   }
 });
