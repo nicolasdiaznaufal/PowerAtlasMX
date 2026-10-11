@@ -8,28 +8,54 @@ import { mountControls } from './controls.js';
 import { indicatorsHTML } from './indicators.js';
 import { areaTablesHTML, wireAreaTables } from './area-tables.js';
 import { COPY } from './copy.js';
+import { scenarioEntries } from './scenario.js';
+import { isNeutral } from './query-extras.js';
+import { mountScenarioPanel } from './scenario-panel.js';
+import { mountRangeSlider } from './range-slider.js';
+import { summaryRows, summaryHTML } from './span-summary.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function mountView({ host, side, shell, view, build }) {
-  let ver = 0, dead = false, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get());
+  let ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), spanMounted = false, sumVer = 0;
   const sorts = { state: { key: 'vf', dir: -1 }, region: { key: 'vf', dir: -1 } };
   const winOf = () => shell.winId || 'Y2';
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
+    <div id="vb-span"></div>
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
-  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div>`;
+  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-scn"></div><div id="vb-ind" class="inds"></div>`;
+  const scn = mountScenarioPanel(side.querySelector('#vb-scn'), shell.store);
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
   const state = (kind, html) => { const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };
 
+  function mountSpan() {
+    const ok = raw && raw.find((e) => e.series);
+    if (spanMounted || !ok) return;
+    spanMounted = true;
+    mountRangeSlider(q('#vb-span'), { months: ok.series.months, win: WIN[winOf()], span: shell.store.span, onChange: (sp) => shell.store.setSpan(sp) });
+  }
+
+  async function paintSummary(real, w) {
+    const my = ++sumVer, el = q('#sr-summary');
+    if (!el) return;
+    el.textContent = 'Loading span summary…';
+    const rows = await summaryRows(entries, shell, shell.store.span, w, real);
+    if (my !== sumVer || dead || !q('#sr-summary')) return;
+    q('#sr-summary').innerHTML = summaryHTML(rows, shell, shell.store.span, w, real);
+  }
+
   function paint() {
-    if (!entries) return;
+    if (!raw) return;
+    entries = scenarioEntries(raw, shell.store.scenario);
     const real = shell.store.real, w = WIN[winOf()], ctx = { entries, shell, winId: winOf(), real, w, view: ctxExtra };
     side.querySelector('#vb-ind').innerHTML = indicatorsHTML(entries, shell, view);
     const body = q('#vb-body');
     const national = shell.store.get()[0] && shell.store.get()[0].kind === 'national' && ctxExtra.analysis;
-    body.innerHTML = build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
+    const banner = isNeutral(shell.store.scenario) ? '' : '<div class="sim-banner" role="note"><span class="badge">Simulated</span><span>These values are a what-if on the typical day, not published data. Published values are shown as ghost lines and as the change next to each indicator.</span></div>';
+    body.innerHTML = banner + build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
     build.draw(body, ctx, { repaint: paint, state: ctxExtra });
+    paintSummary(real, w);
     if (national) {
       const el = body.querySelector('#vb-areas');
       const drawAreas = () => {
@@ -44,13 +70,16 @@ export function mountView({ host, side, shell, view, build }) {
     const my = ++ver, slots = shell.store.get();
     if (!slots.length) return;
     selKey = serializeSel(slots);
+    spanMounted = false; // the presets depend on the window
     state('loading', 'Loading data…');
     try {
       const [list, src] = await Promise.all([loadEntries(slots, winOf()), slots[0].kind === 'national' ? loadSources({ kind: 'national', id: 'ALL' }) : Promise.resolve(null)]);
       if (my !== ver || dead) return;
       if (list.every((e) => e.error)) throw list[0].error;
-      entries = list; ctxExtra.analysis = src && src.analysis;
+      raw = list; ctxExtra.analysis = src && src.analysis;
+      mountSpan();
       if (list.length === 1 && list[0].missing) {
+        entries = null;
         side.querySelector('#vb-ind').innerHTML = '';
         state('err', `No data for this selection in ${esc(WIN[winOf()].label)}. ${slots[0].kind === 'node' ? 'The node is outside the analysis universe for that window.' : ''}`);
         return;
@@ -66,9 +95,12 @@ export function mountView({ host, side, shell, view, build }) {
   }
 
   load();
-  const off = shell.store.subscribe((l) => { if (serializeSel(l) !== selKey) load(); else paint(); });
+  const off = shell.store.subscribe((l) => {
+    if (serializeSel(l) !== selKey) load();
+    else paint();
+  });
   let timer = 0, lastW = host.clientWidth;
   const onResize = () => { clearTimeout(timer); timer = setTimeout(() => { if (host.clientWidth !== lastW) { lastW = host.clientWidth; paint(); } }, 150); };
   window.addEventListener('resize', onResize);
-  return { destroy() { dead = true; off(); ctl.destroy(); window.removeEventListener('resize', onResize); clearTimeout(timer); } };
+  return { destroy() { dead = true; off(); ctl.destroy(); scn.destroy(); window.removeEventListener('resize', onResize); clearTimeout(timer); } };
 }

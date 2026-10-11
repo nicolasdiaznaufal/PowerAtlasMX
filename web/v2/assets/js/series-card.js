@@ -7,6 +7,7 @@ import { barChart, lineChart, vfAxis, renderChart, chartWidth, thin } from './sv
 import { legendHTML, esc, nameOf } from './compare-ui.js';
 import { segment } from './controls.js';
 import { COPY } from './copy.js';
+import { inSpan } from './span-data.js';
 
 const SAND = 'var(--s1)', MUTED = 'var(--c-energy)';
 
@@ -14,35 +15,39 @@ export function seriesCardHTML() {
   return `<section class="xp-card series"><div class="xp-vhead"><h2 class="mono" id="sr-title">Value factor over time</h2>
     <div class="seg" role="radiogroup" aria-label="Series by month or by year" id="sr-view" style="grid-template-columns:repeat(2,1fr)"></div></div>
     <div class="legend mono" id="sr-leg"></div><div class="chart" id="sr-vf"></div><div class="chart" id="sr-px" hidden></div>
-    <p class="xp-text" id="sr-note"></p><details><summary class="mono">Data table</summary><div class="tbl" id="sr-table"></div></details></section>`;
+    <p class="xp-text" id="sr-note"></p><details><summary class="mono">Data table</summary><div class="tbl" id="sr-table"></div></details>
+    <h3 class="mono sub">Summary of the time span</h3><div id="sr-summary" aria-live="polite"></div></section>`;
 }
 
 /** entries: slot entries (series may be null); view 'months' | 'years'. */
 export function paintSeries(root, { entries, shell, winId, view, onView }) {
-  const q = (s) => root.querySelector(s), real = shell.store.real, w = WIN[winId];
+  const q = (s) => root.querySelector(s), real = shell.store.real, w = WIN[winId], span = shell.store.span;
   const ok = entries.filter((e) => e.series);
   segment(q('#sr-view'), [['months', 'By month'], ['years', 'By year']], view, onView);
-  q('#sr-title').textContent = view === 'months' ? 'Value factor by month (nominal MXN)' : `Value factor, average and captured price by calendar year${real ? " (today's pesos)" : ' (nominal MXN)'}`;
+  q('#sr-title').textContent = view === 'months' ? `Value factor by month${span ? ` (${span.from} to ${span.to})` : ''} (nominal MXN)` : `Value factor, average and captured price by calendar year${real ? " (today's pesos)" : ' (nominal MXN)'}`;
   q('#sr-note').textContent = COPY.seriesNote;
   const px = q('#sr-px'); px.hidden = view !== 'years';
   if (!ok.length) { q('#sr-vf').innerHTML = '<p class="xp-text">No series for this selection.</p>'; q('#sr-table').innerHTML = ''; return; }
   const multi = entries.length > 1;
   if (view === 'months') {
-    const months = ok[0].series.months, every = thin(months.length, chartWidth(q('#sr-vf')), 56, 6);
+    const allMonths = ok[0].series.months, keep = allMonths.map((m) => inSpan(m, span)), months = allMonths.filter((_, i) => keep[i]), every = thin(months.length, chartWidth(q('#sr-vf')), 56, 6);
     if (!multi) {
       const e = ok[0], pb = priceBasis(e.rec, real);
-      const bars = months.map((m, i) => { const inW = m >= w.desde && m <= w.hasta, v = e.series.vf[i]; return { v, label: mesCorto(m), color: inW ? SAND : MUTED, tip: `${mesCorto(m)}: ${v === null ? 'no data' : num(v, 2)}${inW ? ' (in window)' : ''}` }; });
+      const vfs = e.series.vf.filter((_, i) => keep[i]);
+      const bars = months.map((m, i) => { const inW = m >= w.desde && m <= w.hasta, v = vfs[i]; return { v, label: mesCorto(m), color: inW ? SAND : MUTED, tip: `${mesCorto(m)}: ${v === null ? 'no data' : num(v, 2)}${inW ? ' (in window)' : ''}` }; });
       q('#sr-leg').innerHTML = `<span><i style="background:${SAND}"></i>${esc(w.label)}</span><span><i style="background:${MUTED}"></i>Other months</span><span><i class="dash"></i>VF of the window: ${num(pb.vf, 2)}${pb.real ? " (today's pesos)" : ' (nominal)'}</span>`;
       renderChart(q('#sr-vf'), () => barChart({ bars, hline: { v: pb.vf, label: `Window ${num(pb.vf, 2)}` }, refs: [1], scale: vfAxis(bars.map((b) => b.v).concat([pb.vf])), H: 300, xEvery: every, aria: 'Value factor by month', ytitle: 'Value factor', xtitle: 'Month' }));
     } else {
       q('#sr-leg').innerHTML = legendHTML(entries, shell);
-      const ser = entries.map((e) => ({ vals: e.series ? e.series.vf : months.map(() => null), label: nameOf(shell, e) }));
+      const ser = entries.map((e) => ({ vals: e.series ? e.series.vf.filter((_, i) => keep[i]) : months.map(() => null), label: nameOf(shell, e) }));
       renderChart(q('#sr-vf'), () => lineChart({ series: ser, labels: months.map(mesCorto), refs: [1], H: 300, scale: vfAxis(ser.flatMap((x) => x.vals)), xEvery: every, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor', xtitle: 'Month' }));
     }
-    q('#sr-table').innerHTML = tableHTML(['Month', ...entries.map((e) => nameOf(shell, e))], months.map((m, i) => [mesCorto(m), ...entries.map((e) => (e.series ? e.series.vf[i] : null))]), 2);
+    q('#sr-table').innerHTML = tableHTML(['Month', ...entries.map((e) => nameOf(shell, e))], months.map((m, i) => [mesCorto(m), ...entries.map((e) => (e.series ? e.series.vf.filter((_, j) => keep[j])[i] : null))]), 2);
     return;
   }
-  const ya = yearAxis(entries, real);
+  const ya0 = yearAxis(entries, real), yKeep = ya0.years.map((y) => !span || (`${y}-01` >= span.from && `${y}-12` <= span.to));
+  const sel = yKeep.some(Boolean) ? yKeep : ya0.years.map(() => true);
+  const ya = { years: ya0.years.filter((_, i) => sel[i]), vals: ya0.vals.map((v) => v.filter((_, i) => sel[i])) };
   q('#sr-leg').innerHTML = multi ? legendHTML(entries, shell) : '<span><i style="background:var(--s1)"></i>Value factor</span>';
   const vser = entries.map((e, k) => ({ vals: ya.vals[k], label: nameOf(shell, e) }));
   renderChart(q('#sr-vf'), () => lineChart({ series: vser, labels: ya.years, refs: [1], H: 280, scale: vfAxis(vser.flatMap((x) => x.vals)), aria: 'Value factor by calendar year', ytitle: 'Value factor', xtitle: 'Calendar year' }));

@@ -100,8 +100,8 @@ export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, 
 }
 
 /** two bars per hour (a = left, b = right). Used for shortcut vs hour-by-hour revenue. */
-export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN', xtitle = '' }) {
-  const vals = finite([...a, ...b]);
+export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN', xtitle = '', ghost = null }) {
+  const vals = finite([...a, ...b, ...(ghost || [])]);
   const sc = niceTicks(Math.min(0, ...vals), Math.max(...vals, 1e-9));
   const { g, y } = axis(H, sc.ticks, (v) => num(v, 0), ytitle);
   const iw = W - PAD.l - PAD.r, step = iw / 24, bw = step * 0.38, y0 = y(0);
@@ -113,6 +113,7 @@ export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp',
       const y1 = y(v), top = Math.min(y0, y1), hgt = Math.max(0.5, Math.abs(y0 - y1));
       out += `<rect x="${(x + k * (bw + 1)).toFixed(1)}" y="${Math.min(top, H - PAD.b - hgt).toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${c}"><title>${hh}:00 ${nm}: ${num(v, 0)} ${unit}</title></rect>`;
     });
+    if (ghost && ghost[h] !== null && ghost[h] !== undefined) { const g1 = y(ghost[h]), gt = Math.min(y0, g1); out += `<rect x="${(x + bw + 1).toFixed(1)}" y="${gt.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, Math.abs(y0 - g1)).toFixed(1)}" class="ghost-bar"><title>${hh}:00 published: ${num(ghost[h], 0)} ${unit}</title></rect>`; }
     if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${hh}</text>`;
   }
   return frame(H, aria, out, xtitle);

@@ -88,7 +88,7 @@ export function mountMap(root) {
   const cont = q('#cont');
   const syncCont = (list) => {
     cont.setAttribute('aria-disabled', String(!list.length));
-    cont.href = hrefFor('/choose', list, shell.store.real);
+    cont.href = hrefFor('/choose', list, shell.store.real, shell.store.extras);
     cont.tabIndex = list.length ? 0 : -1;
   };
   cont.addEventListener('click', (e) => { if (cont.getAttribute('aria-disabled') === 'true') e.preventDefault(); });

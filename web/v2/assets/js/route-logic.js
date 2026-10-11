@@ -1,18 +1,20 @@
 // Pure routing logic (no DOM): hash -> {path, list, canonical hash}; selection sync that never writes a stale path.
 import { parseSel, serializeSel } from './store.js';
+import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals } from './query-extras.js';
 
 export const ROUTES = ['/', '/map', '/choose', '/explorer', '/revenue'];
 const NEEDS_SEL = new Set(['/choose', '/explorer', '/revenue']);
 /** `real` (today's pesos) is written as &real=1 only when on; nominal is the default and is omitted. */
-export const hrefFor = (path, list, real = false) => {
+export const hrefFor = (path, list, real = false, extras = null) => {
   if (path === '/' || !(list && list.length)) return `#${path}`;
-  return `#${path}?sel=${serializeSel(list)}${real ? '&real=1' : ''}`;
+  const x = extras || {}, sc = serializeScenario(x.sc);
+  return `#${path}?sel=${serializeSel(list)}${real ? '&real=1' : ''}${x.span ? `&from=${x.span.from}&to=${x.span.to}` : ''}${sc ? `&sc=${sc}` : ''}`;
 };
 
 /** valid: null (unknown yet) or { node, state, region } predicates.
  *  current: the selection already held; a hash without `sel` inherits it (and is rewritten to carry it).
  *  The landing page ignores `sel` (it is dropped from the URL). */
-export function resolveHash(hash, valid = null, current = [], currentReal = false) {
+export function resolveHash(hash, valid = null, current = [], currentReal = false, currentExtras = null) {
   const [p, q] = String(hash || '').replace(/^#/, '').split('?');
   let path = ROUTES.includes(p || '/') ? (p || '/') : '/';
   const params = new URLSearchParams(q || '');
@@ -21,7 +23,12 @@ export function resolveHash(hash, valid = null, current = [], currentReal = fals
   const real = path === '/' ? currentReal : params.has('real') ? params.get('real') === '1' : raw ? false : currentReal;
   const list = raw ? parseSel(raw, valid) : path === '/' ? [] : current.slice();
   if (NEEDS_SEL.has(path) && !list.length) path = '/map';
-  return { path, list, real, hadSel: !!raw, hash: hrefFor(path, list, real) };
+  // span and scenario follow the same rule as the basis: explicit entry -> exactly what the URL says; bare hash -> inherit
+  const cur = currentExtras || {};
+  const inherit = path === '/' || !raw;
+  const span = path === '/' ? cur.span || null : params.has('from') || params.has('to') ? parseSpan(params.get('from'), params.get('to')) : inherit ? cur.span || null : null;
+  const sc = path === '/' ? cur.sc || null : params.has('sc') ? parseScenario(params.get('sc')) : inherit ? cur.sc || null : null;
+  return { path, list, real, span, sc, hadSel: !!raw, hash: hrefFor(path, list, real, { span, sc }) };
 }
 
 /** Router state: `cur` is updated BEFORE the store is synced, so the store subscriber always writes the new route. */
@@ -29,20 +36,26 @@ export function createRouter({ store, valid = () => null, replace, currentHash =
   let cur = null;
   // a navigation may be queued behind a running transition: never overwrite a URL that already points elsewhere
   const pathOf = (h) => { const p = String(h || '').replace(/^#/, '').split('?')[0] || '/'; return ROUTES.includes(p) ? p : '/'; };
+  let applying = false; // while a hash is being applied, no intermediate URL may be written (a reload could capture it)
   store.subscribe((list) => {
-    if (!cur || cur === '/') return;
+    if (applying || !cur || cur === '/') return;
     if (currentHash && pathOf(currentHash()) !== cur) return;
-    replace(hrefFor(cur, list, store.real));
+    replace(hrefFor(cur, list, store.real, store.extras));
   });
   return {
     get path() { return cur; },
     resolve(hash) {
-      const r = resolveHash(hash, valid(), store.get(), store.real);
+      const r = resolveHash(hash, valid(), store.get(), store.real, store.extras);
       const prev = cur;
       cur = r.path;
       if (r.hash !== hash) replace(r.hash);
-      if (r.path !== '/' && store.real !== r.real) store.setReal(r.real);
-      if (r.hadSel && serializeSel(store.get()) !== serializeSel(r.list)) store.set(r.list);
+      applying = true;
+      try {
+        if (r.path !== '/' && store.real !== r.real) store.setReal(r.real);
+        if (r.path !== '/' && !spanEquals(store.span, r.span)) store.setSpan(r.span);
+        if (r.path !== '/' && !scenarioEquals(store.scenario, r.sc)) store.setScenario(r.sc);
+        if (r.hadSel && serializeSel(store.get()) !== serializeSel(r.list)) store.set(r.list);
+      } finally { applying = false; }
       return { path: r.path, prev, changed: prev !== r.path };
     },
   };

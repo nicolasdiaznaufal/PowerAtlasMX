@@ -46,6 +46,18 @@ several slots and, at the National level, sortable tables of all states and all 
 Intro texts and labels live in `assets/js/copy.js` and are a **draft** pending Nico's approval.
 Chart widths follow the container so tick labels stay readable on phones; every chart has x tick labels and an x axis title (tested).
 
+## Time span and what-if scenarios (M9)
+- **Time span** (`&from=YYYY-MM&to=YYYY-MM`, default = the 12-month window): a dual-handle slider with presets (last 12 months, all, each calendar year) drives the monthly
+  value-factor series and its summary. Exact period prices exist only where the node's monthly sums are published (the 20 node sheets): there the summary uses v1's own
+  `compute()` (`calc.js`), so numbers equal v1 "One node in detail, for any period" and, for the 12-month window, the published window figures (tested). Every other slot
+  only has the monthly value factor, so its summary is the simple mean and range of the monthly values (labelled as such, not the period's value factor).
+  Typical day and revenue always use the 12-month windows. Months without complete data are gaps, not zeros.
+- **Scenarios** (`&sc=p:50,m:100,y:0`; the default load is always real values): three levers on the typical-day hourly profile, applied as midday dip, then price shift, then yield.
+  Every simulated figure is `published value x (scenario typical-day result / baseline typical-day result)`, so neutral sliders reproduce the published numbers exactly.
+  Simulated: average price, captured price, value factor (and VF of the average day), revenue per MWp and the shortcut revenue. Not simulated (shown unchanged and marked):
+  share of output at price <= 0, evening-peak minus solar spread, and the monthly/yearly series. A visible "Simulated" badge, deltas vs real and ghost lines of the published profile accompany every simulated view; "Reset to real values" restores everything.
+  The price shift moves the typical-day average by exactly the shift; the displayed (published-scaled) average moves by the shift times (published average / typical-day average), within about 2%.
+
 ## Roadmap (not built)
 Tracker vs fixed tilt, irradiance, typical year and clear sky are held for a later solar brief: no UI beyond the disabled "Fixed tilt" option.
 

@@ -27,13 +27,14 @@ export function mountRevenue(host, { shell, side }) {
       draw(root, { entries, winId, real, w }, { repaint }) {
         drawDecomp(root, entries);
         const rows = compareRows(entries, real), L = columnLabels(real), pesos = real ? "today's pesos" : 'nominal';
+        const realRows = compareRows(entries.map((e) => (e.real ? { ...e, rec: e.real } : e)), real);
         const gapText = (r) => (r.rev.gap === null ? '' : ` Typical day × 365 is ${num(Math.abs(r.rev.gap), 1)}% ${r.rev.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`);
         const labels = Array.from({ length: 24 }, (_, i) => hh(i));
         const hours = root.querySelector('#rv-hours');
         if (entries.length === 1) {
           const r = rows[0], e = entries[0];
           if (r.ok && r.rev.hours) {
-            renderChart(hours, () => pairChart({ a: r.rev.hours.shortcut, b: r.rev.hours.real, ca: 'var(--ink-3)', cb: 'var(--s1)', H: 300, aria: 'Typical day: revenue of 1 MWp by hour, shortcut versus hour by hour', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, CDMX clock (start of hour)', unit: 'MXN per MWp' }));
+            renderChart(hours, () => pairChart({ a: r.rev.hours.shortcut, b: r.rev.hours.real, ca: 'var(--ink-3)', cb: 'var(--s1)', H: 300, aria: 'Typical day: revenue of 1 MWp by hour, shortcut versus hour by hour', ytitle: `MXN per MWp, per day (${pesos})`, xtitle: 'Hour of day, CDMX clock (start of hour)', unit: 'MXN per MWp', ghost: e.real && realRows[0].ok && realRows[0].rev.hours ? realRows[0].rev.hours.real : null }));
             const lab = tableLabels(real, r.rev.scale);
             root.querySelector('#rv-notes').innerHTML = `<b>${esc(nameOf(shell, e))}</b>: 1 MWp earns ${mil(r.rev.total)} M MXN a year (${pesos}); every hour at the average price would give ${mil(r.rev.shortcut)} M MXN${r.rev.over === null ? '' : `, ${num(r.rev.over, 0)}% more`}. ${esc(lab.note)}${esc(gapText(r))}`;
             const h = e.rec.hours;

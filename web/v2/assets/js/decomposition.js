@@ -33,6 +33,6 @@ export function drawDecomp(root, entries) {
   root.querySelectorAll('[data-decomp]').forEach((el) => {
     const e = entries[+el.dataset.decomp];
     if (!e || !e.rec || !e.rec.hours) return;
-    renderChart(el, () => decompChart({ ...e.rec.hours, base: e.rec.base, cap: e.rec.cap, aria: `Typical day: price by hour split into system energy, losses and congestion, with solar output, average price ${num(e.rec.base, 0)} and captured price ${num(e.rec.cap, 0)}` }));
+    renderChart(el, () => decompChart({ ...e.rec.hours, ghost: e.real && e.real.hours ? { pml: e.real.hours.pml, y: e.real.hours.y } : null, base: e.rec.base, cap: e.rec.cap, aria: `Typical day: price by hour split into system energy, losses and congestion, with solar output, average price ${num(e.rec.base, 0)} and captured price ${num(e.rec.cap, 0)}` }));
   });
 }

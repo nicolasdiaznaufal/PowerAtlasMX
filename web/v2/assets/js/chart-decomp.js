@@ -18,11 +18,12 @@ export function solarRuns(y, share = 0.05) {
   return runs;
 }
 
-export function decompChart({ energia, perdidas, congestion, pml, y, base, cap, H = 340, aria }) {
+export function decompChart({ energia, perdidas, congestion, pml, y, base, cap, H = 340, aria, ghost = null }) {
   const parts = [['System energy', 'var(--c-energy)', energia], ['Losses', 'var(--c-losses)', perdidas], ['Congestion', 'var(--c-cong)', congestion]];
   const pos = energia.map((_, h) => parts.reduce((s, p) => s + Math.max(0, p[2][h]), 0));
   const neg = energia.map((_, h) => parts.reduce((s, p) => s + Math.min(0, p[2][h]), 0));
-  const sc = niceTicks(Math.min(0, ...neg), Math.max(...pos, ...pml, base, cap));
+  const gp = ghost ? ghost.pml : [];
+  const sc = niceTicks(Math.min(0, ...neg, ...gp), Math.max(...pos, ...pml, ...gp, base, cap));
   const { g, y: Y } = axis(H, sc.ticks, (v) => num(v, 0), 'MXN/MWh (nominal)');
   const iw = W - PAD.l - PAD.r, step = iw / 24, bw = step * 0.72, top = PAD.t, bot = H - PAD.b;
   const X = (h) => PAD.l + step * h + step / 2;
@@ -41,12 +42,15 @@ export function decompChart({ energia, perdidas, congestion, pml, y, base, cap, 
     }
     if (h % 2 === 0 || W > 560) out += `<text x="${X(h).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${String(h).padStart(2, '0')}</text>`;
   }
+  // the published (real) profile as a ghost line when a scenario is on
+  if (ghost) out += `<path d="${ghost.pml.map((v, h) => `${h ? 'L' : 'M'}${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join('')}" class="ghost-line" fill="none"><title>Published price (real values)</title></path>`;
   // total price line
   out += `<path d="${pml.map((v, h) => `${h ? 'L' : 'M'}${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join('')}" class="pml-line" fill="none"><title>Price (PML) by hour</title></path>`;
   out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${Y(base)}" y2="${Y(base)}" class="hline"><title>Average price ${num(base, 0)} MXN/MWh</title></line>`;
   out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${Y(cap)}" y2="${Y(cap)}" class="cline"><title>Captured price ${num(cap, 0)} MXN/MWh</title></line>`;
   // solar output on the right axis
-  const ymax = niceMax(Math.max(...y, 1e-9)), R = (v) => top + (bot - top) * (1 - v / ymax);
+  const ymax = niceMax(Math.max(...y, ...(ghost ? ghost.y : []), 1e-9)), R = (v) => top + (bot - top) * (1 - v / ymax);
+  if (ghost) out += `<path d="${ghost.y.map((v, h) => `${h ? 'L' : 'M'}${X(h).toFixed(1)},${R(v).toFixed(1)}`).join('')}" class="ghost-line prod" fill="none"><title>Published solar output (real values)</title></path>`;
   out += `<path d="${y.map((v, h) => `${h ? 'L' : 'M'}${X(h).toFixed(1)},${R(v).toFixed(1)}`).join('')}" class="out-line" fill="none"><title>Solar output (right axis)</title></path>`;
   for (const v of [0, ymax / 2, ymax]) out += `<text x="${W - PAD.r + 8}" y="${(R(v) + 4).toFixed(1)}" class="tick prodtick">${num(v, 2)}</text>`;
   out += `<text x="${W - PAD.r + 8}" y="11" class="atitle prodtick">MWh/MWp</text>`;

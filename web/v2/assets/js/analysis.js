@@ -18,8 +18,8 @@ export function mountAnalysis(root, { view, go }) {
     <header class="nav">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
       <nav class="tabs mono" aria-label="Views">
-        <a data-to="/explorer" href="${hrefFor('/explorer', list, shell.store.real)}" ${view === 'explorer' ? 'aria-current="page"' : ''}>Explorer</a>
-        <a data-to="/revenue" href="${hrefFor('/revenue', list, shell.store.real)}" ${view === 'revenue' ? 'aria-current="page"' : ''}>Revenue</a>
+        <a data-to="/explorer" href="${hrefFor('/explorer', list, shell.store.real, shell.store.extras)}" ${view === 'explorer' ? 'aria-current="page"' : ''}>Explorer</a>
+        <a data-to="/revenue" href="${hrefFor('/revenue', list, shell.store.real, shell.store.extras)}" ${view === 'revenue' ? 'aria-current="page"' : ''}>Revenue</a>
       </nav>
     </header>
     <main class="an-body">
@@ -34,9 +34,9 @@ export function mountAnalysis(root, { view, go }) {
         </aside>
         <div class="an-main" id="an-content"></div>
       </div>
-      <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real)}">Open ${COPY[other].title}</a></p>
+      <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real, shell.store.extras)}">Open ${COPY[other].title}</a></p>
     </main>
-    <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real)}" aria-label="Back to the map"><span class="mono">Map</span></a>
+    <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real, shell.store.extras)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;
   const chips = mountChips(root.querySelector('#chips'), shell, { removable: true });
   const host = root.querySelector('#an-content');
@@ -49,7 +49,7 @@ export function mountAnalysis(root, { view, go }) {
   // keep tab / map links in step with the price basis (it lives in the URL as &real=1)
   const links = () => {
     const l = shell.store.get(), r = shell.store.real;
-    root.querySelectorAll('a[data-to]').forEach((a) => { a.href = hrefFor(a.dataset.to, l, r); });
+    root.querySelectorAll('a[data-to]').forEach((a) => { a.href = hrefFor(a.dataset.to, l, r, shell.store.extras); });
   };
   const addBtn = root.querySelector('#add-btn'), addSlot = root.querySelector('#add-slot'), addNote = root.querySelector('#add-note');
   let selector = null;
@@ -74,7 +74,7 @@ export function mountAnalysis(root, { view, go }) {
   const sideEl = root.querySelector('.an-side');
   const onSel = (l) => {
     links(); syncAdd(l); sideEl.classList.toggle('multi', l.length > 1);
-    if (!l.length) { go(hrefFor('/map', [], shell.store.real)); return; }
+    if (!l.length) { go(hrefFor('/map', [], shell.store.real, shell.store.extras)); return; }
     shell.fit(500); // mini-map follows the selection
   };
   syncAdd(shell.store.get());

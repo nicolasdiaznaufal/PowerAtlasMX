@@ -2,7 +2,7 @@
 .maphost { position: fixed; z-index: 1; left: 0; top: 0; width: 100vw; height: 100vh; height: 100svh; background: var(--canvas); view-transition-name: mapdock; overflow: hidden; }
 .maphost .map-canvas { position: absolute; inset: 0; }
 .maphost.is-hidden { visibility: hidden; opacity: 0; pointer-events: none; view-transition-name: none; }
-.maphost.is-mini { left: auto; right: 16px; top: 72px; width: 340px; height: 240px; border-radius: var(--radius); box-shadow: var(--ring-strong); z-index: 30; }
+.maphost.is-mini { position: absolute; left: auto; right: 16px; top: 72px; width: 340px; height: 240px; border-radius: var(--radius); box-shadow: var(--ring-strong); z-index: 30; }
 .maphost.is-mini .map-canvas { pointer-events: none; }
 .overlay { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
 .overlay > * { pointer-events: auto; }
@@ -43,7 +43,7 @@ h1:focus, main:focus { outline: none; }
 .an-body h1 { margin: 0; font-size: clamp(32px, 4vw, 48px); font-weight: 450; letter-spacing: -.05em; }
 .an-body .eyebrow { margin: 0; color: var(--ink-3); }
 .an-note { color: var(--ink-2); margin: 0; max-width: 56ch; }
-.mini-hit { position: fixed; z-index: 31; right: 16px; top: 72px; width: 340px; height: 240px; border-radius: var(--radius); text-decoration: none; display: flex; align-items: flex-end; justify-content: flex-start; padding: 8px; }
+.mini-hit { position: absolute; z-index: 31; right: 16px; top: 72px; width: 340px; height: 240px; border-radius: var(--radius); text-decoration: none; display: flex; align-items: flex-end; justify-content: flex-start; padding: 8px; }
 .mini-hit span { background: rgba(10, 10, 10, .75); padding: 2px 8px; border-radius: 4px; color: var(--ink); }
 .mini-hit:hover span, .mini-hit:focus-visible span { background: var(--accent); color: var(--on-accent); }
 
