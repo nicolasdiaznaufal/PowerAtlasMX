@@ -568,3 +568,63 @@ Se genera con `.venv/bin/python pipeline/kpis.py --analisis` (≈15 s; `schema_v
 - determinismo: dos corridas dan el mismo resultado;
 - cuentas a mano de `_area` y de la tolerancia;
 - `supuestos.yaml` sigue PENDIENTE.
+
+## 12. Configuración (seguidor / fijo) × variante de clima (solar v2)
+
+Código: `pipeline/kpis_variants.py` (cálculo y puertas) y `pipeline/kpis_variants_out.py` (JSON web). Pruebas:
+`tests/test_kpis_variants.py`. Plan de solar: `docs/SOLAR_V2_PLAN.md` (§2 variantes, §4 archivos, §5 entrega).
+
+**Fórmulas: sin cambios.** Se reutilizan `kpis._metricas_nodo`, `kpis.a_reales` y `kpis.nodos_json` (extraída de
+`analisis()` sin cambiar su salida). Lo único que cambia es el `y` de cada celda: en vez del baseline
+`y(mes, hora)` se usa la tabla de la variante de `data/solar_v2/tables_month_hour.parquet` [MWh/MWp por hora], con
+clave mes 1..12 (`mean`, `y2015`..`y2025`) o año·100+mes (`win`). Como `y` es constante en cada celda
+(nodo, año, mes, hora) de `agregados_comunes`, las sumas ponderadas son exactas:
+`Σy = y·n_horas`, `Σ(y·PML) = y·sum_pml_cent/100` (error medido contra el Σ horario del pipeline: 4·10⁻¹³ relativo),
+`Σ(y | PML≤0) = y·n_pml_le0`. De ahí, como en §11: `p_cap = Σ(y·PML)/Σy` [MXN/MWh], `vf = p_cap/pml_medio`,
+`pct_e0 = 100·Σ(y|PML≤0)/Σy` [%], `y_f = Σy` [MWh/MWp], `ingreso = Σ(y·PML)` [MXN/MWp], `ingreso_atajo = y_f·pml_medio`,
+`vf_dia_promedio` (día promedio), `p_cap_real`, `ingreso_real` (mismo deflactor INPC por mes CDMX, base = último mes).
+Independientes de config y variante: `n_horas`, `pml_medio`, `pml_medio_real`, `congestion_media`, `spread_punta_solar`.
+Universo por ventana: ids de `analysis_nodos.json` con `n_horas ≥ 7 200` (igual que §11; si no, `null`).
+**No se anualiza** `y_f` ni `ingreso` (nodos con huecos quedan con sus horas); `yf_annual_equiv` (de
+`solar_v2/scalars.parquet`: rendimiento de 12 meses de la variante) viaja aparte, solo informativo.
+
+Dimensiones: config `tracker` / `fijo` (parquet: `fixed`); variantes `mean` = "Yearly mean 2015-2025" (por defecto,
+= publicado), `y2015`..`y2025`, `win` = clima real de cada mes de la ventana. `clear` (cielo despejado) queda solo como
+referencia de irradiancia/producción en `variants/clear.json`, sin KPIs. Ventanas: Y1 = 2024-08..2025-07, Y2 =
+2025-08..2026-07 para todas las variantes; `completo` y las ventanas ago-jun solo para `mean` (en `analysis_nodos_*`).
+**Nota 2015**: en el nodo mediano (seguidor) 2015 queda −5.9 % frente a los demás años; probablemente un cambio de
+insumos MERRA-2/CERES [sin verificar]. Se mantiene dentro de `mean` (decisión de Nico) y la UI lo rotula
+(`note_2015` en `variant_scalars_*.json`).
+
+**Archivos** (`data/solar_v2/web/`, ignorado por git; `web/tools/build_solar_web.py` los copia a `web/data/solar_v2/`
+junto con `variants/{v}.json` y `scalars.json` de solar). Tamaños medidos (gz nivel 9):
+
+| Archivo | Contenido | bytes / gz |
+|---|---|---|
+| `analysis_nodos_tracker.json` | copia byte a byte del `analysis_nodos.json` publicado (verificada) | 1.28 MB / 474 KB |
+| `analysis_nodos_fijo.json` | mismo esquema, config fijo, `mean`, 5 ventanas | 1.28 MB / 473 KB |
+| `variant_scalars_{tracker,fijo}.json` | columnar sobre `ids` (orden de analysis_nodos): `shared[Y1/Y2]` (5 campos comunes) y `data[variante][Y1/Y2]` con `p_cap, vf, y_f, ingreso, yf_annual_equiv` | 3.27 MB / 1.21 MB c/u |
+| `variant_extra/{tracker,fijo}/{variante}.json` | `pct_e0, ingreso_atajo, vf_dia_promedio, p_cap_real, ingreso_real` de una variante (Y1/Y2), exactos | 0.23 MB / 100 KB c/u (26) |
+| `node_profiles_fijo.json` | esquema de `node_profiles.json` (pml, pérdidas, congestión, y; Y1/Y2), config fijo, `mean` | 2.94 MB / 926 KB |
+| `reconciliation.json` | resultado de las puertas, tamaños, estadísticas vf_fijo − vf_tracker | 11 KB |
+
+Decisión de tamaño: con los 9 campos + `yf_annual_equiv` en un archivo por config serían ≈2.4 MB gz (> 2 MB de
+presupuesto), así que `variant_scalars` lleva el núcleo de 5 campos y el resto va **exacto** (no aproximado) en
+`variant_extra`, que la web carga al elegir variante. Redondeo: 4 decimales, como `analysis_nodos.json`.
+
+**Puertas de conciliación** (el build falla sin escribir nada si alguna no se cumple; resultados en `reconciliation.json`):
+1. `mean` por la ruta solar_v2 contra la ruta publicada (`agregados_config`), **ambas configs**, las 5 ventanas,
+   los 14 campos: error relativo máximo 2.3·10⁻⁹ (tolerancia 10⁻⁶).
+2. `analysis_nodos` seguidor recalculado contra el publicado (4 decimales): mismos ids, campos y `null`; error
+   relativo máximo 2.1·10⁻⁹ (tolerancia: 5·10⁻⁵ de redondeo + 10⁻⁶ relativo).
+3. `y_f` y `n_horas` de cada variante × Y1/Y2 × config contra `solar_v2/scalars.parquet`: 2.4·10⁻¹⁶ relativo.
+4. `n_horas` idéntico entre configs y variantes; `y_f` fijo < seguidor en todo nodo y variante.
+5. `node_profiles_fijo`: filas de precio idénticas a `node_profiles.json`; `y` = `variants/mean.json` (fijo).
+
+vf_fijo − vf_tracker (13 variantes × Y1/Y2): mediana −0.016..−0.011 en Y1 y −0.002..0.000 en Y2, |Δ| máximo 0.089;
+ningún nodo fuera de ±0.15. Pruebas: ejemplo a mano (1 nodo, 24 h), deflactor, `win` con clave año-mes, identidades
+(`vf = p_cap/pml_medio`, `ingreso = y_f·p_cap`, `ingreso_real = y_f·p_cap_real`, `ingreso_atajo = y_f·pml_medio`),
+recálculo independiente en numpy de 3 nodos × 3 combinaciones (incluye `win` y `y2020`), sin NaN/−999, presupuestos gz.
+
+Comandos: `NODAL_DATA_ROOT=$PWD .venv/bin/python pipeline/kpis_variants_out.py` (≈1.5 min) y luego
+`.venv/bin/python web/tools/build_solar_web.py`.
