@@ -27,11 +27,15 @@ export function mountAnalysis(root, { view }) {
       <p class="mono eyebrow">${c.name}</p>
       <h1>${c.name}</h1>
       <ul class="chips chips-row" id="chips" aria-label="Selection"></ul>
-      <p class="an-note">${c.note}</p>
+      <div id="an-content"></div>
       <p><a class="btn btn-ghost btn-sm" href="${hrefFor('/' + other, list)}">Open ${COPY[other].name}</a></p>
     </main>
     <a class="mini-hit" href="${hrefFor('/map', list)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;
   const chips = mountChips(root.querySelector('#chips'), shell, { removable: false });
-  return { destroy() { chips.destroy(); } };
+  const host = root.querySelector('#an-content');
+  let child = null, dead = false;
+  if (view === 'explorer') import('./explorer.js').then((m) => { if (!dead) child = m.mountExplorer(host, { shell }); });
+  else host.innerHTML = `<p class="an-note">${c.note}</p>`;
+  return { destroy() { dead = true; chips.destroy(); if (child) child.destroy(); } };
 }

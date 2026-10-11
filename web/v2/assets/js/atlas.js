@@ -1,5 +1,7 @@
 // Map data: join index.json (names, coordinates) with analysis_nodos.json (metrics, last 12 months).
 // Metrics are read as computed upstream; only the within-region rank is derived here (pure, tested).
+import { getJSON } from './json.js';
+
 export const WINDOW = { key: 'deck_2025_26', label: 'Aug 2025 – Jul 2026 · last 12 months' };
 
 /** rank 1 = highest vf within the same region; nodes without vf get null. Returns {rank, size} arrays. */
@@ -38,8 +40,8 @@ export function buildAtlas(index, analysis) {
 let cache = null;
 export function loadAtlas() {
   if (!cache) {
-    const get = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); });
-    cache = Promise.all([get('../data/index.json'), get('../data/analysis/analysis_nodos.json')]).then(([i, a]) => buildAtlas(i, a));
+    cache = Promise.all([getJSON('../data/index.json'), getJSON('../data/analysis/analysis_nodos.json')]).then(([i, a]) => buildAtlas(i, a));
+    cache.catch(() => { cache = null; });
   }
   return cache;
 }

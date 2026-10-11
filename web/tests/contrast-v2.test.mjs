@@ -12,6 +12,15 @@ const c = (n) => { assert.ok(T[n], `token ${n} missing`); return T[n]; };
 
 const TEXT = 4.5, UI = 3;
 const pairs = [
+  ['c-energy', 'surface', UI, 'chart: energy on card'],
+  ['c-losses', 'surface', UI, 'chart: losses on card'],
+  ['c-cong', 'surface', UI, 'chart: congestion on card'],
+  ['c-prod', 'surface', UI, 'chart: solar output on card'],
+  ['c-prod', 'black', UI, 'chart: solar output on black'],
+  ['c-energy', 'black', UI, 'chart: energy on black'],
+  ['c-losses', 'black', UI, 'chart: losses on black'],
+  ['c-cong', 'black', UI, 'chart: congestion on black'],
+  ['s1', 'surface', UI, 'slot 1 on card'],
   ['ink', 'black', TEXT, 'main text on page black'],
   ['ink-2', 'black', TEXT, 'muted text on page black'],
   ['ink-3', 'black', TEXT, 'tertiary text on page black'],

@@ -110,7 +110,7 @@ async function route() {
   if (prev !== null && !changed) { if (path !== '/map' && path !== '/') await mount(path); return; } // same route, other selection
   if (prev === null) {
     await mount(path); shell.setMode(MODE[path]);
-    if (path === '/') (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 1500 }) : (f) => setTimeout(f, 600))(() => shell.init());
+    if (path === '/') (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 1500 }) : (f) => setTimeout(f, 600))(() => { shell.init(); import('./assets/js/explorer-data.js').then((m) => m.prefetch()); });
     else shell.init().then(() => shell.fit(0, path === '/choose' ? 'choose' : null));
     announce(path);
     return;
