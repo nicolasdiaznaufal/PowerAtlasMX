@@ -20,6 +20,7 @@ export function recordFor(src, slot, winId) {
     if (i === undefined || !w || w.p_cap[i] === null || !p) return { level, key, missing: true };
     const [pml, perdidas, congestion, y] = p;
     return { level, key, n: 1, base: w.pml_medio[i], cap: w.p_cap[i], vf: w.vf[i], vfDay: w.vf_dia_promedio[i], spread: w.spread_punta_solar[i], z: w.pct_e0[i],
+      baseReal: w.pml_medio_real[i], capReal: w.p_cap_real[i], ingreso: w.ingreso[i], ingresoReal: w.ingreso_real[i], atajo: w.ingreso_atajo[i],
       yf: w.y_f[i], region: src.nodos.region[i], entidad: src.nodos.entidad[i],
       hours: { pml, perdidas, congestion, y, energia: pml.map((v, h) => v - perdidas[h] - congestion[h]) } };
   }
@@ -30,6 +31,7 @@ export function recordFor(src, slot, winId) {
   if (!s) return { level, key, missing: true };
   return { level, key, n: s.n_nodos, base: s.pml_medio, cap: s.p_cap, vf: s.vf, vfDay: s.vf_dia_promedio_media_nodos, vfMedian: s.vf_mediana_nodos,
     spread: s.spread_punta_solar, z: s.pct_e0, yf: s.y_f_mwh_por_mwp,
+    baseReal: s.pml_medio_real, capReal: s.p_cap_real, ingreso: s.ingreso_mxn_por_mwp, ingresoReal: s.ingreso_real_mxn_por_mwp, atajo: s.ingreso_atajo_mxn_por_mwp,
     hours: pr ? { pml: pr.pml_h, perdidas: pr.perdidas_h, congestion: pr.congestion_h, energia: pr.energia_h, y: pr.y_h_mwh_por_mwp } : null };
 }
 
@@ -44,23 +46,51 @@ export function seriesFor(src, slot) {
   return a ? { months: s.months, vf: a.m, years: s.years, y: a.y, nn: a.mn } : null;
 }
 
-/** calendar years -> {label, vf, cap, base}; only years present in the series. */
-export function yearRows(series) {
+/** calendar years -> {label, vf, cap, base}; only years present in the series. real = today's pesos (as v1). */
+export function yearRows(series, real = false) {
   return series.years.filter((y) => series.y[String(y)]).map((y) => {
-    const [pm, cp] = series.y[String(y)];
-    return { label: String(y), base: pm, cap: cp, vf: pm ? +(cp / pm).toFixed(3) : null };
+    const [pm, cp, pmr, cpr] = series.y[String(y)];
+    const b = real && pmr ? pmr : pm, c = real && cpr ? cpr : cp;
+    return { label: String(y), base: b, cap: c, vf: b ? +(c / b).toFixed(3) : null };
   });
 }
 
-/** headline tiles, in display order. Values are formatted exactly as shown. */
-export function tilesOf(rec) {
+/** price basis of a record: nominal MXN or today's pesos. VF in real pesos is captured / average of the real figures (as v1). */
+export function priceBasis(rec, real) {
+  const r = real && rec.baseReal != null && rec.capReal != null;
+  return { base: r ? rec.baseReal : rec.base, cap: r ? rec.capReal : rec.cap, vf: r ? rec.capReal / rec.baseReal : rec.vf, real: r };
+}
+
+/** headline tiles, in display order. Values are formatted exactly as shown. Spread, "<= 0" share and VF of the average day are nominal figures. */
+export function tilesOf(rec, real = false) {
+  const b = priceBasis(rec, real), unit = b.real ? "MXN/MWh, today's pesos" : 'MXN/MWh';
   return [
-    { id: 'base', label: 'Average price', unit: 'MXN/MWh', value: rec.base, text: num(rec.base, 0) },
-    { id: 'cap', label: 'Captured price', unit: 'MXN/MWh', value: rec.cap, text: num(rec.cap, 0) },
-    { id: 'vf', label: 'Value factor', unit: 'captured ÷ average', value: rec.vf, text: num(rec.vf, 2) },
-    { id: 'z', label: 'Solar output at or below zero price', unit: '% of energy', value: rec.z, text: num(rec.z, 1) },
+    { id: 'base', label: 'Average price', unit, value: b.base, text: num(b.base, 0) },
+    { id: 'cap', label: 'Captured price', unit, value: b.cap, text: num(b.cap, 0) },
+    { id: 'vf', label: 'Value factor', unit: 'captured ÷ average', value: b.vf, text: num(b.vf, 2) },
+    { id: 'vfDay', label: 'Value factor, average day', unit: 'captured ÷ average', value: rec.vfDay, text: num(rec.vfDay, 2) },
+    { id: 'z', label: 'Solar output at price ≤ 0', unit: '% of energy', value: rec.z, text: num(rec.z, 1) },
     { id: 'spread', label: 'Evening peak minus solar hours', unit: 'MXN/MWh', value: rec.spread, text: num(rec.spread, 0) },
   ];
+}
+
+/** Revenue per MWp per year, from the SAME record (same price, production and profile as Explorer).
+ *  Headline figures are the published `ingreso` fields; hourly bars use the typical-day shape (production x price)
+ *  scaled so that the day adds up to ingreso / 365 exactly. Shortcut = production x the all-hours average price. */
+export function revenueOf(rec, real = false) {
+  const b = priceBasis(rec, real);
+  const total = b.real && rec.ingresoReal != null ? rec.ingresoReal : rec.ingreso;
+  const shortcut = rec.atajo != null && rec.base ? rec.atajo * (b.base / rec.base) : null; // published shortcut revenue, re-based when real
+  const out = { total, shortcut, over: total ? (shortcut / total - 1) * 100 : null, real: b.real, base: b.base, cap: b.cap, vf: b.vf, yf: rec.yf, hours: null };
+  const h = rec.hours;
+  if (h) {
+    const wr = h.y.map((y, k) => y * h.pml[k]), sr = wr.reduce((a, c) => a + c, 0), sy = h.y.reduce((a, c) => a + c, 0);
+    out.hours = {
+      real: wr.map((v) => (sr > 0 && total != null ? (total / 365) * (v / sr) : null)),
+      shortcut: h.y.map((y) => (sy > 0 && shortcut != null ? (shortcut / 365) * (y / sy) : null)),
+    };
+  }
+  return out;
 }
 
 const need = (slot) => (slot.kind === 'node' ? ['nodos', 'profiles', 'sNodes'] : ['analysis', 'sAreas']);

@@ -35,9 +35,12 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   const view = new deck.MapView({ repeat: false });
 
   const fit = (b, pad = padding, extra = {}) => {
-    const w = container.clientWidth || 1000, h = container.clientHeight || 700;
+    const w = Math.max(32, container.clientWidth || 1000), h = Math.max(32, container.clientHeight || 700);
+    // padding must leave room for the content (tiny mini card, short phones)
+    const sx = Math.min(1, (w - 16) / ((pad.left || 0) + (pad.right || 0) || 1)), sy = Math.min(1, (h - 16) / ((pad.top || 0) + (pad.bottom || 0) || 1));
+    const p = { left: (pad.left || 0) * sx, right: (pad.right || 0) * sx, top: (pad.top || 0) * sy, bottom: (pad.bottom || 0) * sy };
     const vp = new deck.WebMercatorViewport({ width: w, height: h });
-    const f = vp.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: pad, maxZoom: extra.maxZoom || 12 });
+    const f = vp.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: p, maxZoom: extra.maxZoom || 12 });
     return { longitude: f.longitude, latitude: f.latitude, zoom: f.zoom, pitch: 0, bearing: 0, minZoom: 2.5, maxZoom: 13 };
   };
   const clamp = (v) => ({ ...v, longitude: Math.min(LIM.lon[1], Math.max(LIM.lon[0], v.longitude)), latitude: Math.min(LIM.lat[1], Math.max(LIM.lat[0], v.latitude)) });

@@ -34,7 +34,7 @@ export function buildAtlas(index, analysis) {
     nodes.push({ id: n.id, name: n.nombre, state: n.entidad, region: n.region, muni: n.municipio, lon: n.lon, lat: n.lat,
       pml: null, pcap: null, vf: null, rank: null, rankN: null, has: false });
   }
-  return { nodes, config: analysis.config, analysisCount: analysis.ids.length };
+  return { nodes, config: analysis.config, analysisCount: analysis.ids.length, pesosBase: (index.pesos_reales && index.pesos_reales.base_mes) || null };
 }
 
 let cache = null;

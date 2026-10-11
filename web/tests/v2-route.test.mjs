@@ -103,3 +103,26 @@ test('a selection change while a navigation is still queued does not overwrite t
   h.router.resolve(h.url); // the queued navigation resolves later and wins
   assert.equal(serializeSel(h.store.get()), '01AAN-85');
 });
+
+test("price basis lives in the URL as &real=1 and survives navigation, Back and reload", () => {
+  const h = harness();
+  h.push('#/explorer?sel=01AAN-85&real=1');
+  assert.equal(h.store.real, true);
+  assert.equal(h.url, '#/explorer?sel=01AAN-85&real=1');
+  h.push('#/revenue?sel=01AAN-85&real=1');
+  h.store.setReal(false);                              // user flips the toggle on this entry
+  assert.equal(h.url, '#/revenue?sel=01AAN-85');
+  h.back();
+  assert.equal(h.store.real, true);                    // previous entry restored exactly
+  assert.equal(h.url, '#/explorer?sel=01AAN-85&real=1');
+  h.forward();
+  assert.equal(h.store.real, false);
+  // reload = resolving the same hash on a fresh router
+  const h2 = harness();
+  h2.push('#/revenue?sel=state:JALISCO&real=1');
+  assert.equal(h2.store.real, true);
+  assert.equal(h2.url, '#/revenue?sel=state:JALISCO&real=1');
+  // a bare hash inherits the basis
+  h2.push('#/map');
+  assert.equal(h2.url, '#/map?sel=state:JALISCO&real=1');
+});

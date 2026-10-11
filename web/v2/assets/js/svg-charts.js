@@ -65,3 +65,19 @@ export function stackChart({ energia, perdidas, congestion, base, cap, H = 260, 
   out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(cap)}" y2="${y(cap)}" class="cline"><title>Captured price ${num(cap, 0)} MXN/MWh</title></line>`;
   return frame(H, aria, out);
 }
+
+/** two bars per hour (a = left, b = right). Used for shortcut vs hour-by-hour revenue. */
+export function pairChart({ a, b, ca, cb, H = 220, aria, ytitle = 'MXN per MWp', unit = 'MXN' }) {
+  const hi = niceMax(Math.max(...a, ...b, 0)), { g, y } = axis(H, 0, hi, (v) => num(v, 0), ytitle);
+  const iw = W - PAD.l - PAD.r, step = iw / 24, bw = step * 0.38;
+  let out = g;
+  for (let h = 0; h < 24; h++) {
+    const x = PAD.l + step * h + step * 0.08, hh = String(h).padStart(2, '0');
+    [[a[h], ca, 'shortcut'], [b[h], cb, 'hour by hour']].forEach(([v, c, nm], k) => {
+      if (v === null || v === undefined) return;
+      out += `<rect x="${(x + k * (bw + 1)).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, y(0) - y(v)).toFixed(1)}" fill="${c}"><title>${hh}:00 ${nm}: ${num(v, 0)} ${unit}</title></rect>`;
+    });
+    if (h % 3 === 0) out += `<text x="${(x + bw).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="tick">${hh}</text>`;
+  }
+  return frame(H, aria, out);
+}

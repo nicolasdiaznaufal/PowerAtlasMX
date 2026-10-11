@@ -26,10 +26,13 @@ export const serializeSel = (list) => list.map((s) => (s.kind === 'national' ? '
 
 export function createStore(initial = []) {
   let list = initial.slice(0, MAX_SEL);
+  let real = false; // price basis: false = nominal MXN, true = today's pesos
   const subs = new Set();
   const emit = () => subs.forEach((f) => f(list));
   return {
     get: () => list,
+    get real() { return real; },
+    setReal(v) { v = !!v; if (v !== real) { real = v; emit(); } },
     has: (s) => list.some((x) => key(x) === key(s)),
     /** returns false when full */
     add(s) { if (list.some((x) => key(x) === key(s))) return true; if (list.length >= MAX_SEL) return false; list = [...list, s]; emit(); return true; },

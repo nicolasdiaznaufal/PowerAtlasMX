@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { recordFor, seriesFor, tilesOf, yearRows } from '../v2/assets/js/explorer-data.js';
+import { recordFor, seriesFor, tilesOf, yearRows, priceBasis } from '../v2/assets/js/explorer-data.js';
 import { num } from '../assets/js/format.js';
 
 const W = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -50,4 +50,42 @@ test('national / region / state tiles equal analysis.json; yearly VF from additi
 test('missing slot reports missing, node without window data too', { skip }, () => {
   const src = load();
   assert.equal(recordFor(src, { kind: 'node', id: 'NO-SUCH' }, 'Y2').missing, true);
+});
+
+test("real pesos: tiles use the *_real fields; VF real = captured real / average real; spread and <= 0 share stay nominal", { skip }, () => {
+  const src = load();
+  const w = src.nodos.ventanas.deck_2025_26;
+  for (const i of [0, 500, 1500]) {
+    if (w.p_cap[i] === null) continue;
+    const rec = recordFor(src, { kind: 'node', id: src.nodos.ids[i] }, 'Y2');
+    const t = Object.fromEntries(tilesOf(rec, true).map((x) => [x.id, x]));
+    assert.equal(t.base.value, w.pml_medio_real[i]); assert.equal(t.cap.value, w.p_cap_real[i]);
+    assert.equal(t.vf.value, w.p_cap_real[i] / w.pml_medio_real[i]);
+    assert.equal(t.z.value, w.pct_e0[i]); assert.equal(t.spread.value, w.spread_punta_solar[i]);
+    const nom = Object.fromEntries(tilesOf(rec, false).map((x) => [x.id, x]));
+    assert.equal(nom.base.value, w.pml_medio[i]);
+    assert.ok(t.base.value > nom.base.value, 'today\'s pesos are above nominal for this window');
+  }
+  const nat = recordFor(src, { kind: 'national', id: 'ALL' }, 'Y2');
+  const c = src.analysis.ventanas.deck_2025_26.por_config.tracker.nacional;
+  assert.equal(priceBasis(nat, true).cap, c.p_cap_real);
+  assert.equal(priceBasis(nat, true).base, c.pml_medio_real);
+});
+
+test('VF of the average day tile equals vf_dia_promedio (the field v1 prints)', { skip }, () => {
+  const src = load();
+  const w = src.nodos.ventanas.deck_2025_26;
+  const i = src.nodos.ids.indexOf('08NCM-115');
+  const rec = recordFor(src, { kind: 'node', id: '08NCM-115' }, 'Y2');
+  const t = tilesOf(rec).find((x) => x.id === 'vfDay');
+  assert.equal(t.value, w.vf_dia_promedio[i]);
+  assert.equal(t.text, num(w.vf_dia_promedio[i], 2));
+  const nat = recordFor(src, { kind: 'national', id: 'ALL' }, 'Y2');
+  assert.equal(tilesOf(nat).find((x) => x.id === 'vfDay').value, src.analysis.ventanas.deck_2025_26.por_config.tracker.nacional.vf_dia_promedio_media_nodos);
+});
+
+test('tile label uses the <= 0 symbol and says what the share is of', () => {
+  const t = tilesOf({ base: 1, cap: 1, vf: 1, vfDay: 1, z: 1, spread: 1 }).find((x) => x.id === 'z');
+  assert.equal(t.label, 'Solar output at price ≤ 0');
+  assert.equal(t.unit, '% of energy');
 });
