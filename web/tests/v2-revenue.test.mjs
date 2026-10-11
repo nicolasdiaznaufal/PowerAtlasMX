@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { recordFor, revenueOf, tilesOf, priceBasis, partialNote } from '../v2/assets/js/explorer-data.js';
+import { recordFor, revenueOf, tilesOf, priceBasis, partialNote, tableLabels } from '../v2/assets/js/explorer-data.js';
 
 const W = join(dirname(fileURLToPath(import.meta.url)), '..');
 const f = (p) => join(W, 'data', p);
@@ -86,4 +86,20 @@ test('typical-day gap and scale factor are derived from the published ingreso', 
     assert.ok(near(rv.scale * raw * 365, rec.ingreso, 1e-9));
     assert.ok(Math.abs(rv.gap) < 60, `${slot.id}: gap ${rv.gap}`);
   }
+});
+
+test("table labels name the basis; the real-mode footnote says the factor includes the today's-pesos adjustment", () => {
+  const n = tableLabels(false, 0.819), r = tableLabels(true, 0.861);
+  assert.match(n.shortcut, /nominal/); assert.match(n.hour, /nominal/);
+  assert.doesNotMatch(n.note, /today's pesos/);
+  assert.match(r.shortcut, /today's pesos/); assert.match(r.hour, /today's pesos/);
+  assert.match(r.note, /includes the adjustment from nominal to today's pesos/);
+  assert.match(r.note, /0\.861/); assert.match(n.note, /0\.819/);
+});
+
+test('real-mode scale factor = nominal factor x (ingreso_real / ingreso)', { skip }, () => {
+  const s = src();
+  const rec = recordFor(s, { kind: 'node', id: '03MMN-230' }, 'Y1');
+  const n = revenueOf(rec, false), r = revenueOf(rec, true);
+  assert.ok(near(r.scale / n.scale, rec.ingresoReal / rec.ingreso, 1e-9));
 });

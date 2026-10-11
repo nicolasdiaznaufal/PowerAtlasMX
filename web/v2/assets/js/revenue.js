@@ -2,7 +2,7 @@
 // Same data layer and same record as Explorer, so price, production and VF can never differ between the two views.
 import { WIN } from '../../../assets/js/names.js';
 import { num } from '../../../assets/js/format.js';
-import { loadSources, recordFor, revenueOf, tilesOf, partialNote } from './explorer-data.js';
+import { loadSources, recordFor, revenueOf, tilesOf, partialNote, tableLabels } from './explorer-data.js';
 import { mountControls } from './controls.js';
 import { barChart, pairChart, stackChart } from './svg-charts.js';
 
@@ -69,14 +69,15 @@ export function mountRevenue(host, { shell }) {
     const pn = partialNote(rec), wn = q('#rv-warn'); wn.hidden = !pn; wn.textContent = pn || '';
     const h = rec.hours, hr = rv.hours;
     const hh = (i) => String(i).padStart(2, '0');
+    const lab = tableLabels(rv.real, rv.scale);
     const gapText = rv.gap === null ? '' : `Typical day × 365 is ${num(Math.abs(rv.gap), 1)}% ${rv.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`;
     if (h && hr) {
       q('#rv-hours').innerHTML = pairChart({ a: hr.shortcut, b: hr.real, ca: 'var(--ink-3)', cb: 'var(--s1)', aria: 'Typical day: revenue of 1 MWp by hour, shortcut versus hour by hour', ytitle: 'MXN per MWp, per day', unit: 'MXN per MWp' });
       q('#rv-day').innerHTML = stackChart({ ...h, base: rec.base, cap: rec.cap, aria: 'Typical day: price by hour split into energy, losses and congestion' });
       q('#rv-lb').textContent = `Average ${num(rec.base, 0)}`; q('#rv-lc').textContent = `Captured ${num(rec.cap, 0)}`;
       q('#rv-prod').innerHTML = barChart({ bars: h.y.map((v, i) => ({ v, label: hh(i), color: 'var(--c-prod)', tip: `${hh(i)}:00 output: ${num(v, 3)} MWh/MWp` })), xEvery: 3, H: 150, fmt: (v) => num(v, 1), aria: 'Typical day: solar output by hour', ytitle: 'MWh per MWp' });
-      q('#rv-table').innerHTML = `<table><thead><tr><th>Hour</th><th class="n">Output, MWh/MWp</th><th class="n">Price (nominal), MXN/MWh</th><th class="n">Output × price, MXN</th><th class="n">Shortcut, MXN</th><th class="n">Hour by hour (scaled), MXN</th></tr></thead><tbody>${h.y.map((y, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(y, 3)}</td><td class="n">${num(h.pml[i], 0)}</td><td class="n">${num(rv.raw[i], 0)}</td><td class="n">${num(hr.shortcut[i], 0)}</td><td class="n">${num(hr.real[i], 0)}</td></tr>`).join('')}</tbody></table>`
-        + `<p class="xp-text">Output × price is the typical-day product. The "hour by hour (scaled)" column multiplies it by ${num(rv.scale, 3)} so that the day adds up to the published yearly revenue ÷ 365. ${gapText}</p>`;
+      q('#rv-table').innerHTML = `<table><thead><tr><th>Hour</th><th class="n">Output, MWh/MWp</th><th class="n">Price (nominal), MXN/MWh</th><th class="n">Output × price, MXN</th><th class="n">${lab.shortcut}</th><th class="n">${lab.hour}</th></tr></thead><tbody>${h.y.map((y, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(y, 3)}</td><td class="n">${num(h.pml[i], 0)}</td><td class="n">${num(rv.raw[i], 0)}</td><td class="n">${num(hr.shortcut[i], 0)}</td><td class="n">${num(hr.real[i], 0)}</td></tr>`).join('')}</tbody></table>`
+        + `<p class="xp-text">${lab.note} ${gapText}</p>`;
     } else {
       ['#rv-hours', '#rv-day', '#rv-prod', '#rv-table'].forEach((s) => { q(s).innerHTML = ''; });
     }

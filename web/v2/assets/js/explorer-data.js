@@ -74,6 +74,16 @@ export function tilesOf(rec, real = false) {
   ];
 }
 
+/** Labels of the revenue data table, by price basis. The scale factor folds in the nominal -> today's pesos adjustment in real mode. */
+export function tableLabels(real, scale) {
+  const f = num(scale, 3);
+  return real
+    ? { shortcut: "Shortcut, MXN (today's pesos)", hour: "Hour by hour (scaled), MXN (today's pesos)",
+        note: `Output × price is the typical-day product in nominal pesos. The "hour by hour (scaled)" column multiplies it by ${f}, which includes the adjustment from nominal to today's pesos, so that the day adds up to the published yearly revenue in today's pesos ÷ 365.` }
+    : { shortcut: 'Shortcut, MXN (nominal)', hour: 'Hour by hour (scaled), MXN (nominal)',
+        note: `Output × price is the typical-day product. The "hour by hour (scaled)" column multiplies it by ${f} so that the day adds up to the published yearly revenue ÷ 365.` };
+}
+
 export const FULL_YEAR_HOURS = 8760;
 /** Visible note for node-windows with fewer priced hours than a full year (nothing is annualised). Areas publish no hour count. */
 export function partialNote(rec) {
