@@ -70,7 +70,7 @@ export function variantRecord(src0, slot, winId, ctx) {
     hours = { pml: pr.pml_h, perdidas: pr.perdidas_h, congestion: pr.congestion_h, energia: pr.energia_h, y: ys.length ? pr.pml_h.map((_, h) => mean(ys.map((y) => y[h]))) : pr.y_h_mwh_por_mwp };
   }
   const cap = m('cap'), base = m('base');
-  return { level, key, n: members.length, nHoras: null, base, cap, vf: base ? cap / base : null, vfMedian: median(members.map((o) => o.f.vf)), vfDay: m('vfDay'),
+  return { level, key, derived: true, n: members.length, nHoras: null, base, cap, vf: base ? cap / base : null, vfMedian: median(members.map((o) => o.f.vf)), vfDay: m('vfDay'),
     spread: m('spread'), z: m('z'), yf: m('yf'), yfEq: m('yfEq'), baseReal: m('baseReal'), capReal: m('capReal'), ingreso: m('ingreso'), ingresoReal: m('ingresoReal'), atajo: m('atajo'), hours };
 }
 

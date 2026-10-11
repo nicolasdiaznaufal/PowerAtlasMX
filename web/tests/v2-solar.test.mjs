@@ -182,11 +182,53 @@ test('controls: mounting radiogroup, labelled weather select, announcements', ()
   assert.match(src, /role="status" aria-live="polite"/);
 });
 
-test('service worker keeps the data cache bounded', async () => {
-  const { trimCache } = createRequire(import.meta.url)('../v2/sw-strategy.js');
-  const store = new Map(Array.from({ length: 20 }, (_, i) => [`u${i}`, i]));
-  const cachesApi = { open: async () => ({ keys: async () => [...store.keys()], delete: async (k) => store.delete(k) }) };
-  assert.equal(await trimCache(cachesApi, 'v2-data', 16), 4);
-  assert.deepEqual([...store.keys()].slice(0, 2), ['u4', 'u5']);   // oldest left first
-  assert.equal(store.size, 16);
+test('service worker keeps the data cache bounded: core files are pinned, only variant files are evicted (oldest first)', async () => {
+  const { trimCache, evictableUrl } = createRequire(import.meta.url)('../v2/sw-strategy.js');
+  const urls = ['http://h/data/index.json', 'http://h/data/analysis/analysis_nodos.json', 'http://h/data/solar_v2/variant_scalars_fijo.json',
+    ...Array.from({ length: 8 }, (_, i) => `http://h/data/solar_v2/variants/y20${15 + i}.json`), 'http://h/data/solar_v2/variant_extra/fijo/mean.json', 'http://h/data/derived/series_nodes.json'];
+  const store = new Map(urls.map((u, i) => [u, i]));
+  const cachesApi = { open: async () => ({ keys: async () => [...store.keys()].map((url) => ({ url })), delete: async (k) => store.delete(k.url) }) };
+  const gone = await trimCache(cachesApi, 'v2-data', 5, evictableUrl);
+  assert.equal(gone, 4);                                              // 9 evictable -> 5 kept
+  for (const u of ['http://h/data/index.json', 'http://h/data/analysis/analysis_nodos.json', 'http://h/data/solar_v2/variant_scalars_fijo.json', 'http://h/data/derived/series_nodes.json']) assert.ok(store.has(u), `${u} is pinned`);
+  assert.equal(store.has('http://h/data/solar_v2/variants/y2015.json'), false);   // oldest evicted
+  assert.equal(store.has('http://h/data/solar_v2/variants/y2022.json'), true);
+  assert.equal(store.has('http://h/data/solar_v2/variant_extra/fijo/mean.json'), true);   // newest evictable kept
+  assert.equal(evictableUrl('/data/index.json'), false);
+});
+
+test('one navigation that changes mounting and weather notifies once (no in-between context is loaded)', () => {
+  const valid = { node: () => true, state: () => true, region: () => true };
+  const store = createStore(), ctxs = []; let cur = '#/explorer?sel=A-1';
+  const router = createRouter({ store, valid: () => valid, replace: (h) => { cur = h; }, currentHash: () => cur });
+  router.resolve(cur);
+  store.subscribe(() => ctxs.push(`${store.cfg}|${store.wx}`));
+  cur = '#/explorer?sel=A-1&cfg=fijo&wx=win'; router.resolve(cur);
+  assert.deepEqual(ctxs, ['fijo|win']);
+});
+
+test('series card: under fixed tilt / another weather the window VF is not drawn over the tracker bars and the note is shown', async () => {
+  const mk = () => { const el = { innerHTML: '', textContent: '', hidden: false, clientWidth: 640, style: {}, setAttribute() {}, addEventListener() {}, append() {}, focus() {}, querySelector: () => el, closest: () => el }; return el; };
+  const els = {};
+  const root = { querySelector: (s) => (els[s] || (els[s] = mk())) };
+  globalThis.document = { createElement: () => mk(), getElementById: () => null };
+  globalThis.window = { matchMedia: () => ({ matches: false }) };
+  const { paintSeries } = await import('../v2/assets/js/series-card.js');
+  const months = Array.from({ length: 81 }, (_, i) => `${2020 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`);
+  const series = { months, vf: months.map(() => 0.8), years: [2020], y: { 2020: [600, 500, 620, 520] } };
+  const rec = { base: 600, cap: 500, vf: 0.83, baseReal: 620, capReal: 520, hours: null };
+  const entries = [{ slot: { kind: 'node', id: 'X' }, rec, series }];
+  const run = (cfg, wx) => {
+    Object.keys(els).forEach((k) => delete els[k]);
+    const shell = { store: { real: false, span: null, scenario: null, cfg, wx }, label: () => ({ t: 'X', k: 'Node' }) };
+    paintSeries(root, { entries, shell, winId: 'Y2', view: 'months', onView() {} });
+    return { svg: els['#sr-vf'].innerHTML, leg: els['#sr-leg'].innerHTML, note: els['#sr-note'].textContent };
+  };
+  const d = run('tracker', 'mean'), f = run('fijo', 'y2020');
+  assert.match(d.svg, /class="hline"/);
+  assert.doesNotMatch(d.note, /single-axis tracker with yearly-mean weather/);
+  assert.doesNotMatch(f.svg, /class="hline"/);
+  assert.match(f.leg, /VF of the window, fixed tilt, 2020 weather: 0\.83/);
+  assert.match(f.note, /single-axis tracker with yearly-mean weather/);
+  delete globalThis.document; delete globalThis.window;
 });

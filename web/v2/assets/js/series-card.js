@@ -9,6 +9,7 @@ import { segment } from './controls.js';
 import { COPY } from './copy.js';
 import { inSpan } from './span-data.js';
 import { isNeutral } from './query-extras.js';
+import { isDefaultCtx } from './solar-data.js';
 
 const SAND = 'var(--s1)', MUTED = 'var(--c-energy)';
 
@@ -27,7 +28,9 @@ export function paintSeries(root, { entries, shell, winId, view, onView }) {
   segment(q('#sr-view'), [['months', 'By month'], ['years', 'By year']], view, onView);
   q('#sr-title').textContent = view === 'months' ? `Value factor by month${span ? ` (${span.from} to ${span.to})` : ''} (nominal MXN)` : `Value factor, average and captured price by calendar year${real ? " (today's pesos)" : ' (nominal MXN)'}`;
   const sim = !isNeutral(shell.store.scenario);
-  q('#sr-note').textContent = COPY.seriesNote + (sim ? ' The bars, lines and the span summary are published values, not simulated.' : '');
+  const dflt = isDefaultCtx({ cfg: shell.store.cfg, wx: shell.store.wx });
+  const ctxLabel = `${shell.store.cfg === 'fijo' ? 'fixed tilt' : 'single-axis tracker'}, ${COPY.wxLabel(shell.store.wx)}`;
+  q('#sr-note').textContent = COPY.seriesNote + (dflt ? '' : ` ${COPY.monthlyNote}`) + (sim ? ' The bars, lines and the span summary are published values, not simulated.' : '');
   const px = q('#sr-px'); px.hidden = view !== 'years';
   if (!ok.length) { q('#sr-vf').innerHTML = '<p class="xp-text">No series for this selection.</p>'; q('#sr-table').innerHTML = ''; return; }
   const multi = entries.length > 1;
@@ -37,8 +40,12 @@ export function paintSeries(root, { entries, shell, winId, view, onView }) {
       const e = ok[0], pb = priceBasis(e.real || e.rec, real), sb = e.real ? priceBasis(e.rec, real) : null; // the bars are published: so is the line
       const vfs = e.series.vf.filter((_, i) => keep[i]);
       const bars = months.map((m, i) => { const inW = m >= w.desde && m <= w.hasta, v = vfs[i]; return { v, label: mesCorto(m), color: inW ? SAND : MUTED, tip: `${mesCorto(m)}: ${v === null ? 'no data' : num(v, 2)}${inW ? ' (in window)' : ''}` }; });
-      q('#sr-leg').innerHTML = `<span><i style="background:${SAND}"></i>${esc(w.label)}</span><span><i style="background:${MUTED}"></i>Other months</span><span><i class="dash"></i>VF of the window${sim ? ' (published)' : ''}: ${num(pb.vf, 2)}${pb.real ? " (today's pesos)" : ' (nominal)'}</span>${sb ? `<span class="exact">Simulated VF of the window: ${sb.vf === null ? 'n/a (price ≤ 0)' : num(sb.vf, 2)}</span>` : ''}`;
-      renderChart(q('#sr-vf'), () => barChart({ bars, hline: { v: pb.vf, label: `Window ${num(pb.vf, 2)}` }, refs: [1], scale: vfAxis(bars.map((b) => b.v).concat([pb.vf])), H: 300, xEvery: every, aria: 'Value factor by month', ytitle: 'Value factor', xtitle: 'Month' }));
+      const vfTxt = `${num(pb.vf, 2)}${pb.real ? " (today's pesos)" : ' (nominal)'}`;
+      const winLine = dflt
+        ? `<span><i class="dash"></i>VF of the window${sim ? ' (published)' : ''}: ${vfTxt}</span>`
+        : `<span class="exact">VF of the window, ${esc(ctxLabel)}: ${vfTxt}. The bars are tracker, yearly-mean weather.</span>`;
+      q('#sr-leg').innerHTML = `<span><i style="background:${SAND}"></i>${esc(w.label)}</span><span><i style="background:${MUTED}"></i>Other months</span>${winLine}${sb ? `<span class="exact">Simulated VF of the window: ${sb.vf === null ? 'n/a (price ≤ 0)' : num(sb.vf, 2)}</span>` : ''}`;
+      renderChart(q('#sr-vf'), () => barChart({ bars, hline: dflt ? { v: pb.vf, label: `Window ${num(pb.vf, 2)}` } : null, refs: [1], scale: vfAxis(bars.map((b) => b.v).concat(dflt ? [pb.vf] : [])), H: 300, xEvery: every, aria: 'Value factor by month', ytitle: 'Value factor', xtitle: 'Month' }));
     } else {
       q('#sr-leg').innerHTML = legendHTML(entries, shell);
       const ser = entries.map((e) => ({ vals: e.series ? e.series.vf.filter((_, i) => keep[i]) : months.map(() => null), label: nameOf(shell, e) }));

@@ -29,6 +29,6 @@ export function indicatorsHTML(entries, shell, view) {
     const sim = !!entries[k].real;
     const na = e.rec && e.rec.simNA;
     const items = indicatorItems(row, view, real, sim && base[k].ok ? base[k] : null).map(([l, v, u, dl]) => (na && v === '—' ? [l, 'n/a', 'price ≤ 0 under this scenario', ''] : [l, v, u, dl])).map(([l, v, u, dl]) => `<div class="ind-item"><span class="mono">${esc(l)}</span><strong>${v}</strong>${dl ? `<span class="mono delta">${esc(dl)} vs real</span>` : ''}<span class="mono u">${esc(u)}</span></div>`).join('');
-    return `<section class="ind">${head}${row.partial ? `<p class="xp-warn-inline">${esc(row.partial)}</p>` : ''}${row.partial && row.equiv ? `<p class="xp-text">${esc(row.equiv)}</p>` : ''}${na ? '<p class="xp-text">Prices are shown, and are zero or negative under this scenario; the value factor and revenue are not meaningful.</p>' : ''}<div class="ind-grid">${items}</div></section>`;
+    return `<section class="ind">${head}${row.partial ? `<p class="xp-warn-inline">${esc(row.partial)}</p>` : ''}${row.partial && row.equiv ? `<p class="xp-text">${esc(row.equiv)}</p>` : ''}${e.rec && e.rec.derived ? '<p class="xp-text mono">Mean over member nodes (derived)</p>' : ''}${na ? '<p class="xp-text">Prices are shown, and are zero or negative under this scenario; the value factor and revenue are not meaningful.</p>' : ''}<div class="ind-grid">${items}</div></section>`;
   }).join('');
 }

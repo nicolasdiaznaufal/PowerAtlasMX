@@ -5,6 +5,7 @@ import { vfSummary, loadSheetResult } from './span-data.js';
 import { esc, nameOf } from './compare-ui.js';
 import { swatchSVG } from './series-style.js';
 import { spanText } from './range-slider.js';
+import { COPY } from './copy.js';
 
 /** rows for every entry. span = {from,to} | null; win = {desde,hasta}. */
 export async function summaryRows(entries, shell, span, win, real) {
@@ -27,7 +28,7 @@ export async function summaryRows(entries, shell, span, win, real) {
   }));
 }
 
-export function summaryHTML(rows, shell, span, win, real) {
+export function summaryHTML(rows, shell, span, win, real, dflt = true) {
   const eff = span || { from: win.desde, to: win.hasta }, pesos = real ? "today's pesos" : 'nominal';
   const head = ['Slot', 'Months in span', 'Months with data', 'Mean of monthly VF', 'Monthly VF range', `Average price (MXN/MWh, ${pesos})`, `Captured price (MXN/MWh, ${pesos})`, 'Value factor of the period', 'Basis'];
   const body = rows.map((r, k) => {
@@ -39,5 +40,6 @@ export function summaryHTML(rows, shell, span, win, real) {
   }).join('');
   return `<p class="xp-text">Span: <b>${esc(spanText(eff.from, eff.to))}</b>${span ? '' : ' (the selected 12-month window)'}. Months without complete data are gaps, not zeros.
     Exact period prices exist where the node's monthly sums are published (the node sheets); other slots only carry the monthly value factor, so their span summary is the simple mean of those monthly values, not the period's value factor.</p>
+    ${dflt ? '' : `<p class="xp-text"><b>${esc(COPY.monthlyNote)}</b> The prices and value factor of the published window follow the selected mounting and weather.</p>`}
     <div class="tbl cmp"><table><thead><tr>${head.map((h, j) => `<th class="${j && j < head.length - 1 ? 'n' : ''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }

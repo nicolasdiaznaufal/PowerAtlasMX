@@ -66,15 +66,15 @@ Chart widths follow the container so tick labels stay readable on phones; every 
   2015 carries the data note (`note_2015`: about -6% vs the mean, likely an input change in MERRA-2/CERES; it stays inside the published yearly mean).
 - **Data** (`web/data/solar_v2/`, git-ignored; build with `web/tools/build_solar_web.py`, documented in `docs/TECNICO.md` section 12 and `docs/SOLAR_V2_PLAN.md`):
   `variant_scalars_{tracker,fijo}.json` (5 exact fields per variant and window), `variant_extra/{cfg}/{variant}.json` (the other 5 exact fields), `variants/{v}.json`
-  (typical-day production and irradiance per node), `variants/clear.json` (clear-sky reference). Loaded lazily: nothing from `solar_v2` is requested until fixed tilt or
-  another weather is selected (tested). Tracker + yearly mean uses the published files exactly as before.
-- **Areas** (state, region, national) under another configuration or weather are derived in the browser as the mean over member nodes with data, the published
-  definition; they match `analysis.json` to rounding (the node files carry 4 decimals; tested). Node figures are the file values, never approximated.
+  (typical-day production and irradiance per node), `variants/clear.json` (clear-sky reference). Loaded lazily: nothing from `solar_v2` is requested on the default tracker + yearly-mean Explorer or Revenue until the irradiance card scrolls into view
+  (Explorer, nodes) or fixed tilt / another weather is selected (verified in a browser; the pure gate `shouldLoadIrradiance` is tested). Tracker + yearly mean uses the published files exactly as before.
+- **Areas** (state, region, national) under another configuration or weather are derived in the browser as the mean over member nodes with data (the published
+  definition, labelled "derived" on the page; the all-states and all-regions tables are derived the same way under fixed tilt or another weather); they match `analysis.json` to rounding (the node files carry 4 decimals; tested). Node figures are the file values, never approximated.
 - **Irradiance** (Explorer, nodes only): global horizontal and plane of array (per mounting), monthly and typical day, kWh/m2; "Show clear-sky reference" overlays the
   clear-sky irradiance and production and shows the cloud loss (1 - real / clear). Clear sky is a reference, not a scenario: no KPIs exist for it.
 - **Partial-year nodes** keep the published, un-annualised numbers; the variant's 12-month yield is shown "for information" beside the partial-year note.
 - **Monthly value-factor series and the span slider** stay on the single-axis tracker with yearly-mean weather (the published monthly series); the page says so.
-- **Service worker:** the solar files are network first with a bounded cache (`DATA_MAX` = 16 entries, oldest evicted first); only code and CSS are precached.
+- **Service worker:** the data files are network first; the core JSON (about 21 MB raw) is pinned and at most 5 per-variant files (`variants/*`, `variant_extra/*`, about 25 MB worst case) are kept, oldest evicted first; only code and CSS are precached.
 - **Credits:** Solar resource: NASA POWER (MERRA-2 / CERES SYN1deg); PV model: pvlib-python (footer of Explorer and Revenue, `docs/CREDITS.md`).
 
 ## Roadmap (not built)

@@ -3,7 +3,7 @@ import { WIN } from '../../../assets/js/names.js';
 import { mountView } from './view-base.js';
 import { isNeutral } from './query-extras.js';
 import { decompSectionHTML, drawDecomp } from './decomposition.js';
-import { irradianceCardHTML, paintIrradiance, nodeSolar } from './irradiance.js';
+import { irradianceCardHTML, paintIrradiance, nodeSolar, shouldLoadIrradiance } from './irradiance.js';
 import { loadIrradiance } from './solar-data.js';
 import { esc as escH, nameOf } from './compare-ui.js';
 import { num } from '../../../assets/js/format.js';
@@ -39,7 +39,12 @@ export function mountExplorer(host, { shell, side }) {
         };
         const chk = root.querySelector('#irr-clear');
         if (chk) chk.addEventListener('change', () => { shell.showClear = chk.checked; irr(); });
-        irr();
+        const card = root.querySelector('#irr-card');
+        if (shouldLoadIrradiance(ctx, false) || !card || typeof IntersectionObserver === 'undefined') irr();
+        else {
+          const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); irr(); } }, { rootMargin: '0px' });
+          io.observe(card);
+        }
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
           const L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), rows = compareRows(entries, real);

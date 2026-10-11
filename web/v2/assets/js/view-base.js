@@ -2,6 +2,7 @@
 // repaint on selection, window, basis and width changes. A view supplies { mainHTML(ctx), draw(root, ctx) }.
 import { WIN } from '../../../assets/js/names.js';
 import { loadEntries } from './compare-data.js';
+import { loadSourcesCtx } from './solar-data.js';
 import { loadSources } from './explorer-data.js';
 import { serializeSel } from './store.js';
 import { mountControls } from './controls.js';
@@ -44,7 +45,7 @@ export function mountView({ host, side, shell, view, build }) {
     el.textContent = 'Loading span summary…';
     const rows = await summaryRows(entries, shell, shell.store.span, w, real);
     if (my !== sumVer || dead || !q('#sr-summary')) return;
-    q('#sr-summary').innerHTML = summaryHTML(rows, shell, shell.store.span, w, real);
+    q('#sr-summary').innerHTML = summaryHTML(rows, shell, shell.store.span, w, real, isDefaultCtx({ cfg: shell.store.cfg, wx: shell.store.wx }));
   }
 
   function paint() {
@@ -63,7 +64,7 @@ export function mountView({ host, side, shell, view, build }) {
     if (national) {
       const el = body.querySelector('#vb-areas');
       const drawAreas = () => {
-        el.innerHTML = areaTablesHTML(ctxExtra.analysis, winOf(), real, sorts);
+        el.innerHTML = areaTablesHTML(ctxExtra.analysis, winOf(), real, sorts, { src: ctxExtra.src, ctx: { cfg: shell.store.cfg, wx: shell.store.wx } });
         wireAreaTables(el, sorts, drawAreas, (slot) => shell.store.set([slot, ...shell.store.get().slice(1).filter((s) => !(s.kind === slot.kind && s.id === slot.id))]));
       };
       drawAreas();
@@ -79,12 +80,18 @@ export function mountView({ host, side, shell, view, build }) {
     state('loading', shell.store.cfg === 'fijo' || shell.store.wx !== 'mean' ? 'Loading fixed-tilt / weather-variant data…' : 'Loading data…');
     try {
       const ctx = { cfg: shell.store.cfg, wx: shell.store.wx };
-      const [list, src] = await Promise.all([loadEntries(slots, winOf(), ctx), slots[0].kind === 'national' ? loadSources({ kind: 'national', id: 'ALL' }) : Promise.resolve(null)]);
+      const [list, src] = await Promise.all([loadEntries(slots, winOf(), ctx), slots[0].kind === 'national' ? loadSourcesCtx({ kind: 'national', id: 'ALL' }, ctx) : Promise.resolve(null)]);
       if (my !== ver || dead) return;
       if (list.every((e) => e.error)) throw list[0].error;
-      raw = list; ctxExtra.analysis = src && src.analysis;
+      raw = list; ctxExtra.analysis = src && src.analysis; ctxExtra.src = src;
       ctxExtra.note2015 = null;
-      if (!isDefaultCtx(ctx) && ctx.wx === 'y2015') { try { ctxExtra.note2015 = (await getJSON(solarUrls(ctx).vs)).note_2015 || null; } catch { /* note is informative */ } }
+      if (!isDefaultCtx(ctx) && ctx.wx === 'y2015') {
+        try {
+          const v = await getJSON(solarUrls(ctx).vs), cnt = (win) => v.data.y2015[win].p_cap.filter((x) => x !== null && x !== undefined).length;
+          const raw15 = v.note_2015 || '';
+          ctxExtra.note2015 = raw15.replace(/the 2,431 KPI nodes/, `the nodes with data in the window (${cnt('Y1').toLocaleString('en-US')} in Y1, ${cnt('Y2').toLocaleString('en-US')} in Y2)`) || null;
+        } catch { /* note is informative */ }
+      }
       mountSpan();
       if (list.length === 1 && list[0].missing) {
         entries = null;

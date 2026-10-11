@@ -23,7 +23,7 @@ export const COPY = {
   mountNote: 'Single-axis tracker: panels follow the sun east to west with backtracking. Fixed tilt: panels face south at a fixed angle set from the node\'s latitude (about three quarters of the latitude plus 3 degrees). Same losses for both.',
   weatherNote: 'Weather year: the typical day of each month is built from the selected weather and applied to the real prices of the window. Yearly mean is the published default.',
   wxLabel: (v) => (v === 'mean' ? 'Yearly mean (2015–2025)' : v === 'win' ? 'Window weather' : `${v.slice(1)} weather`),
-  monthlyNote: 'The monthly value factor series and the span slider use the single-axis tracker with yearly-mean weather (the published monthly series); they do not change with the mounting or weather selection.',
+  monthlyNote: 'Monthly series, span summary and calendar-year value factor are for the single-axis tracker with yearly-mean weather (the published monthly series); they do not change with the mounting or weather selection.',
   irrNote: 'Irradiance is available for nodes only. Clear sky is a reference line, not a revenue scenario: KPIs are not computed for it.',
   credits: 'Solar resource: NASA POWER (MERRA-2 / CERES SYN1deg); PV model: pvlib-python.',
 };

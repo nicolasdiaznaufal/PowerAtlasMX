@@ -26,15 +26,18 @@
     if (!warned) { warned = true; if (warn) warn('v2 service worker: could not cache a response', e); }
     return Promise.resolve(false);
   }
-  /** keep at most `max` entries (oldest inserted first out). Never throws. */
-  function trimCache(cachesApi, name, max) {
+  /** keep at most `max` EVICTABLE entries (oldest inserted first out); entries that are not evictable are pinned. Never throws. */
+  function trimCache(cachesApi, name, max, evictable) {
     return cachesApi.open(name).then(function (c) {
       return c.keys().then(function (ks) {
-        var extra = ks.slice(0, Math.max(0, ks.length - max));
+        var cand = ks.filter(function (k) { return !evictable || evictable(typeof k === 'string' ? k : k.url); });
+        var extra = cand.slice(0, Math.max(0, cand.length - max));
         return Promise.all(extra.map(function (k) { return c.delete(k); })).then(function () { return extra.length; });
       });
     }).catch(function () { return 0; });
   }
-  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse, trimCache: trimCache };
+  /** pinned: index/analysis/series/profiles and the per-config scalars. evictable: per-variant files (4-5 MB each). */
+  function evictableUrl(url) { return /\/solar_v2\/(variants|variant_extra)\//.test(url); }
+  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse, trimCache: trimCache, evictableUrl: evictableUrl };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.swStrategy = api;
 })(typeof self !== 'undefined' ? self : this);

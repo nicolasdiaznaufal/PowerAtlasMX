@@ -33,11 +33,14 @@ export function createStore(initial = []) {
   let cfg = 'tracker'; // mounting: 'tracker' | 'fijo'
   let wx = 'mean';     // weather: 'mean' | 'y2015'..'y2025' | 'win'
   const subs = new Set();
-  const emit = () => subs.forEach((f) => f(list));
+  let batching = 0, dirty = false;
+  const emit = () => { if (batching) { dirty = true; return; } subs.forEach((f) => f(list)); };
   return {
     get: () => list,
     get real() { return real; },
     setReal(v) { v = !!v; if (v !== real) { real = v; emit(); } },
+    /** run several setters and notify subscribers once (no in-between state is ever observed or loaded). */
+    batch(fn) { batching++; try { fn(); } finally { batching--; } if (!batching && dirty) { dirty = false; emit(); } },
     get span() { return span; },
     setSpan(v) { const n = v && v.from && v.to ? { from: v.from, to: v.to } : null; if (!spanEquals(n, span)) { span = n; emit(); } },
     get scenario() { return scenario; },

@@ -53,12 +53,14 @@ export function createRouter({ store, valid = () => null, replace, currentHash =
       if (r.hash !== hash) replace(r.hash);
       applying = true;
       try {
-        if (r.path !== '/' && store.real !== r.real) store.setReal(r.real);
-        if (r.path !== '/' && !spanEquals(store.span, r.span)) store.setSpan(r.span);
-        if (r.path !== '/' && !scenarioEquals(store.scenario, r.sc)) store.setScenario(r.sc);
-        if (r.path !== '/' && store.cfg !== r.cfg) store.setCfg(r.cfg);
-        if (r.path !== '/' && store.wx !== r.wx) store.setWx(r.wx);
-        if (r.hadSel && serializeSel(store.get()) !== serializeSel(r.list)) store.set(r.list);
+        store.batch(() => {
+          if (r.path !== '/' && store.real !== r.real) store.setReal(r.real);
+          if (r.path !== '/' && !spanEquals(store.span, r.span)) store.setSpan(r.span);
+          if (r.path !== '/' && !scenarioEquals(store.scenario, r.sc)) store.setScenario(r.sc);
+          if (r.path !== '/' && store.cfg !== r.cfg) store.setCfg(r.cfg);
+          if (r.path !== '/' && store.wx !== r.wx) store.setWx(r.wx);
+          if (r.hadSel && serializeSel(store.get()) !== serializeSel(r.list)) store.set(r.list);
+        });
       } finally { applying = false; }
       return { path: r.path, prev, changed: prev !== r.path };
     },

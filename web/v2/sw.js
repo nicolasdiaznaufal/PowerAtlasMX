@@ -6,10 +6,12 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m9-2-f1f5dac2';
+const VERSION = 'v2-m9-2-3cebfa03';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
-const DATA_MAX = 16; // bound of the data cache: the data files are 1 to 3 MB each, variants add up; oldest entries leave first
+// Data cache bound: the core JSON (index, analysis, series, profiles, per-config scalars: about 21 MB raw) is pinned; per-variant files
+// (variants/*.json about 4.5 MB, variant_extra about 0.25 MB) are evictable, oldest first, at most DATA_VARIANTS entries (about 25 MB worst case).
+const DATA_VARIANTS = 5;
 importScripts('sw-strategy.js', 'precache.js');
 
 const OFFLINE_HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · PowerAtlasMx</title>'
@@ -39,7 +41,7 @@ const handlers = {
     if (hit) return hit;
     return fetch(req).then((r) => { e.waitUntil(store(SHELL, req, r)); return r; }).catch(() => Response.error());
   }),
-  data: (req, e) => fetch(req).then((r) => { e.waitUntil(store(DATA, req, r).then(() => self.swStrategy.trimCache(caches, DATA, DATA_MAX))); return r; }).catch(() => caches.open(DATA).then((c) => c.match(req)).then((h) => h || Response.error())),
+  data: (req, e) => fetch(req).then((r) => { e.waitUntil(store(DATA, req, r).then(() => self.swStrategy.trimCache(caches, DATA, DATA_VARIANTS, self.swStrategy.evictableUrl))); return r; }).catch(() => caches.open(DATA).then((c) => c.match(req)).then((h) => h || Response.error())),
 };
 
 self.addEventListener('fetch', (e) => {
