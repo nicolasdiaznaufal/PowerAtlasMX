@@ -145,3 +145,6 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .ind-item .delta { color: var(--accent); text-transform: none; letter-spacing: .01em; }
 .sub { margin: 8px 0 0; color: var(--ink-2); font-weight: 400; }
 .badge[hidden] { display: none; }
+.scn { margin-top: 12px; }
+.scn-help { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; line-height: 1.35; }
+.badge.off { background: var(--raised); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hairline); }

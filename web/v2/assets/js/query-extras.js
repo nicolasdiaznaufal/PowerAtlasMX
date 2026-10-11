@@ -4,9 +4,12 @@ export const NEUTRAL = Object.freeze({ price: 0, dip: 100, yield: 0 });
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 const clamp = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
 
-export function parseSpan(from, to) {
+/** bounds = {min, max} (available months) clamps both ends; a span entirely outside the data is dropped. */
+export function parseSpan(from, to, bounds = null) {
   if (!YM.test(from || '') || !YM.test(to || '') || from > to) return null;
-  return { from, to };
+  if (!bounds) return { from, to };
+  const f = from < bounds.min ? bounds.min : from, t = to > bounds.max ? bounds.max : to;
+  return f > t ? null : { from: f, to: t };
 }
 export const spanEquals = (a, b) => (!a && !b) || (!!a && !!b && a.from === b.from && a.to === b.to);
 

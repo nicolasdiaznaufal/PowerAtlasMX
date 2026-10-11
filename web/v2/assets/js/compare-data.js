@@ -40,12 +40,12 @@ export function yearAxis(entries, real = false) {
 }
 
 /** table column headings per price basis (average/captured/VF follow the toggle; spread, <= 0 share and average-day VF are nominal figures). */
-export function columnLabels(real) {
+export function columnLabels(real, sim = false) {
   const b = real ? "today's pesos" : 'nominal';
   return {
     heading: (win) => `Comparison, ${win} · prices in ${b}`,
     base: `Average price, MXN/MWh (${b})`, cap: `Captured price, MXN/MWh (${b})`, vf: `Value factor (${b})`,
-    z: 'Output at price ≤ 0, % of energy', vfDay: 'VF, average day (nominal)',
+    z: `Output at price ≤ 0, % of energy${sim ? ' (not simulated)' : ''}`, vfDay: 'VF, average day (nominal)',
     revenue: `Revenue per MWp per year, M MXN (${b})`, shortcut: `Shortcut, M MXN (${b})`, over: 'Shortcut overstates, %',
   };
 }

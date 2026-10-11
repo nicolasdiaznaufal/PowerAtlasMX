@@ -45,10 +45,17 @@ export function scenarioRatios(hours, sc) {
 
 /** record with the scenario applied (same shape as explorer-data records). Returns the same object when neutral. */
 export function scenarioRecord(rec, sc) {
-  if (!rec || rec.missing || isNeutral(sc) || !rec.hours) return { rec, ratios: scenarioRatios(null, null) };
+  if (!rec || rec.missing || isNeutral(sc)) return { rec, ratios: scenarioRatios(null, null) };
+  if (!rec.hours) return { rec, ratios: { rB: 1, rC: 1, rVF: 1, rS: 1, yieldK: 1, ok: false } }; // no hourly profile: nothing to simulate
   const r = scenarioRatios(rec.hours, sc);
   if (!r.ok) return { rec, ratios: r };
   const mul = (v, k) => (v === null || v === undefined ? v : v * k);
+  // a price that is zero or negative under the scenario makes the ratios (VF, revenue) meaningless: keep the prices, drop the rest
+  if (!(rec.base * r.rB > 0) || !(rec.cap * r.rC > 0)) {
+    return { rec: { ...rec, simulated: true, simNA: 'n/a: price ≤ 0 under this scenario', hours: applyScenario(rec.hours, sc),
+      base: mul(rec.base, r.rB), baseReal: mul(rec.baseReal, r.rB), cap: mul(rec.cap, r.rC), capReal: mul(rec.capReal, r.rC),
+      vf: null, vfDay: null, ingreso: null, ingresoReal: null, atajo: null, yf: mul(rec.yf, r.yieldK) }, ratios: { ...r, na: true } };
+  }
   const out = {
     ...rec, simulated: true, hours: applyScenario(rec.hours, sc),
     base: mul(rec.base, r.rB), baseReal: mul(rec.baseReal, r.rB), cap: mul(rec.cap, r.rC), capReal: mul(rec.capReal, r.rC),
@@ -65,6 +72,7 @@ export function scenarioEntries(entries, sc) {
   return entries.map((e) => {
     if (e.error || e.missing || !e.rec) return e;
     const { rec, ratios } = scenarioRecord(e.rec, sc);
-    return rec === e.rec ? e : { ...e, rec, real: e.rec, ratios };
+    if (rec === e.rec) return { ...e, noBaseline: !ratios.ok }; // shown as published, and said so
+    return { ...e, rec, real: e.rec, ratios };
   });
 }

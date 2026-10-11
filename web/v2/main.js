@@ -87,7 +87,7 @@ const router = createRouter({
     const ids = new Set(sh.atlas.nodes.map((n) => n.id));
     const st = new Set(sh.geo.states.features.map((f) => f.properties.key));
     const rg = new Set(sh.geo.regions.features.map((f) => f.properties.key));
-    return { node: (id) => ids.has(id), state: (k) => st.has(k), region: (k) => rg.has(k) };
+    return { node: (id) => ids.has(id), state: (k) => st.has(k), region: (k) => rg.has(k), months: sh.atlas.months || null };
   },
   replace: (h) => history.replaceState(null, '', h),
   currentHash: () => location.hash,

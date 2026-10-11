@@ -1,6 +1,7 @@
 // Explorer: PML decomposition by hour (prominent), value factor over time (month / year), comparison table for several slots.
 import { WIN } from '../../../assets/js/names.js';
 import { mountView } from './view-base.js';
+import { isNeutral } from './query-extras.js';
 import { decompSectionHTML, drawDecomp } from './decomposition.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { compareRows } from './compare-data.js';
@@ -17,7 +18,7 @@ export function mountExplorer(host, { shell, side }) {
         drawDecomp(root, entries);
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
-          const L = columnLabels(real), rows = compareRows(entries, real);
+          const L = columnLabels(real, !isNeutral(shell.store.scenario)), rows = compareRows(entries, real);
           const cols = [{ h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => r.tiles.vf.text }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => r.tiles.vfDay.text }];
           root.querySelector('#cmp-table').innerHTML = `<h2 class="mono">${esc(L.heading(w.label))}</h2>${tableHTML(rows, entries, shell, cols)}`;
         }

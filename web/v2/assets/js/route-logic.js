@@ -26,7 +26,7 @@ export function resolveHash(hash, valid = null, current = [], currentReal = fals
   // span and scenario follow the same rule as the basis: explicit entry -> exactly what the URL says; bare hash -> inherit
   const cur = currentExtras || {};
   const inherit = path === '/' || !raw;
-  const span = path === '/' ? cur.span || null : params.has('from') || params.has('to') ? parseSpan(params.get('from'), params.get('to')) : inherit ? cur.span || null : null;
+  const span = path === '/' ? cur.span || null : params.has('from') || params.has('to') ? parseSpan(params.get('from'), params.get('to'), valid && valid.months) : inherit ? cur.span || null : null;
   const sc = path === '/' ? cur.sc || null : params.has('sc') ? parseScenario(params.get('sc')) : inherit ? cur.sc || null : null;
   return { path, list, real, span, sc, hadSel: !!raw, hash: hrefFor(path, list, real, { span, sc }) };
 }

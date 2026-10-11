@@ -4,7 +4,9 @@ import { announce } from './live.js';
 
 const DEFS = [
   { k: 'price', label: 'Price shift', unit: 'MXN/MWh', step: 10, show: (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} MXN/MWh`, text: (v) => (v === 0 ? 'no shift' : `${v > 0 ? 'plus' : 'minus'} ${Math.abs(v)} pesos per megawatt hour`) },
-  { k: 'dip', label: 'Midday price dip', unit: '% of today\'s dip', step: 5, show: (v) => `${v}% of the real dip`, text: (v) => `${v} percent of the real midday dip` },
+  { k: 'dip', label: 'Midday price dip', unit: '', step: 5, show: (v) => (v === 100 ? '100 · as published' : v === 0 ? '0 · no dip' : v > 100 ? `${v} · ${v - 100}% deeper` : `${v} · ${100 - v}% shallower`),
+    text: (v) => (v === 100 ? 'as published' : v === 0 ? 'no dip' : v > 100 ? `${v - 100} percent deeper than published` : `${100 - v} percent shallower than published`),
+    help: '100 = as published; 0 = no dip; 150 = 50% deeper. This reshapes solar-hour prices only; the day\'s mean price is not held constant.' },
   { k: 'yield', label: 'Solar yield', unit: '%', step: 1, show: (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}%`, text: (v) => (v === 0 ? 'as modelled' : `${v > 0 ? 'plus' : 'minus'} ${Math.abs(v)} percent`) },
 ];
 
@@ -13,7 +15,7 @@ export function mountScenarioPanel(el, store) {
   el.innerHTML = `<fieldset class="scn"><legend class="mono">What if? (simulation)</legend>
     <p class="hint">Move a slider to simulate. Published values come back with Reset.</p>
     ${DEFS.map((d) => `<label class="scn-row" for="sc-${d.k}"><span>${d.label}</span><output id="o-${d.k}" class="mono"></output>
-      <input type="range" id="sc-${d.k}" min="${SCENARIO_LIMITS[d.k][0]}" max="${SCENARIO_LIMITS[d.k][1]}" step="${d.step}"></label>`).join('')}
+      <input type="range" id="sc-${d.k}" min="${SCENARIO_LIMITS[d.k][0]}" max="${SCENARIO_LIMITS[d.k][1]}" step="${d.step}"${d.help ? ` aria-describedby="sc-${d.k}-help"` : ''}>${d.help ? `<small class="scn-help" id="sc-${d.k}-help">${d.help}</small>` : ''}</label>`).join('')}
     <div class="scn-actions"><span class="badge" id="scn-badge" hidden>Simulated</span><button type="button" class="btn btn-ghost btn-sm" id="scn-reset">Reset to real values</button></div>
     <p class="sr" id="scn-live" role="status" aria-live="polite"></p></fieldset>`;
   const q = (s) => el.querySelector(s), live = q('#scn-live');

@@ -144,3 +144,52 @@ test('applying a hash never writes an intermediate URL (a reload in the middle w
   assert.deepEqual(store.scenario, { price: -100, dip: 50, yield: -10 });
   assert.equal(store.span, null);
 });
+
+import { columnLabels } from '../v2/assets/js/compare-data.js';
+
+test('negative prices under a scenario: prices kept, VF and revenue are n/a (validador repro nodes)', { skip }, () => {
+  const s = src();
+  for (const [id, win] of [['04PLD-230', 'Y2'], ['04LCF-230', 'Y1']]) {
+    if (!s.nodos.ids.includes(id)) continue;
+    const rec = recordFor(s, { kind: 'node', id }, win);
+    if (rec.missing) continue;
+    const { rec: sim } = scenarioRecord(rec, { price: -300, dip: 100, yield: 0 });
+    assert.ok(sim.simNA, `${id} ${win}`);
+    assert.equal(sim.vf, null); assert.equal(sim.vfDay, null); assert.equal(sim.ingreso, null); assert.equal(sim.atajo, null);
+    assert.ok(sim.base < rec.base && sim.cap < rec.cap);   // prices are still simulated
+    const t = Object.fromEntries(tilesOf(sim, false).map((x) => [x.id, x]));
+    assert.equal(t.vf.text, '—');
+    assert.equal(revenueOf(sim, false).total, null);
+    assert.equal(revenueOf(sim, false).hours.real.every((v) => v === null), true);
+    // real-pesos basis never turns a scenario into a value factor either
+    assert.equal(tilesOf(sim, true).find((x) => x.id === 'vf').value, null);
+  }
+  // a mild scenario is never n/a
+  const ok = scenarioRecord(recordFor(s, { kind: 'national', id: 'ALL' }, 'Y2'), { price: -20, dip: 100, yield: 0 }).rec;
+  assert.ok(!ok.simNA && ok.vf > 0);
+});
+
+test('a slot without a baseline stays published and says so under an active scenario', () => {
+  const noHours = { slot: { kind: 'node', id: 'X' }, rec: { base: 100, cap: 80, vf: 0.8, hours: null }, series: null };
+  const out = scenarioEntries([noHours], { price: 10, dip: 100, yield: 0 });
+  assert.equal(out[0].noBaseline, true);
+  assert.equal(out[0].real, undefined);                    // not marked simulated
+  assert.equal(out[0].rec.vf, 0.8);
+  const flat = { slot: { kind: 'node', id: 'Y' }, rec: { base: 0, cap: 0, vf: null, hours: { pml: Array(24).fill(0), y: Array(24).fill(1), perdidas: Array(24).fill(0), congestion: Array(24).fill(0), energia: Array(24).fill(0) } } };
+  assert.equal(scenarioEntries([flat], { price: 10, dip: 100, yield: 0 })[0].noBaseline, true);
+  assert.equal(scenarioEntries([noHours], null)[0].noBaseline, undefined);
+});
+
+test('comparison tables mark the unsimulated column; span bounds clamp the URL', () => {
+  assert.match(columnLabels(false, true).z, /not simulated/);
+  assert.doesNotMatch(columnLabels(false, false).z, /not simulated/);
+  assert.deepEqual(parseSpan('2019-05', '2030-01', { min: '2020-01', max: '2026-09' }), { from: '2020-01', to: '2026-09' });
+  assert.equal(parseSpan('2027-01', '2027-06', { min: '2020-01', max: '2026-09' }), null);
+  assert.deepEqual(parseSpan('2023-03', '2024-01', { min: '2020-01', max: '2026-09' }), { from: '2023-03', to: '2024-01' });
+  const valid = { node: () => true, state: () => true, region: () => true, months: { min: '2020-01', max: '2026-09' } };
+  const store = createStore(), writes = []; let cur = '#/explorer?sel=A-1&from=2019-01&to=2031-12';
+  const router = createRouter({ store, valid: () => valid, replace: (h) => { writes.push(h); cur = h; }, currentHash: () => cur });
+  router.resolve(cur);
+  assert.equal(cur, '#/explorer?sel=A-1&from=2020-01&to=2026-09');
+  assert.deepEqual(store.span, { from: '2020-01', to: '2026-09' });
+});

@@ -58,7 +58,7 @@ export function yearRows(series, real = false) {
 /** price basis of a record: nominal MXN or today's pesos. VF in real pesos is captured / average of the real figures (as v1). */
 export function priceBasis(rec, real) {
   const r = real && rec.baseReal != null && rec.capReal != null;
-  return { base: r ? rec.baseReal : rec.base, cap: r ? rec.capReal : rec.cap, vf: r ? rec.capReal / rec.baseReal : rec.vf, real: r };
+  return { base: r ? rec.baseReal : rec.base, cap: r ? rec.capReal : rec.cap, vf: rec.simNA ? null : r ? rec.capReal / rec.baseReal : rec.vf, real: r };
 }
 
 /** headline tiles, in display order. Values are formatted exactly as shown. Spread, "<= 0" share and VF of the average day are nominal figures. */

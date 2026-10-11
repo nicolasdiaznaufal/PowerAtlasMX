@@ -1,5 +1,6 @@
 // Revenue: PML decomposition by hour (same as Explorer), production x price by hour, revenue per MWp per year, series, comparison table.
 import { mountView } from './view-base.js';
+import { isNeutral } from './query-extras.js';
 import { decompSectionHTML, drawDecomp } from './decomposition.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { compareRows, columnLabels } from './compare-data.js';
@@ -8,7 +9,7 @@ import { num } from '../../../assets/js/format.js';
 import { pairChart, lineChart, renderChart } from './svg-charts.js';
 import { tableHTML, esc, legendHTML, nameOf } from './compare-ui.js';
 
-const mil = (v) => num(v / 1e6, 2);
+const mil = (v) => (v === null || v === undefined ? 'n/a' : num(v / 1e6, 2));
 const hh = (i) => String(i).padStart(2, '0');
 
 function revenueCardHTML(entries) {
@@ -26,9 +27,9 @@ export function mountRevenue(host, { shell, side }) {
       mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${revenueCardHTML(entries)}${seriesCardHTML()}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
       draw(root, { entries, winId, real, w }, { repaint }) {
         drawDecomp(root, entries);
-        const rows = compareRows(entries, real), L = columnLabels(real), pesos = real ? "today's pesos" : 'nominal';
+        const rows = compareRows(entries, real), L = columnLabels(real, !isNeutral(shell.store.scenario)), pesos = real ? "today's pesos" : 'nominal';
         const realRows = compareRows(entries.map((e) => (e.real ? { ...e, rec: e.real } : e)), real);
-        const gapText = (r) => (r.rev.gap === null ? '' : ` Typical day × 365 is ${num(Math.abs(r.rev.gap), 1)}% ${r.rev.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`);
+        const gapText = (r) => (r.rev.gap === null || r.rev.total === null ? '' : ` Typical day × 365 is ${num(Math.abs(r.rev.gap), 1)}% ${r.rev.gap >= 0 ? 'above' : 'below'} the published yearly revenue (nominal).`);
         const labels = Array.from({ length: 24 }, (_, i) => hh(i));
         const hours = root.querySelector('#rv-hours');
         if (entries.length === 1) {
