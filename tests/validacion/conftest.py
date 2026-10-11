@@ -14,6 +14,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+# Raiz de los DATOS (data/): $NODAL_DATA_ROOT si esta definida (p. ej. un worktree sin data/), si no la del repo.
+DATA_ROOT = Path(os.environ["NODAL_DATA_ROOT"]) if os.environ.get("NODAL_DATA_ROOT") else ROOT
 DB_PATH = ROOT / "data" / "db" / "pml.duckdb"
 PARQUET_ROOT = ROOT / "data" / "parquet" / "pml_mda"
 RAW_ROOT = ROOT / "data" / "raw" / "cenace"

@@ -20,15 +20,15 @@ import pandas as pd
 import pytest
 
 from _indep import horas_anio, kpis_desde_sumas, mapa_cdmx
-from conftest import ROOT
+from conftest import DATA_ROOT, ROOT
 
 pytestmark = pytest.mark.pesado
 
-AGG = ROOT / "data" / "aggregates"
-NODES = ROOT / "data" / "nodes"
-INDEX = ROOT / "data" / "index.json"
-BASE_MH = ROOT / "data" / "baselines" / "solar_baselines_month_hour.parquet"
-INPC_CSV = ROOT / "data" / "ref" / "inpc_mensual.csv"
+AGG = DATA_ROOT / "data" / "aggregates"
+NODES = DATA_ROOT / "data" / "nodes"
+INDEX = DATA_ROOT / "data" / "index.json"
+BASE_MH = DATA_ROOT / "data" / "baselines" / "solar_baselines_month_hour.parquet"
+INPC_CSV = DATA_ROOT / "data" / "ref" / "inpc_mensual.csv"
 # Muestra nueva (ronda CDMX): pedidos + renombrados + 95 % + <12 meses + 9 al azar (semilla 20261010)
 NODOS = ["07CFP-400", "03DEA-230", "03PCL-115", "03JTC-115", "03EGM-230", "03MNO-115", "08BNV-115",
          "02NXM-230", "04MPP-115",
@@ -108,11 +108,15 @@ def todos_mes(prep):
 
 @pytest.fixture(scope="module")
 def index():
+    if not INDEX.exists():
+        pytest.skip("sin data/index.json")
     return json.loads(INDEX.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def inpc():
+    if not INPC_CSV.exists():
+        pytest.skip("sin data/ref/inpc_mensual.csv")
     t = pd.read_csv(INPC_CSV, dtype={"mes": str})
     return dict(zip(t.mes, t.inpc.astype(float)))
 

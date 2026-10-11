@@ -592,8 +592,10 @@ Dimensiones: config `tracker` / `fijo` (parquet: `fixed`); variantes `mean` = "Y
 = publicado), `y2015`..`y2025`, `win` = clima real de cada mes de la ventana. `clear` (cielo despejado) queda solo como
 referencia de irradiancia/producción en `variants/clear.json`, sin KPIs. Ventanas: Y1 = 2024-08..2025-07, Y2 =
 2025-08..2026-07 para todas las variantes; `completo` y las ventanas ago-jun solo para `mean` (en `analysis_nodos_*`).
-**Nota 2015**: en el nodo mediano (seguidor) 2015 queda −5.9 % frente a los demás años; probablemente un cambio de
-insumos MERRA-2/CERES [sin verificar]. Se mantiene dentro de `mean` (decisión de Nico) y la UI lo rotula
+**Nota 2015** (mediana entre nodos de `yf_annual_equiv` de `y2015` sobre la referencia, seguidor): en los 2 431 nodos
+del universo KPI, −6.1 % frente a `mean` 2015-2025 (que incluye 2015) y −6.7 % frente al promedio de los otros diez
+años (2016-2025); en los 2 605 nodos de solar, −5.9 % frente a `mean`. Probablemente un cambio de insumos
+MERRA-2/CERES [sin verificar]. Se mantiene dentro de `mean` (decisión de Nico) y la UI lo rotula
 (`note_2015` en `variant_scalars_*.json`).
 
 **Archivos** (`data/solar_v2/web/`, ignorado por git; `web/tools/build_solar_web.py` los copia a `web/data/solar_v2/`

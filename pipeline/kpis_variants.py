@@ -29,8 +29,10 @@ DATA_ROOT = Path(os.environ.get("NODAL_DATA_ROOT", K.ROOT))
 VARIANTES = ["mean"] + [f"y{a}" for a in range(2015, 2026)] + ["win"]     # clear: solo referencia de irradiancia
 ETIQUETAS = {"mean": "Yearly mean 2015-2025", "win": "Window weather (actual months of each window)",
              **{f"y{a}": f"{a} weather" for a in range(2015, 2026)}}
-NOTA_2015 = ("2015 is -5.9 % vs the other years at the median node (tracker), likely a MERRA-2/CERES input change "
-             "[unverified]; it stays inside the Yearly mean.")
+NOTA_2015 = ("2015 weather: median across the 2,431 KPI nodes (tracker, 12-month yield) is -6.1 % vs the 2015-2025 "
+             "Yearly mean (which includes 2015) and -6.7 % vs the mean of the other ten years (2016-2025); over all "
+             "2,605 solar nodes it is -5.9 % vs the Yearly mean. Likely a MERRA-2/CERES input change [unverified]; "
+             "2015 stays inside the Yearly mean.")
 VENT_WEB = {"Y1": "deck_2024_25", "Y2": "deck_2025_26"}
 CFG_WEB = {"tracker": "tracker", "fixed": "fijo"}
 CAMPOS9 = ["p_cap", "vf", "pct_e0", "y_f", "ingreso", "ingreso_atajo", "vf_dia_promedio", "p_cap_real", "ingreso_real"]
