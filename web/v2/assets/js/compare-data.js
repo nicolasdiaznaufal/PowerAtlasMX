@@ -1,5 +1,5 @@
 // Compare data layer: one entry per selected slot, built with the SAME functions Explorer and Revenue use for a single slot.
-import { seriesFor, tilesOf, revenueOf, partialNote, priceBasis, yearRows } from './explorer-data.js';
+import { seriesFor, tilesOf, revenueOf, partialNote, annualEquivNote, priceBasis, yearRows } from './explorer-data.js';
 import { loadSourcesCtx, recordForCtx } from './solar-data.js';
 
 /** load every slot independently (a failing slot does not block the others). */
@@ -29,7 +29,7 @@ export function compareRows(entries, real = false) {
     if (e.error || e.missing) return { k, slot: e.slot, ok: false, error: !!e.error, missing: !!e.missing };
     const t = Object.fromEntries(tilesOf(e.rec, real).map((x) => [x.id, x]));
     const rv = revenueOf(e.rec, real);
-    return { k, slot: e.slot, ok: true, tiles: t, partial: partialNote(e.rec), rev: rv, basis: priceBasis(e.rec, real), na: !!e.rec.simNA };
+    return { k, slot: e.slot, ok: true, tiles: t, partial: partialNote(e.rec), equiv: annualEquivNote(e.rec), rev: rv, basis: priceBasis(e.rec, real), na: !!e.rec.simNA };
   });
 }
 

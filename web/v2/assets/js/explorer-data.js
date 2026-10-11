@@ -91,6 +91,12 @@ export function partialNote(rec) {
   return `Partial year: ${num(rec.nHoras, 0)} priced hours of ${num(FULL_YEAR_HOURS, 0)}. Revenue covers priced hours only and is understated.`;
 }
 
+/** For information only: the variant's 12-month yield for a node with fewer priced hours (published figures are NOT annualised). */
+export function annualEquivNote(rec) {
+  if (rec.nHoras == null || rec.nHoras >= FULL_YEAR_HOURS || !(rec.yfEq > 0)) return null;
+  return `For information: annual equivalent of the yield, ${num(rec.yfEq, 0)} kWh/kWp (the published figures cover priced hours only).`;
+}
+
 /** Revenue per MWp per year, from the SAME record (same price, production and profile as Explorer).
  *  Headline figures are the published `ingreso` fields; hourly bars use the typical-day shape (production x price)
  *  scaled so that the day adds up to ingreso / 365 exactly. Shortcut = production x the all-hours average price. */

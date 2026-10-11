@@ -129,7 +129,7 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
   labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   series.forEach((sr, k) => {
-    const st = STYLES[k % 3];
+    const st = sr.style || STYLES[k % 3];
     let d = '', pen = false;
     sr.vals.forEach((v, i) => { if (v === null || v === undefined) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
     out += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="2" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''} stroke-linejoin="round"/>`;
@@ -138,6 +138,25 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
       const tip = `<title>${esc(sr.label)} · ${esc(labels[i])}: ${fmt(v)}</title>`;
       if (i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
     });
+  });
+  return frame(H, aria, out, xtitle);
+}
+
+/** grouped bars: labels x series [{vals, color, ghost: bool}] (ghost = outline only, e.g. the clear-sky reference). */
+export function groupChart({ labels, series, H = 240, fmt = (v) => num(v, 0), xEvery = 1, aria, ytitle = '', xtitle = '' }) {
+  const all = finite(series.flatMap((s) => s.vals)), sc = niceTicks(0, Math.max(...all, 1e-9));
+  const { g, y } = axis(H, sc.ticks, fmt, ytitle);
+  const iw = W - PAD.l - PAD.r, step = iw / labels.length, n = series.length, bw = Math.max(2, (step * 0.8) / n), y0 = y(0);
+  let out = g;
+  labels.forEach((l, i) => {
+    const x0 = PAD.l + step * i + (step - bw * n) / 2;
+    series.forEach((sr, k) => {
+      const v = sr.vals[i];
+      if (v === null || v === undefined) return;
+      const y1 = y(v), top = Math.min(y0, y1), h = Math.max(0.5, Math.abs(y0 - y1));
+      out += `<rect x="${(x0 + k * bw).toFixed(1)}" y="${top.toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${h.toFixed(1)}" ${sr.ghost ? 'class="ghost-bar"' : `fill="${sr.color}"`}><title>${esc(sr.label || '')} ${esc(l)}: ${fmt(v)}</title></rect>`;
+    });
+    if (i % xEvery === 0) out += `<text x="${(PAD.l + step * i + step / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`;
   });
   return frame(H, aria, out, xtitle);
 }

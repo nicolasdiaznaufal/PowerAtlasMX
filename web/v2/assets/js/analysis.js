@@ -34,6 +34,7 @@ export function mountAnalysis(root, { view, go }) {
         </aside>
         <div class="an-main" id="an-content"></div>
       </div>
+      <footer class="credits mono">${COPY.credits}</footer>
       <p><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real, shell.store.extras)}">Open ${COPY[other].title}</a></p>
     </main>
     <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real, shell.store.extras)}" aria-label="Back to the map"><span class="mono">Map</span></a>

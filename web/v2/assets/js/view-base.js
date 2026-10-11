@@ -25,7 +25,7 @@ export function mountView({ host, side, shell, view, build }) {
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
     <div id="vb-span"></div>
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
-  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-scn"></div><div id="vb-ind" class="inds"></div>`;
+  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-scn"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
   const scn = mountScenarioPanel(side.querySelector('#vb-scn'), shell.store);
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
@@ -58,7 +58,7 @@ export function mountView({ host, side, shell, view, build }) {
     const note15 = shell.store.wx === 'y2015' && ctxExtra.note2015 ? `<p class="xp-warn" role="note">${esc(ctxExtra.note2015)}</p>` : '';
     const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))}</p>`;
     body.innerHTML = ctxLine + note15 + banner + build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
-    build.draw(body, ctx, { repaint: paint, state: ctxExtra });
+    build.draw(body, ctx, { repaint: paint, state: ctxExtra, side });
     paintSummary(real, w);
     if (national) {
       const el = body.querySelector('#vb-areas');

@@ -34,6 +34,7 @@ self.PRECACHE = [
  "assets/js/explorer.js",
  "assets/js/geo.js",
  "assets/js/indicators.js",
+ "assets/js/irradiance.js",
  "assets/js/json.js",
  "assets/js/landing.js",
  "assets/js/live.js",

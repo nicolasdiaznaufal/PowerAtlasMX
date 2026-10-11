@@ -26,6 +26,15 @@
     if (!warned) { warned = true; if (warn) warn('v2 service worker: could not cache a response', e); }
     return Promise.resolve(false);
   }
-  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse };
+  /** keep at most `max` entries (oldest inserted first out). Never throws. */
+  function trimCache(cachesApi, name, max) {
+    return cachesApi.open(name).then(function (c) {
+      return c.keys().then(function (ks) {
+        var extra = ks.slice(0, Math.max(0, ks.length - max));
+        return Promise.all(extra.map(function (k) { return c.delete(k); })).then(function () { return extra.length; });
+      });
+    }).catch(function () { return 0; });
+  }
+  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse, trimCache: trimCache };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.swStrategy = api;
 })(typeof self !== 'undefined' ? self : this);
