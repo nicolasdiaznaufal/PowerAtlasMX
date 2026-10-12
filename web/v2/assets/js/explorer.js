@@ -9,6 +9,7 @@ import { esc as escH, nameOf } from './compare-ui.js';
 import { num } from '../../../assets/js/format.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { dailyCardHTML, mountDaily } from './daily-card.js';
+import { mapsCardHTML, mountMaps } from './maps-card.js';
 import { compareRows } from './compare-data.js';
 import { columnLabels } from './compare-data.js';
 import { tableHTML, esc, NA_HTML } from './compare-ui.js';
@@ -18,7 +19,7 @@ export function mountExplorer(host, { shell, side }) {
   return mountView({
     host, side, shell, view: 'explorer',
     build: {
-      mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${irradianceCardHTML(entries.map((e) => e.slot), !!shell.showClear)}${seriesCardHTML()}${dailyCardHTML('explorer')}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
+      mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${dailyCardHTML('explorer')}${seriesCardHTML()}${mapsCardHTML()}${irradianceCardHTML(entries.map((e) => e.slot), !!shell.showClear)}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
       draw(root, { entries, winId, real, w }, { repaint, side }) {
         drawDecomp(root, entries);
         const ctx = { cfg: shell.store.cfg, wx: shell.store.wx };
@@ -49,6 +50,7 @@ export function mountExplorer(host, { shell, side }) {
           io.observe(card);
         }
         mountDaily(root, { entries, shell, winId, view: 'explorer' });
+        mountMaps(root, { shell, winId });
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
           const L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), rows = compareRows(entries, real);

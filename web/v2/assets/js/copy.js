@@ -30,9 +30,7 @@ export const COPY = {
   irrNote: 'Irradiance is available for nodes only. Clear sky is a reference line, not a revenue scenario: KPIs are not computed for it.',
   daily: {
     avg: 'A 7-day moving average takes each day together with the 6 days before it and averages them, which smooths the day-to-day noise; a day is drawn only when at least 4 of its 7 days have data.',
-    vf: 'The value factor is the price solar captures divided by the all-hours average price. Both are summed over the same 7 days first, so one odd day weighs only as much as its hours and energy. Where the 7-day average price is very low the ratio is not meaningful and the line is left blank.',
-    hidden: (n) => `n/a: 7-day average price below max(50 MXN/MWh, 10% of the trailing-year average price) (${n} days hidden, nominal prices).`,
-    clipped: 'Points beyond -1 and 2.5 are drawn as triangles on the edge of the plot; hover shows the true value.',
+    parts: 'PML is the price at the node; congestion and losses are the parts of it that come from grid congestion and from energy lost on the way. The three are drawn on one plot as 7-day moving averages.',
     spread: 'Price spread is the highest minus the lowest hourly price of the day; days with fewer than 12 hours of prices are left out.',
     revenue: 'Revenue is what 1 MWp earns each day by selling every sunlit hour at that hour\'s price, averaged over 7 days.',
     cap: 'Captured price is the revenue of the 7 days divided by the energy of the same 7 days: the average price solar actually earned.',

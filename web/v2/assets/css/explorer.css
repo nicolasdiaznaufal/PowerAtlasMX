@@ -172,3 +172,26 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .hv-box .hv-row em { font-style: normal; color: var(--ink-2); margin-right: auto; padding-right: 10px; }
 .hv-box .hv-row strong { font-weight: 500; }
 .chart .win-band { fill: var(--s1); opacity: .12; }
+
+/* M12: horizontal simulation box above the first card */
+.scn-wrap .scn { margin-top: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 24px; align-items: start; }
+.scn-wrap .scn legend { grid-column: 1 / -1; }
+.scn-wrap .scn .hint { grid-column: 1 / -1; margin: 0; color: var(--ink-2); }
+.scn-wrap .scn .scn-actions { grid-column: 1 / -1; justify-content: flex-start; }
+.scn-wrap .scn .sr { grid-column: 1 / -1; }
+@media (max-width: 760px) { .scn-wrap .scn { grid-template-columns: minmax(0, 1fr); } }
+.bar-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.bar-one { display: grid; gap: 6px; }
+@media (max-width: 900px) { .bar-pair { grid-template-columns: minmax(0, 1fr); } }
+
+/* M12: canvas maps (v1 GeoMap) */
+.map-wrap { position: relative; width: 100%; max-width: 780px; }
+.gm-host { position: relative; width: 100%; --bg: var(--surface); --orange: var(--accent); --map-nodata: #2B352E; }
+.gm-host canvas { position: absolute; left: 0; top: 0; display: block; }
+.map-tip { white-space: nowrap; }
+.ramp { display: flex; align-items: center; gap: 8px; color: var(--ink-2); text-transform: none; max-width: 780px; }
+.ramp i { flex: 1; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #33443A, #EDE6D0); box-shadow: var(--ring); }
+.ramp .muted, .muted { color: var(--ink-3); }
+.map-tabs { width: 100%; max-width: 900px; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+.map-tabs button { height: auto; min-height: 36px; padding: 6px 8px; line-height: 1.25; }
+@media (max-width: 760px) { .map-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }

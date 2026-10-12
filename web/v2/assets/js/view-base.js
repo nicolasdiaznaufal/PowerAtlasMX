@@ -24,10 +24,10 @@ export function mountView({ host, side, shell, view, build }) {
   const sorts = { state: { key: 'vf', dir: -1 }, region: { key: 'vf', dir: -1 } };
   const winOf = () => shell.winId || 'Y2';
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
-    <div id="vb-span"></div>
+    <div id="vb-span"></div><div id="vb-scn" class="scn-wrap"></div>
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
-  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-scn"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
-  const scn = mountScenarioPanel(side.querySelector('#vb-scn'), shell.store);
+  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
+  const scn = mountScenarioPanel(host.querySelector('#vb-scn'), shell.store);
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
   const state = (kind, html) => { const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };

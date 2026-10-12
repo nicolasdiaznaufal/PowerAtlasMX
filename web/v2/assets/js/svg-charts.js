@@ -60,24 +60,25 @@ export function axis(H, ticks, fmt, ytitle) {
 }
 
 /** bars: [{v, label, color, tip}], hline: {v, label}. xEvery: label every n bars. */
-export function barChart({ bars, hline = null, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '', xtitle = '' }) {
+export function barChart({ bars, hline = null, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, aria, ytitle = '', xtitle = '', ticks = null, hoverTitle = (l) => l, minBw = 1.5, hoverName = '' }) {
   const vals = finite(bars.map((b) => b.v));
   const sc = scale || niceTicks(Math.min(0, ...vals), niceMax(Math.max(...vals, hline ? hline.v : 0, 0)));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
-  const iw = W - PAD.l - PAD.r, step = iw / bars.length, bw = Math.max(1.5, step * 0.7), y0 = y(Math.max(sc.lo, Math.min(0, sc.hi)));
+  const iw = W - PAD.l - PAD.r, step = iw / bars.length, bw = Math.max(minBw, step * 0.7), y0 = y(Math.max(sc.lo, Math.min(0, sc.hi)));
+  const tk = ticks ? new Map(ticks.map((t) => [t.i, t.text])) : null; // ticks: [{i, text}] overrides xEvery (daily bars: month labels)
   let out = g;
   bars.forEach((b, i) => {
     const x = PAD.l + step * i + (step - bw) / 2;
     if (b.v !== null && b.v !== undefined) {
       const y1 = y(Math.min(sc.hi, Math.max(sc.lo, b.v)));
       const h = Math.max(0.5, Math.abs(y0 - y1)), top = Math.min(Math.min(y0, y1), H - PAD.b - h);
-      out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}"><title>${esc(b.tip || `${b.label}: ${fmt(b.v)}`)}</title></rect>`;
+      out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}">${ticks ? '' : `<title>${esc(b.tip || `${b.label}: ${fmt(b.v)}`)}</title>`}</rect>`;
     }
-    if (i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(b.label)}</text>`;
+    if (tk ? tk.has(i) : i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(tk ? tk.get(i) : b.label)}</text>`;
   });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   if (hline && hline.v !== null) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
-  setHover({ vbW: W, H, xs: bars.map((_, i) => PAD.l + step * i + step / 2), at: (i) => ({ title: bars[i].label, items: [{ name: ytitle || 'Value', color: bars[i].color, text: bars[i].v === null || bars[i].v === undefined ? 'no data' : fmt(bars[i].v) }] }) });
+  setHover({ vbW: W, H, xs: bars.map((_, i) => PAD.l + step * i + step / 2), at: (i) => ({ title: hoverTitle(bars[i].label), items: [{ name: hoverName || ytitle || 'Value', color: bars[i].color, text: bars[i].v === null || bars[i].v === undefined ? 'no data' : fmt(bars[i].v) }] }) });
   return frame(H, aria, out, xtitle);
 }
 

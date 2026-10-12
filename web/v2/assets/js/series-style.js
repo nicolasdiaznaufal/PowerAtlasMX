@@ -17,3 +17,8 @@ export function swatchSVG(i) {
   const s = STYLES[i % 3];
   return `<svg class="swatch" viewBox="0 0 32 12" width="32" height="12" aria-hidden="true"><line x1="1" x2="31" y1="6" y2="6" stroke="${s.color}" stroke-width="2" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''}/><path transform="translate(16 6)" d="${markerPath(s.marker, 3.2)}" fill="${s.color}"/></svg>`;
 }
+
+/** swatch of an explicit style object { color, dash, marker } (legends whose colour is not tied to the slot order). */
+export function swatchStyle(s) {
+  return `<svg class="swatch" viewBox="0 0 32 12" width="32" height="12" aria-hidden="true"><line x1="1" x2="31" y1="6" y2="6" stroke="${s.color}" stroke-width="2" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''}/><path transform="translate(16 6)" d="${markerPath(s.marker || 'circle', 3.2)}" fill="${s.color}"/></svg>`;
+}
