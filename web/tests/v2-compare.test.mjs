@@ -84,7 +84,7 @@ test('chip removal: focus moves to the next chip, then to + Add; the announcemen
   assert.equal(nextFocusIndex(0, 2), 0);   // first removed: the chip that moved up
   assert.equal(nextFocusIndex(2, 2), 1);   // last removed: the new last chip
   assert.equal(nextFocusIndex(0, 0), -1);  // nothing left: caller falls back to + Add / heading
-  assert.equal(removedMessage('Jalisco', 2), 'Removed Jalisco; 2 of 3 slots');
+  assert.equal(removedMessage('Jalisco', 2), 'Removed Jalisco; 2 of 16 slots');
 });
 
 test('VF axis max never clips: >= 1, covers every plotted value, round steps', async () => {

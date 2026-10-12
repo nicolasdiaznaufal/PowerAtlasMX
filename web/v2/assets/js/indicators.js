@@ -18,10 +18,15 @@ export function indicatorItems(row, view, real, base = null) {
   return [...prices, ...rest, ['Evening peak minus solar hours', t.spread.text, `MXN/MWh, nominal${sim}`, '']];
 }
 
+/** the place whose figures the left column shows (several places: the one clicked in the list, default the first). */
+export const focusIndex = (shell, n) => Math.max(0, Math.min(n - 1, shell.focusIdx || 0));
+
 export function indicatorsHTML(entries, shell, view) {
-  const real = shell.store.real, rows = compareRows(entries, real), multi = entries.length > 1;
+  const real = shell.store.real, rows = compareRows(entries, real), multi = entries.length > 1, fi = focusIndex(shell, entries.length);
   const base = compareRows(entries.map((e) => (e.real ? { ...e, rec: e.real } : e)), real);
-  return rows.map((row, k) => {
+  const note = multi ? '<p class="mono ind-note">Figures of the highlighted place; click a place above to switch.</p>' : '';
+  return note + rows.map((row, k) => {
+    if (multi && k !== fi) return '';
     const e = entries[k];
     const mark = e.noBaseline ? '<span class="badge off">Not simulated (no baseline)</span>' : e.real ? '<span class="badge">Simulated</span>' : '';
     const head = `<div class="ind-head">${multi ? swatchSVG(k) : ''}<b>${esc(nameOf(shell, e))}</b>${mark}</div>`;

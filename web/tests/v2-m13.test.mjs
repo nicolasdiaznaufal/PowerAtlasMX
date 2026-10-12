@@ -143,3 +143,12 @@ test('Revenue: assumptions inline at the top, no drawer, no Edit button; same fi
   assert.match(i, /FIELDS/); assert.match(i, /Deck scenario/); assert.match(i, /My assumptions/); assert.match(i, /Clear my assumptions/);
   assert.match(src('assets/js/view-base.js'), /view === 'revenue' \? '<div id="vb-assump">/);
 });
+
+test('left column: compact, sticky for the whole page, no inner scroll; one-line places, figures of the focused place only', () => {
+  const css = src('assets/css/explorer.css'), ind = src('assets/js/indicators.js'), ch = src('assets/js/chips.js');
+  assert.match(css, /\.an-side \{ max-height: none !important; overflow: visible !important;/);
+  assert.match(css, /\.an-side\.multi \{ position: sticky !important; \}/);
+  assert.match(css, /\.an-side \.chips\.dense \{ grid-template-columns: 1fr 1fr; \}/);   // 7 to 16 places: two per line
+  assert.match(ind, /multi && k !== fi\) return ''/);
+  assert.match(ch, /list\.length > 6/); assert.match(ch, /aria-pressed/);
+});

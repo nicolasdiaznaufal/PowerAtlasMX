@@ -39,7 +39,7 @@ export function mountAnalysis(root, { view, go }) {
     </main>
     <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real, shell.store.extras)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;
-  const chips = mountChips(root.querySelector('#chips'), shell, { removable: true });
+  const chips = mountChips(root.querySelector('#chips'), shell, { removable: true, focusable: true });
   const host = root.querySelector('#an-content');
   let child = null, dead = false;
   const mod = view === 'explorer' ? import('./explorer.js').then((m) => m.mountExplorer) : import('./revenue.js').then((m) => m.mountRevenue);

@@ -10,6 +10,7 @@ import { num } from '../../../assets/js/format.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { dailyCardHTML, mountDaily } from './daily-card.js';
 import { mapsCardHTML, mountMaps } from './maps-card.js';
+import { focusIndex } from './indicators.js';
 import { compareRows } from './compare-data.js';
 import { columnLabels } from './compare-data.js';
 import { tableHTML, esc, NA_HTML } from './compare-ui.js';
@@ -30,7 +31,7 @@ export function mountExplorer(host, { shell, side }) {
             if (!root.isConnected) return;
             paintIrradiance(root, { entries, shell, winId, ...ctx, data, clearOn });
             const box = side.querySelector('#vb-irr');
-            if (box) box.innerHTML = entries.filter((e) => e.slot.kind === 'node' && !e.error && !e.missing).map((e) => {
+            if (box) box.innerHTML = entries.filter((e, k) => e.slot.kind === 'node' && !e.error && !e.missing && (entries.length === 1 || k === focusIndex(shell, entries.length))).map((e) => {
               const s = nodeSolar({ id: e.slot.id, ...ctx, winId, vfile: data.vfile, clear: clearOn ? data.clear : null });
               return s ? `<section class="ind"><div class="ind-head"><b>${escH(nameOf(shell, e))}</b><span class="mono">solar resource</span></div><div class="ind-grid">
                 <div class="ind-item"><span class="mono">Global horizontal</span><strong>${num(s.annual.ghi, 0)}</strong><span class="mono u">kWh/m² per year</span></div>

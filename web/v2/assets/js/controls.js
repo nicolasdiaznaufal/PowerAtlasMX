@@ -31,10 +31,10 @@ export function mountControls(host, shell, onChange) {
     <div class="seg" role="radiogroup" aria-label="Mounting" id="ct-mount" title="${COPY.mountNote}"></div>
     <p class="sr" id="ct-live" role="status" aria-live="polite"></p>`;
   const base = shell.atlas && shell.atlas.pesosBase ? mesLargo(shell.atlas.pesosBase) : null;
-  const drawReal = () => segment(host.querySelector('#ct-real'), [['nom', 'Nominal MXN'], ['real', `Today's pesos${base ? ` (${base})` : ''}`]], shell.store.real ? 'real' : 'nom', (k) => {
+  const drawReal = () => segment(host.querySelector('#ct-real'), [['nom', 'Nominal MXN'], ['real', 'Today\'s pesos', false, base ? `Constant pesos of ${base}` : '']], shell.store.real ? 'real' : 'nom', (k) => {
     shell.store.setReal(k === 'real'); drawReal(); onChange();
   });
-  const mount = () => segment(host.querySelector('#ct-mount'), [['tracker', 'Single-axis tracker'], ['fijo', 'Fixed tilt', false, COPY.fixedTip]], shell.store.cfg, (k) => {
+  const mount = () => segment(host.querySelector('#ct-mount'), [['tracker', 'Tracker', false, 'Single-axis tracker'], ['fijo', 'Fixed tilt', false, COPY.fixedTip]], shell.store.cfg, (k) => {
     shell.store.setCfg(k); mount(); host.querySelector('#ct-live').textContent = `${k === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} selected`;
   });
   mount(); drawReal();

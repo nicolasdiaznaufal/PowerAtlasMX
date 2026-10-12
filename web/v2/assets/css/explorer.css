@@ -284,3 +284,34 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .xp-scope { overflow-wrap: anywhere; white-space: normal; padding-right: 4px; }
 .wx select { max-width: 100%; }
 @media (max-width: 999px) { .an-side { max-height: none; overflow: visible; } }
+
+/* M14: compact left column that fits one viewport (no clipping, no inner scrollbar); sticky for the whole page */
+.an-side { max-height: none !important; overflow: visible !important; gap: 8px; align-self: start; }
+.an-side.multi { position: sticky !important; }
+.an-side .chips { gap: 4px; }
+.an-side .chips li { padding: 3px 4px 3px 6px; gap: 8px; align-items: center; }
+.an-side .chips .ct { background: none; border: 0; color: var(--ink); text-align: left; padding: 0; font: 500 13.5px/1.25 var(--font-sans); cursor: default; }
+.an-side .chips button.ct { cursor: pointer; }
+.an-side .chips button.ct[aria-pressed="true"] { color: var(--accent); }
+.an-side .chips .dot { width: 18px; height: 18px; font-size: 10px; }
+.an-side .chips button[aria-label] { width: 24px; height: 24px; }
+.an-side .chips.dense { grid-template-columns: 1fr 1fr; }
+.an-side .chips.dense .ct { font-size: 12px; }
+.add-row { gap: 6px; } .add-row .btn { height: 30px; padding: 0 12px; }
+.an-side .lbl, #sc-lbl { font-size: 10px; }
+#scope .seg4 { grid-template-columns: repeat(4, 1fr) !important; }
+#scope .seg button { font-size: 12px; padding: 5px 2px; min-height: 30px; }
+#sc-note { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#vb-ctl { display: grid; gap: 6px; }
+#vb-ctl .seg button { min-height: 30px; padding: 4px 4px; font-size: 12.5px; }
+#vb-ctl .xp-scope { display: none; }
+.an-side .inds { gap: 8px; }
+.an-side .ind { padding: 8px 10px; gap: 6px; }
+.an-side .ind-head b { font-size: 14px; } .an-side .ind-head { flex-wrap: wrap; }
+.an-side .ind-grid { gap: 6px 10px; }
+.an-side .ind-item .mono:first-child { font-size: 9.5px; line-height: 1.25; }
+.an-side .ind-item strong { font-size: 18px; }
+.an-side .ind-item .u { font-size: 9.5px; line-height: 1.2; }
+.ind-note { margin: 0; color: var(--ink-3); font-size: 10px; }
+.an-side .irr-slot, .an-side #vb-irr .ind-head .mono { font-size: 10px; }
+.an-side .xp-warn-inline, .an-side .xp-text { font-size: 12px; }
