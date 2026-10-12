@@ -11,7 +11,7 @@ export const inSpan = (m, span) => !span || (m >= span.from && m <= span.to);
 /** presets: last 12 months (the selected window), all months, and each calendar year present. */
 export function presetSpans(months, win) {
   const first = months[0], last = months[months.length - 1];
-  const out = [{ id: 'l12', label: 'Last 12 months', from: win.desde, to: win.hasta }, { id: 'all', label: 'All', from: first, to: last }];
+  const out = [{ id: 'l12', label: 'Last 12 months', from: win.desde, to: win.hasta }, { id: 'p12', label: 'Previous 12 months', from: '2024-08', to: '2025-07' }, { id: 'all', label: 'All', from: first, to: last }];
   for (let y = +first.slice(0, 4); y <= +last.slice(0, 4); y++) {
     const from = `${y}-01` < first ? first : `${y}-01`, to = `${y}-12` > last ? last : `${y}-12`;
     out.push({ id: String(y), label: String(y), from, to });

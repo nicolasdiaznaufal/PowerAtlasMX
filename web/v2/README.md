@@ -104,6 +104,12 @@ Chart widths follow the container so tick labels stay readable on phones; every 
 - **Zoom** (`zoom.js`): drag on any time plot to zoom, double-click / Escape / Reset to go back; one range per card, Zoom in / out buttons for keyboard users.
 - **Explorer:** simulation box and hourly plot form one card; one map with a metric toggle. **Revenue:** assumptions are inline at the top (no drawer).
 
+## Time control (M14)
+The time span (chips Last 12 months, Previous 12 months, All, 2020 to 2026, plus the range slider and its readout) is the ONE time control; it is the URL `&from=&to=`
+(nothing for the last 12 months). Monthly and daily series, summaries, zoom (reset returns to the span) and the maps follow it (a span of two years or more uses the published
+full-history areas). Typical day, revenue, economics and coverage use the 12-month window that holds the span end (Y1 when the span lies inside Aug 2024 - Jul 2025, else Y2), with a note.
+Weather is fixed to the yearly mean 2015-2025 (`&wx=` is accepted and dropped).
+
 ## Roadmap (not built)
 Nothing pending from the solar brief; NSRDB contrast and a daily NASA refresh are held (see docs/SOLAR_V2_PLAN.md section 7).
 

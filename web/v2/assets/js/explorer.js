@@ -1,7 +1,7 @@
 // Explorer: PML decomposition by hour (prominent), value factor over time (month / year), comparison table for several slots.
 import { WIN } from '../../../assets/js/names.js';
 import { mountView } from './view-base.js';
-import { isNeutral, winOfSpan } from './query-extras.js';
+import { isNeutral, mapWinOfSpan } from './query-extras.js';
 import { decompSectionHTML, drawDecomp } from './decomposition.js';
 import { irradianceCardHTML, paintIrradiance, nodeSolar, shouldLoadIrradiance } from './irradiance.js';
 import { loadIrradiance } from './solar-data.js';
@@ -50,7 +50,7 @@ export function mountExplorer(host, { shell, side }) {
           io.observe(card);
         }
         mountDaily(root, { entries, shell, winId, view: 'explorer' });
-        mountMaps(root, { shell, winId: winOfSpan(shell.store.span) });
+        mountMaps(root, { shell, winId: mapWinOfSpan(shell.store.span) });
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {
           const L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), rows = compareRows(entries, real);

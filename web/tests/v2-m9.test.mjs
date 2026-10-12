@@ -111,7 +111,7 @@ test('span: presets, VF summary, and exact period figures equal v1 compute() for
   const s = src(), index = J('index.json');
   const months = s.sNodes.months, win = { desde: '2025-08', hasta: '2026-07' };
   const ps = presetSpans(months, win);
-  assert.deepEqual(ps.slice(0, 2).map((p) => p.id), ['l12', 'all']);
+  assert.deepEqual(ps.slice(0, 3).map((p) => p.id), ['l12', 'p12', 'all']);
   assert.equal(ps.find((p) => p.id === '2020').from, '2020-01');
   assert.equal(ps.find((p) => p.id === '2026').to, months[months.length - 1]);
   const ser = { months, vf: s.sNodes.nodes['05CJM-115'].m };

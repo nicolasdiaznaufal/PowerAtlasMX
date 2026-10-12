@@ -1,6 +1,6 @@
 // Pure routing logic (no DOM): hash -> {path, list, canonical hash}; selection sync that never writes a stale path.
 import { parseSel, serializeSel } from './store.js';
-import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals, parseCfg, parseWx, normalizeSpan } from './query-extras.js';
+import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals, parseCfg, parseWx } from './query-extras.js';
 
 export const ROUTES = ['/', '/map', '/choose', '/explorer', '/revenue', '/appendix'];
 /** routes with no selection or analysis state: they never carry ?sel and never touch the store (landing, appendix). */
@@ -28,8 +28,7 @@ export function resolveHash(hash, valid = null, current = [], currentReal = fals
   // span and scenario follow the same rule as the basis: explicit entry -> exactly what the URL says; bare hash -> inherit
   const cur = currentExtras || {};
   const inherit = BARE(path) || !raw;
-  const full = valid && valid.months ? { from: valid.months.min, to: valid.months.max } : null;
-  const span = BARE(path) ? cur.span || null : params.has('from') || params.has('to') ? normalizeSpan(parseSpan(params.get('from'), params.get('to'), valid && valid.months), full) : inherit ? cur.span || null : null;
+  const span = BARE(path) ? cur.span || null : params.has('from') || params.has('to') ? parseSpan(params.get('from'), params.get('to'), valid && valid.months) : inherit ? cur.span || null : null;
   const sc = BARE(path) ? cur.sc || null : params.has('sc') ? parseScenario(params.get('sc')) : inherit ? cur.sc || null : null;
   const cfg = BARE(path) ? cur.cfg || 'tracker' : params.has('cfg') ? parseCfg(params.get('cfg')) : inherit ? cur.cfg || 'tracker' : 'tracker';
   const wx = BARE(path) ? cur.wx || 'mean' : params.has('wx') ? parseWx(params.get('wx')) : inherit ? cur.wx || 'mean' : 'mean';

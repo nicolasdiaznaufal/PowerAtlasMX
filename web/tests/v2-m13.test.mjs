@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { winOfSpan, spanForWin, normalizeSpan, dataWin, FULL_SPAN, Y1_SPAN } from '../v2/assets/js/query-extras.js';
+import { windowOfSpan, mapWinOfSpan, spanIsWindow, FULL_SPAN, Y1_SPAN } from '../v2/assets/js/query-extras.js';
 import { resolveHash, hrefFor } from '../v2/assets/js/route-logic.js';
 import { createStore, MAX_SEL, parseSel } from '../v2/assets/js/store.js';
 import { indexAt, rangeFromDrag, stepRange, createZoom } from '../v2/assets/js/zoom.js';
@@ -15,43 +15,43 @@ import { renderChart, lineChart } from '../v2/assets/js/svg-charts.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => fs.readFileSync(join(HERE, '..', 'v2', p), 'utf8');
 
-test('main window: Y2 default (no URL), Y1 and the full history live in from/to; other spans normalise', () => {
-  assert.equal(winOfSpan(null), 'Y2');
-  assert.equal(winOfSpan(Y1_SPAN), 'Y1');
-  assert.equal(winOfSpan(FULL_SPAN), 'ALL');
-  assert.equal(winOfSpan({ from: '2022-01', to: '2023-12' }), 'ALL');       // 24 months or more = the full history
-  assert.equal(winOfSpan({ from: '2025-01', to: '2025-06' }), 'Y2');        // short custom spans fall back to the default
-  assert.equal(spanForWin('Y2'), null);
-  assert.deepEqual(spanForWin('Y1'), { ...Y1_SPAN });
-  assert.deepEqual(spanForWin('ALL', { from: '2020-01', to: '2026-10' }), { from: '2020-01', to: '2026-10' });
-  assert.equal(normalizeSpan({ from: '2025-01', to: '2025-06' }), null);
-  assert.equal(dataWin('ALL'), 'Y2'); assert.equal(dataWin('Y1'), 'Y1');
+test('time span is the one control: 12-month figures use the window that holds the span end', () => {
+  assert.equal(windowOfSpan(null), 'Y2');
+  assert.equal(windowOfSpan(Y1_SPAN), 'Y1');
+  assert.equal(windowOfSpan({ from: '2024-10', to: '2025-03' }), 'Y1');        // inside Aug 2024 - Jul 2025
+  assert.equal(windowOfSpan({ from: '2025-01', to: '2025-09' }), 'Y2');        // reaches past Jul 2025: the current window
+  assert.equal(windowOfSpan(FULL_SPAN), 'Y2');
+  assert.equal(mapWinOfSpan(FULL_SPAN), 'ALL');                                // published full-history areas feed the maps
+  assert.equal(mapWinOfSpan({ from: '2025-08', to: '2025-12' }), 'Y2');
+  assert.equal(spanIsWindow(null), true); assert.equal(spanIsWindow(FULL_SPAN), false);
 });
 
-test('URL: the window round-trips and a legacy custom span is normalised', () => {
+test('URL: from/to are kept as given (clamped to the data), nothing for the last 12 months', () => {
   const valid = { node: (id) => id === 'A', state: () => false, region: () => false, months: { min: '2020-01', max: '2026-09' } };
   assert.deepEqual(resolveHash('#/explorer?sel=A&from=2020-01&to=2026-09', valid).span, { from: '2020-01', to: '2026-09' });
-  assert.equal(resolveHash('#/explorer?sel=A&from=2025-02&to=2025-05', valid).span, null);
-  assert.equal(resolveHash('#/explorer?sel=A&from=2024-08&to=2025-07', valid).hash, '#/explorer?sel=A&from=2024-08&to=2025-07');
-  assert.equal(hrefFor('/revenue', [{ kind: 'node', id: 'A' }], false, { span: spanForWin('ALL') }), '#/revenue?sel=A&from=2020-01&to=2026-09');
+  assert.deepEqual(resolveHash('#/explorer?sel=A&from=2025-02&to=2025-05', valid).span, { from: '2025-02', to: '2025-05' });
+  assert.equal(resolveHash('#/explorer?sel=A', valid).span, null);
+  assert.equal(hrefFor('/revenue', [{ kind: 'node', id: 'A' }], false, { span: { ...FULL_SPAN } }), '#/revenue?sel=A&from=2020-01&to=2026-09');
 });
 
-test('one time control: no span slider, no second window toggle, cards follow the page window', () => {
-  assert.equal(/mountRangeSlider|vb-span/.test(src('assets/js/view-base.js')), false);
+test('weather is fixed: no select, old wx values are ignored and dropped from the URL', () => {
+  assert.equal(/ct-wx|Weather year/.test(src('assets/js/controls.js')), false);
+  const valid = { node: (id) => id === 'A', state: () => false, region: () => false };
+  const r = resolveHash('#/explorer?sel=A&wx=y2020', valid);
+  assert.equal(r.wx, 'mean'); assert.equal(r.hash, '#/explorer?sel=A');
+  assert.match(src('assets/js/view-base.js'), /MDA reference price \(CENACE\)/);   // the note lives in the data line
+});
+
+test('time control: chips + slider + readout, no window toggle, no legend, cards follow the page window', () => {
+  const v = src('assets/js/view-base.js'), r = src('assets/js/range-slider.js');
+  assert.match(v, /mountRangeSlider/); assert.match(v, /id="vb-span"/);
+  assert.equal(/Time span \(monthly value factor\)/.test(r), false);
+  assert.match(src('assets/js/span-data.js'), /Previous 12 months/);
+  assert.equal(/ct-win|WIN_LABEL/.test(src('assets/js/controls.js')), false);
   for (const f of ['pnl-card.js', 'coverage-card.js']) {
     const s = src(`assets/js/${f}`);
     assert.equal(/WIN\.Y1\.short, WIN\.Y2\.short|pl-yr|cv-yr|Find a place|mountPlacePicker/.test(s), false, f);
   }
-  const c = src('assets/js/controls.js');
-  assert.match(c, /Full history 2020–2026/);
-  assert.match(c, /setSpan\(spanForWin/);
-});
-
-test('weather year select stays in the sticky left column with its note', () => {
-  const c = src('assets/js/controls.js'), css = src('assets/css/explorer.css');
-  assert.ok(c.includes('id="ct-wx"') && c.includes('MDA reference price (CENACE)'));
-  assert.match(css, /\.an-side \{ max-height: calc\(100vh - 24px\); overflow-y: auto;/);
-  assert.match(css, /\.xp-scope \{ overflow-wrap: anywhere; white-space: normal;/);
 });
 
 test('zoom: index mapping, drag threshold, steps, persistence by label', () => {

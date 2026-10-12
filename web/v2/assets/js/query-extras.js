@@ -33,25 +33,25 @@ export const WEATHER_YEARS = Array.from({ length: 11 }, (_, i) => 2015 + i);
 export const WX_DEFAULT = 'mean', CFG_DEFAULT = 'tracker';
 const WX_RE = /^(mean|win|y20(1[5-9]|2[0-5]))$/;
 export const parseCfg = (v) => (v === 'fijo' ? 'fijo' : CFG_DEFAULT);
-export const parseWx = (v) => (WX_RE.test(v || '') ? v : WX_DEFAULT);
+// Weather is fixed to the yearly mean 2015-2025: old &wx= values are accepted and ignored (the URL is rewritten without them).
+export const parseWx = () => WX_DEFAULT;
 
-// Main time window = the ONE time control. Y2 (last 12 months) is the default and has no URL part; Y1 and the full history are written as
-// &from=YYYY-MM&to=YYYY-MM. Any other span is normalised to one of the three.
+// The time span (&from=YYYY-MM&to=YYYY-MM) is the ONE time control; no span = the last 12 months (the Y2 window, nothing in the URL).
+// Figures that exist per 12-month window only (typical day, revenue, economics, coverage) use the window that contains or overlaps the span end.
 export const Y1_SPAN = Object.freeze({ from: '2024-08', to: '2025-07' });
 export const FULL_SPAN = Object.freeze({ from: '2020-01', to: '2026-09' });
 const monthIdx = (m) => +m.slice(0, 4) * 12 + (+m.slice(5, 7) - 1);
-/** 'Y1' | 'Y2' | 'ALL' of a stored span. */
-export function winOfSpan(span) {
-  if (!span) return 'Y2';
-  if (span.from === Y1_SPAN.from && span.to === Y1_SPAN.to) return 'Y1';
-  return monthIdx(span.to) - monthIdx(span.from) >= 23 ? 'ALL' : 'Y2';
+/** 'Y1' when the span lies inside Aug 2024 - Jul 2025, otherwise 'Y2'. */
+export function windowOfSpan(span) {
+  if (span && span.from >= Y1_SPAN.from && span.to <= Y1_SPAN.to) return 'Y1';
+  return 'Y2';
 }
-/** the span stored for a window ('Y2' -> null). `full` overrides the default full-history bounds (the data's own months). */
-export function spanForWin(w, full = null) {
-  if (w === 'Y1') return { ...Y1_SPAN };
-  if (w === 'ALL') return { ...(full || FULL_SPAN) };
-  return null;
+/** published area figures also exist for the full history: a span of two years or more uses them on the maps. */
+export function mapWinOfSpan(span) {
+  if (span && monthIdx(span.to) - monthIdx(span.from) >= 23) return 'ALL';
+  return windowOfSpan(span);
 }
-export const normalizeSpan = (span, full = null) => spanForWin(winOfSpan(span), full);
-/** the window whose figures feed the 12-month analysis (typical day, revenue, economics): the full history uses the last 12 months. */
-export const dataWin = (w) => (w === 'ALL' ? 'Y2' : w);
+/** true when the span is exactly the window the 12-month figures come from (no note needed). */
+export function spanIsWindow(span) {
+  return !span || (span.from === Y1_SPAN.from && span.to === Y1_SPAN.to);
+}

@@ -14,8 +14,8 @@ import { solarUrls, isDefaultCtx } from './solar-data.js';
 import { scenarioEntries } from './scenario.js';
 import { isNeutral } from './query-extras.js';
 import { mountScenarioPanel } from './scenario-panel.js';
-import { winOfSpan, dataWin } from './query-extras.js';
-import { WINDOWS } from './explorer-data.js';
+import { windowOfSpan, spanIsWindow, spanEquals } from './query-extras.js';
+import { mountRangeSlider } from './range-slider.js';
 import { summaryRows, summaryHTML } from './span-summary.js';
 import { bindMounting } from './assump.js';
 import { mountAssumpInline } from './assump-inline.js';
@@ -23,12 +23,12 @@ import { mountAssumpInline } from './assump-inline.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function mountView({ host, side, shell, view, build }) {
-  let ctxKey = `${shell.store.cfg}|${shell.store.wx}`, ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), sumVer = 0, mainWin = winOfSpan(shell.store.span);
+  let ctxKey = `${shell.store.cfg}|${shell.store.wx}`, ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), sumVer = 0, mainWin = windowOfSpan(shell.store.span), sliderSpan, sliderOn = false;
   const sorts = { state: { key: 'vf', dir: -1 }, region: { key: 'vf', dir: -1 } };
-  // the main window is the only time control: Y2 | Y1 | ALL (kept in the URL span). The 12-month analysis uses dataWin (ALL -> last 12 months).
-  const winOf = () => dataWin(winOfSpan(shell.store.span));
+  // the time span is the only time control (URL from/to). Figures that exist per 12-month window use the window that holds the span end.
+  const winOf = () => windowOfSpan(shell.store.span);
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
-    <div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
+    <div id="vb-span"></div><div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
   side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
   bindMounting(shell);
@@ -37,6 +37,14 @@ export function mountView({ host, side, shell, view, build }) {
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
   const state = (kind, html) => { const sc = q('#vb-scn'); if (sc) sc.hidden = kind !== 'ok'; const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };
+
+  function mountSpan() {
+    const ok = raw && raw.find((e) => e.series);
+    if (!ok) return;
+    if (sliderOn && spanEquals(sliderSpan, shell.store.span)) return;
+    sliderOn = true; sliderSpan = shell.store.span;
+    mountRangeSlider(q('#vb-span'), { months: ok.series.months, win: WIN.Y2, span: shell.store.span, onChange: (sp) => { sliderSpan = sp; shell.store.setSpan(sp); } });
+  }
 
   async function paintSummary(real, w) {
     const my = ++sumVer, el = q('#sr-summary');
@@ -55,9 +63,9 @@ export function mountView({ host, side, shell, view, build }) {
     const body = q('#vb-body');
     const national = shell.store.get()[0] && shell.store.get()[0].kind === 'national' && ctxExtra.analysis;
     const banner = isNeutral(shell.store.scenario) ? '' : `<div class="sim-banner" role="note"><span class="badge">Simulated</span><span>These values are a what-if on the typical day, not published data.${view === 'explorer' ? ' Published values are shown as ghost lines and as the change next to each indicator.' : ''}</span><button type="button" class="btn btn-ghost btn-sm" data-sim-reset>Reset to real values</button></div>`;
-    const winNote = mainWin === 'ALL' ? `<p class="xp-text" role="note">Full history (${WIN.ALL.label.replace('Full history ', '')}): the monthly and daily series and the maps cover all of it. The typical day, revenue and plant economics have no full-history figures and use the last 12 months (${esc(WIN.Y2.label)}).</p>` : '';
+    const winNote = !spanIsWindow(shell.store.span) || mainWin === 'Y1' ? `<p class="xp-text" role="note">Monthly and daily series follow the time span. The typical day, revenue and plant economics exist per 12-month window and use ${esc(WIN[mainWin].label)}.</p>` : '';
     const note15 = shell.store.wx === 'y2015' && ctxExtra.note2015 ? `<p class="xp-warn" role="note">${esc(ctxExtra.note2015)}</p>` : '';
-    const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))}</p>`;
+    const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))} · MDA reference price (CENACE): no capacity, CEL or contracts</p>`;
     q('#vb-pre').innerHTML = ctxLine + winNote + note15 + banner;
     body.innerHTML = build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
     build.draw(body, ctx, { repaint: paint, state: ctxExtra, side });
@@ -99,6 +107,7 @@ export function mountView({ host, side, shell, view, build }) {
         return;
       }
       state('ok', '');
+      mountSpan();
       paint();
     } catch (e) {
       if (my !== ver || dead) return;
@@ -111,8 +120,9 @@ export function mountView({ host, side, shell, view, build }) {
   load();
   host.addEventListener('click', (ev) => { if (ev.target.closest && ev.target.closest('[data-sim-reset]')) shell.store.setScenario(null); });
   const off = shell.store.subscribe((l) => {
-    const w = winOfSpan(shell.store.span);
+    const w = windowOfSpan(shell.store.span);
     if (serializeSel(l) !== selKey || `${shell.store.cfg}|${shell.store.wx}` !== ctxKey || w !== mainWin) { mainWin = w; load(); }
+    else if (!spanEquals(sliderSpan, shell.store.span)) { mountSpan(); paint(); }
     else paint();
   });
   let timer = 0, lastW = host.clientWidth;

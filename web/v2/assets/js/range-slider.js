@@ -9,13 +9,13 @@ export function mountRangeSlider(el, { months, win, span, onChange }) {
   const n = months.length, presets = presetSpans(months, win);
   const cur = span || { from: win.desde, to: win.hasta };
   let a = Math.max(0, months.indexOf(cur.from)), b = Math.max(a, months.indexOf(cur.to) < 0 ? n - 1 : months.indexOf(cur.to));
-  el.innerHTML = `<fieldset class="span"><legend class="mono">Time span (monthly value factor)</legend>
+  el.innerHTML = `<fieldset class="span" aria-label="Time span">
     <div class="presets" role="group" aria-label="Span presets">${presets.map((p) => `<button type="button" class="chip-btn" data-p="${p.id}" aria-pressed="false">${p.label}</button>`).join('')}</div>
     <div class="range"><div class="track"></div><div class="fill" id="sp-fill"></div>
       <input type="range" id="sp-a" min="0" max="${n - 1}" step="1" aria-label="Span start month">
       <input type="range" id="sp-b" min="0" max="${n - 1}" step="1" aria-label="Span end month"></div>
     <p class="span-text mono" id="sp-text" role="status" aria-live="polite"></p>
-    <p class="hint">Typical day and revenue use the 12-month windows; the span drives the monthly series and its summary.</p></fieldset>`;
+</fieldset>`;
   const A = el.querySelector('#sp-a'), B = el.querySelector('#sp-b'), fill = el.querySelector('#sp-fill'), text = el.querySelector('#sp-text');
   const isPreset = (p) => months[a] === p.from && months[b] === p.to;
   const paint = () => {

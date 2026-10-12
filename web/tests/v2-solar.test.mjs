@@ -24,7 +24,7 @@ const near = (a, b, rel = 1e-9) => Math.abs(a - b) <= rel * Math.max(1, Math.abs
 
 test('query parsing: mounting and weather', () => {
   assert.equal(parseCfg('fijo'), 'fijo'); assert.equal(parseCfg('x'), 'tracker'); assert.equal(parseCfg(null), 'tracker');
-  for (const v of ['mean', 'win', 'y2015', 'y2025']) assert.equal(parseWx(v), v);
+  for (const v of ['mean', 'win', 'y2015', 'y2025']) assert.equal(parseWx(v), 'mean');   // weather is fixed (M14)
   for (const v of ['y2014', 'y2026', 'clear', '', null]) assert.equal(parseWx(v), 'mean');
   assert.equal(isDefaultCtx({ cfg: 'tracker', wx: 'mean' }), true);
   assert.equal(isDefaultCtx({ cfg: 'fijo', wx: 'mean' }), false);
@@ -38,16 +38,16 @@ test('cfg and wx survive the URL, Back and Forward; explicit entries without the
   const router = createRouter({ store, valid: () => valid, replace: (h) => { hist[i] = h; }, currentHash: () => hist[i] });
   const push = (h) => { hist.length = i + 1; hist.push(h); i++; router.resolve(h); };
   push('#/explorer?sel=A-1&cfg=fijo&wx=y2020');
-  assert.equal(store.cfg, 'fijo'); assert.equal(store.wx, 'y2020');
+  assert.equal(store.cfg, 'fijo'); assert.equal(store.wx, 'mean');   // weather is fixed: old values are ignored
   store.setCfg('tracker');
-  assert.equal(hist[i], '#/explorer?sel=A-1&wx=y2020');
+  assert.equal(hist[i], '#/explorer?sel=A-1');
   store.setWx('win');
-  assert.equal(hist[i], '#/explorer?sel=A-1&wx=win');
+  assert.equal(hist[i], '#/explorer?sel=A-1');
   push('#/revenue?sel=A-1');
   assert.equal(store.cfg, 'tracker'); assert.equal(store.wx, 'mean');
   push('#/revenue?sel=A-1&cfg=fijo');
   i -= 2; router.resolve(hist[i]);
-  assert.equal(store.wx, 'win');
+  assert.equal(store.wx, 'mean');
   i += 2; router.resolve(hist[i]);
   assert.equal(store.cfg, 'fijo');
   push('#/map');                                   // bare hash inherits
@@ -174,11 +174,10 @@ test('new charts emit x labels and an x axis title', () => {
   assert.match(l, /stroke-dasharray="2 4"/); assert.match(l, /xtitle/);
 });
 
-test('controls: mounting radiogroup, labelled weather select, announcements', () => {
+test('controls: mounting radiogroup, announcements (no weather select)', () => {
   const src = readFileSync(join(W, 'v2/assets/js/controls.js'), 'utf8');
   assert.match(src, /role="radiogroup" aria-label="Mounting"/);
-  assert.match(src, /<label class="wx" for="ct-wx">/);
-  assert.match(src, /<select id="ct-wx">/);
+  assert.doesNotMatch(src, /ct-wx/);
   assert.match(src, /role="status" aria-live="polite"/);
 });
 
@@ -204,7 +203,7 @@ test('one navigation that changes mounting and weather notifies once (no in-betw
   router.resolve(cur);
   store.subscribe(() => ctxs.push(`${store.cfg}|${store.wx}`));
   cur = '#/explorer?sel=A-1&cfg=fijo&wx=win'; router.resolve(cur);
-  assert.deepEqual(ctxs, ['fijo|win']);
+  assert.deepEqual(ctxs, ['fijo|mean']);
 });
 
 test('series card: under fixed tilt / another weather the window VF is not drawn over the tracker bars and the note is shown', async () => {
