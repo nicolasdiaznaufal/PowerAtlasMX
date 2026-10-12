@@ -196,3 +196,38 @@ def full_day_range(days, max_hours) -> tuple[dt.date, dt.date]:
     """Primer y ultimo dia CDMX con 24 horas en algun nodo (max_hours: max entre nodos de horas con PML)."""
     d = pd.DatetimeIndex(days)[np.asarray(max_hours) >= 24]
     return d.min().date(), d.max().date()
+
+
+# ------------------------------------------------------------------ medias moviles (referencia para la web)
+def ma7(x, n_horas, min_days: int = 4, w: int = 7) -> np.ndarray:
+    """Media movil (ventana que TERMINA en el dia i) ponderada por n_horas, saltando dias nulos; NaN con < min_days."""
+    x, n = np.asarray(x, float), np.asarray(n_horas, float)
+    ok = np.isfinite(x) & np.isfinite(n) & (n > 0)
+    out = np.full(len(x), np.nan)
+    for i in range(len(x)):
+        k = ok[max(0, i - w + 1):i + 1]
+        if k.sum() >= min_days:
+            xs, ns = x[max(0, i - w + 1):i + 1][k], n[max(0, i - w + 1):i + 1][k]
+            out[i] = (xs * ns).sum() / ns.sum()
+    return out
+
+
+def ma7_ratio(ingreso, y_day, pml_avg, n_horas, min_days: int = 4, w: int = 7) -> tuple[np.ndarray, np.ndarray]:
+    """(p_cap_7d, vf_7d) por cociente de SUMAS sobre los dias validos (ingreso, y, pml y n_horas no nulos) de la
+    ventana: p_cap = sum(ingreso)/sum(y); vf = p_cap / (sum(n*pml)/sum(n)). Nunca la media de vf_dia.
+    NaN con < min_days validos, sum(y) <= 0 o pml ponderado <= 0."""
+    a = [np.asarray(v, float) for v in (ingreso, y_day, pml_avg, n_horas)]
+    ok = np.logical_and.reduce([np.isfinite(v) for v in a]) & (a[3] > 0)
+    pc, vf = np.full(len(a[0]), np.nan), np.full(len(a[0]), np.nan)
+    for i in range(len(ok)):
+        s = slice(max(0, i - w + 1), i + 1)
+        k = ok[s]
+        if k.sum() < min_days:
+            continue
+        ing, y, p, n = (v[s][k] for v in a)
+        if y.sum() <= 0:
+            continue
+        pc[i] = ing.sum() / y.sum()
+        pm = (n * p).sum() / n.sum()
+        vf[i] = pc[i] / pm if pm > 0 else np.nan
+    return pc, vf

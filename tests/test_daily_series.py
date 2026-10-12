@@ -171,6 +171,29 @@ def test_codificacion_y_presupuesto():
     assert gz <= 120_000, gz
 
 
+def test_ma7_ratio_cociente_de_sumas():
+    """7 dias: dia 2 con pml_avg ~0 (vf_dia enorme) no domina; dia 5 nulo se salta; < 4 validos -> NaN."""
+    ing = np.array([500., 400., 300., 600., 450., np.nan, 350.])
+    y = np.array([1., 1., 1., 1., 1., np.nan, 0.5])
+    pml = np.array([400., 500., 0.01, 600., 300., 200., 700.])
+    n = np.array([24., 24., 24., 24., 12., 24., 24.])
+    pc, vf = S.ma7_ratio(ing, y, pml, n)
+    k = [0, 1, 2, 3, 4, 6]
+    pc_ref = ing[k].sum() / y[k].sum()                                   # 2600 / 5.5
+    pm_ref = (n[k] * pml[k]).sum() / n[k].sum()
+    assert pc[6] == pytest.approx(pc_ref) and vf[6] == pytest.approx(pc_ref / pm_ref)
+    assert np.isnan(pc[:3]).all() and np.isfinite(pc[3])                 # minimo 4 dias validos
+    assert vf[6] < 2 < (300 / 0.01)                                      # la media de vf_dia daria ~ 4 000
+    m = S.ma7(pml, n)
+    assert m[6] == pytest.approx((n * pml).sum() / n.sum())
+
+
+def test_median_gate():
+    z = {"p50": -0.004}
+    assert G.median_gate({"tracker": {"Y1": z, "Y2": z}, "fijo": {"Y1": z, "Y2": {"p50": 0.02}}}) == 1
+    assert G.median_gate({"tracker": {"Y1": None}}) == 1
+
+
 # ------------------------------------------------------------------ parte 2: datos reales
 MAIN = Path("/Users/nicolasdiaznaufal/Documents/REPSA/App/nodal-solar")
 ROOT = Path(os.environ["NODAL_DATA_ROOT"]) if os.environ.get("NODAL_DATA_ROOT") else MAIN
@@ -194,6 +217,7 @@ def test_real_puertas_y_tamanos(man):
     assert d["base"] == "2026-09" and d["factor"][d["months"].index("2026-09")] == 1.0
     assert all(f is not None and f >= 1.0 - 1e-12 for f in d["factor"])
     assert {a["kind"] for a in man["areas"]} == {"all", "region", "state"}
+    assert G.median_gate(rec["summary"]["d_daily_vs_win_rel"]) == 0     # puerta N3 sobre los datos publicados
 
 
 @real

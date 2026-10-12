@@ -158,12 +158,22 @@ def check_all(root: Path, res: list, ids, missing, errors) -> dict:
                 bad["d"] += int(abs(rel) > TOL_D)
     bad["y_vs_y24"] = int(yv24 > 1e-9)
     dist = {k: {w: _dist(v) for w, v in d.items()} for k, d in drel.items()}
+    bad["d_median"] = median_gate(dist)
     miss_w = {k: {w: _dist([r["gates"][k]["win"][w]["dias_sin_clima"] for r in res]) for w in WINDOWS} for k in S.CONFIGS}
     summary = {"nodes": len(res), "missing": len(missing), "errors": [e["nodo"] for e in errors],
                "a_max_rel": a_rel, "a_max_abs": a_abs, "c_max_rel": c_max, "c_nd_mismatch": ndm, "d_exact_max_rel": dex,
                "y_day_vs_y24_max_abs": yv24, "identity_max": ids_err, "d_daily_vs_win_rel": dist,
                "days_priced_without_weather": miss_w, "violations": bad}
     return {"summary": summary, "ok": not any(bad.values()) and not missing and not errors}
+
+
+TOL_D_MEDIAN = 0.015                  # |mediana entre nodos| de la puerta (d) por config y ventana
+
+
+def median_gate(dist: dict) -> int:
+    """Cuenta (config, ventana) cuya mediana de (ingreso diario - ingreso win)/ingreso win excede TOL_D_MEDIAN.
+    Un desfase de 1 h del reloj mueve el ingreso +2..+12 % / -1..-7 %: la cota de 10 % sola es debil."""
+    return sum(int(z is None or abs(z["p50"]) > TOL_D_MEDIAN) for d in dist.values() for z in d.values())
 
 
 def _dist(v):

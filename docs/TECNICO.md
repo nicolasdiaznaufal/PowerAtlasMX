@@ -714,3 +714,19 @@ Ventanas: completo 2020-01..2026-09, Y1 2024-08..2025-07, Y2 2025-08..2026-07 (m
 Corrida completa: 353 s con 8 procesos (2 431 nodos, 0 errores, 0 faltantes). Comandos:
 `NODAL_DATA_ROOT=$PWD .venv/bin/python pipeline/daily_build.py [--replace]` y luego
 `.venv/bin/python web/tools/build_daily_web.py` (copia byte a byte a `web/data/solar_v2/daily/`).
+
+**Medias móviles de 7 días (contrato para la web; referencia `daily_series.ma7` / `ma7_ratio`, probadas).**
+Los valores diarios no cambian. `vf_dia` diverge cuando `pml_avg` está apenas sobre 0 (rango medido −1 296..+382;
+1 067 nodo-config-días con |vf| > 5; ej. 04MAP-115 el 2024-04-03), así que **nunca se promedia `vf_dia` ni
+`p_cap_dia`**. Ventana = los 7 días que terminan en el día i; se saltan los días nulos y se exige **≥ 4 días válidos**
+(si no, nulo). Precio capturado 7d = Σ ingreso_dia / Σ y_day; VF 7d = ese cociente / (Σ n_horas·pml_avg / Σ n_horas)
+(día válido: ingreso, y, pml_avg y n_horas no nulos; nulo si Σ y ≤ 0 o el PML ponderado ≤ 0). PML, energía,
+pérdidas, congestión y spread: media ponderada por `n_horas`; `y_day`, `ingreso_dia`, `horas_solares`: misma media
+ponderada por `n_horas` (con 24 h por día equivale a la media simple). Áreas: igual, con sus campos de área.
+**Días con pocas horas:** 39 nodo-días tienen `n_horas` = 1: el primer día de nodos que empiezan en verano con horario
+de verano (2020-22); su hora 1 cae a las 23:00 CDMX del día anterior, correcto con el reloj fijo. La ponderación por
+`n_horas` los vuelve despreciables en PML; recomendación: excluir de la serie de `spread` los días con `n_horas` < 12
+(un max−min de pocas horas no es comparable).
+**Puerta (d) mediana** (`daily_gates.median_gate`): |mediana entre nodos| de (Σ ingreso_dia − ingreso `win`)/ingreso
+`win` ≤ 1.5 % por config y ventana (un desfase de 1 h del reloj la mueve +2..+12 % / −1..−7 %). Medido: seguidor Y1
+−0.44 %, Y2 −0.45 %; fijo Y1 −0.42 %, Y2 −0.45 %.
