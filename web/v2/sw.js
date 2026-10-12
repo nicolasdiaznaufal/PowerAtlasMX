@@ -6,12 +6,14 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m9-2-e735150c';
+const VERSION = 'v2-m9-2-ec16a071';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 // Data cache bound: the core JSON (index, analysis, series, profiles, per-config scalars: about 21 MB raw) is pinned; per-variant files
 // (variants/*.json about 4.5 MB, variant_extra about 0.25 MB) are evictable, oldest first, at most DATA_VARIANTS entries (about 25 MB worst case).
 const DATA_VARIANTS = 5;
+// Daily series (data/solar_v2/daily/, 38 area files and one file per node): fetched on demand, about 100 KB each, at most DATA_DAILY kept (about 1.2 MB), never precached.
+const DATA_DAILY = 12;
 importScripts('sw-strategy.js', 'precache.js');
 
 const OFFLINE_HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · PowerAtlasMx</title>'
@@ -41,7 +43,7 @@ const handlers = {
     if (hit) return hit;
     return fetch(req).then((r) => { e.waitUntil(store(SHELL, req, r)); return r; }).catch(() => Response.error());
   }),
-  data: (req, e) => fetch(req).then((r) => { e.waitUntil(store(DATA, req, r).then(() => self.swStrategy.trimCache(caches, DATA, DATA_VARIANTS, self.swStrategy.evictableUrl))); return r; }).catch(() => caches.open(DATA).then((c) => c.match(req)).then((h) => h || Response.error())),
+  data: (req, e) => fetch(req).then((r) => { e.waitUntil(store(DATA, req, r).then(() => Promise.all([self.swStrategy.trimCache(caches, DATA, DATA_VARIANTS, self.swStrategy.evictableUrl), self.swStrategy.trimCache(caches, DATA, DATA_DAILY, self.swStrategy.dailyUrl)]))); return r; }).catch(() => caches.open(DATA).then((c) => c.match(req)).then((h) => h || Response.error())),
 };
 
 self.addEventListener('fetch', (e) => {

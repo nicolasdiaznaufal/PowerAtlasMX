@@ -127,14 +127,15 @@ export function pairChart({ b, cb, H = 220, aria, ytitle = 'MXN per MWp', unit =
 }
 
 /** overlay of up to 3 series. series: [{vals, label}] in slot order (style i). nulls break the line. markEvery: marker every n points. */
-export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '', xtitle = '', unit = '', hline = null, bands = [], hoverTitle = (l) => l }) {
+export function lineChart({ series, labels, refs = [], H = 220, scale = null, fmt = (v) => num(v, 2), xEvery = 1, markEvery = 1, aria, ytitle = '', xtitle = '', unit = '', hline = null, bands = [], hoverTitle = (l) => l, ticks = null }) {
   const all = finite(series.flatMap((s) => s.vals));
   const sc = scale || niceTicks(Math.min(0, ...all), Math.max(...all, 1e-9));
   const { g, y } = axis(H, sc.ticks, fmt, ytitle);
   const n = labels.length, iw = W - PAD.l - PAD.r, step = iw / n, X = (i) => PAD.l + step * i + step / 2;
   let out = g;
   for (const [a, b] of bands) out += `<rect x="${(PAD.l + step * a).toFixed(1)}" y="${PAD.t}" width="${(step * (b - a + 1)).toFixed(1)}" height="${H - PAD.t - PAD.b}" class="win-band"/>`;
-  labels.forEach((l, i) => { if (i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(l)}</text>`; });
+  const tk = ticks ? new Map(ticks.map((t) => [t.i, t.text])) : null; // ticks: [{i, text}] overrides xEvery (daily plots: month labels)
+  labels.forEach((l, i) => { if (tk ? tk.has(i) : i % xEvery === 0) out += `<text x="${X(i).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(tk ? tk.get(i) : l)}</text>`; });
   for (const r of refs) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(r)}" y2="${y(r)}" class="refline"><title>Value factor 1.0</title></line>`;
   series.forEach((sr, k) => {
     const st = sr.style || STYLES[k % 3];
@@ -144,7 +145,7 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
     sr.vals.forEach((v, i) => {
       if (v === null || v === undefined) return;
       const tip = `<title>${esc(sr.label)} · ${esc(labels[i])}: ${fmt(v)}</title>`;
-      if (i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
+      if (markEvery && i % markEvery === 0) out += `<path transform="translate(${X(i).toFixed(1)} ${y(v).toFixed(1)})" d="${markerPath(st.marker)}" fill="${st.color}">${tip}</path>`;
     });
   });
   if (hline && hline.v !== null && hline.v !== undefined) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;

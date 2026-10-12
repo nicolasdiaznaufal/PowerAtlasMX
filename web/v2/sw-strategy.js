@@ -38,6 +38,8 @@
   }
   /** pinned: index/analysis/series/profiles and the per-config scalars. evictable: per-variant files (4-5 MB each). */
   function evictableUrl(url) { return /\/solar_v2\/(variants|variant_extra)\//.test(url); }
-  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse, trimCache: trimCache, evictableUrl: evictableUrl };
+  /** daily series files (about 80-100 KB gz each, node or area): evictable, never precached, bounded separately from the variants. */
+  function dailyUrl(url) { return /\/solar_v2\/daily\//.test(url); }
+  const api = { strategyFor: strategyFor, staleCaches: staleCaches, storeResponse: storeResponse, trimCache: trimCache, evictableUrl: evictableUrl, dailyUrl: dailyUrl };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.swStrategy = api;
 })(typeof self !== 'undefined' ? self : this);

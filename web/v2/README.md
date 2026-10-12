@@ -10,6 +10,13 @@ open http://localhost:8080/v2/
 ```
 The app is a static site; any static server that serves `web/` works (the app reads `../data/...` and `../assets/...` relative to `/v2/`).
 
+## Daily series (M11)
+Explorer and Revenue draw 7-day moving averages at daily resolution from `web/data/solar_v2/daily/` (gitignored, 2 471 files,
+about 194 MB gzipped / 486 MB raw; one 80-100 KB gzipped file per node plus 38 area files; layout in docs/TECNICO.md section 13).
+Build: `python3 web/tools/build_daily_web.py` (copies the validated `data/solar_v2/daily/`). Files are fetched only when the
+daily card scrolls into view (`daily-load.js`), kept in memory at most 8 at a time, and in the service worker cache at most 12
+(`DATA_DAILY`, evictable, never precached). Moving averages are computed in the browser (`daily-math.js`).
+
 ## Data dependencies
 v2 reads files that are **not in git**: `web/data/index.json`, `web/data/analysis/{analysis,analysis_nodos}.json`,
 `web/data/derived/{node_profiles,series_nodes,series_areas,geography}.json`. The `.gitignore` entry `data/` also ignores `web/data/`,
