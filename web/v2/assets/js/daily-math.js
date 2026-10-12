@@ -1,6 +1,7 @@
 // Daily series (docs/TECNICO.md section 13): decoding of the integer-coded files and 7-day moving averages computed in the browser.
 // Pure functions, no DOM, no fetch. A moving average ends on the day itself, skips null days, needs >= 4 valid days of 7, and
 // never averages the daily value factor or captured price: they are ratios of SUMS (blow-up days with PML near 0 do not dominate).
+export const VF_FLOOR = 50, VF_FRAC = 0.1, TRAIL_DAYS = 365, TRAIL_MIN = 28, VF_AXIS = [-1, 2.5];
 export const MIN_DAYS = 4, WINDOW = 7, MIN_SPREAD_HOURS = 12;
 export const SOLAR_END = '2026-07-30'; // last day with NASA POWER weather (production fields are null after it)
 export const SCALE = { n_horas: 1, pml_avg: 0.1, energia_avg: 0.1, perdidas_avg: 0.01, congestion_avg: 0.01, spread: 0.1, y_day: 1e-4, horas_solares: 1, p_cap_dia: 0.1, vf_dia: 1e-4, ingreso_dia: 0.1, n_nodos: 1 };
@@ -50,6 +51,22 @@ export function rangeOf(start, n, span) {
   return [i0, Math.max(i0, i1)];
 }
 
+/** hide-threshold of the 7-day value factor per day: max(50 MXN/MWh, 10% of the trailing 365-day mean of daily pml_avg; >= 28 days of history else only the 50). */
+export function vfThreshold(pml) {
+  return pml.map((_, i) => {
+    let s = 0, k = 0;
+    for (let j = Math.max(0, i - TRAIL_DAYS + 1); j <= i; j++) if (ok(pml[j])) { s += pml[j]; k++; }
+    return Math.max(VF_FLOOR, k >= TRAIL_MIN ? VF_FRAC * (s / k) : 0);
+  });
+}
+
+/** vals clamped to [lo, hi] for drawing; `raw` keeps the true values (hover), `clipped` counts the clamped points. */
+export function clampVf(vals, [lo, hi] = VF_AXIS) {
+  let clipped = 0;
+  const out = vals.map((v) => { if (!ok(v)) return null; if (v < lo || v > hi) { clipped++; return Math.min(hi, Math.max(lo, v)); } return v; });
+  return { vals: out, raw: vals, clipped };
+}
+
 /** pesos-of-today factor of every day (by CDMX month); null where the month is unknown. defl = { months, factor }. */
 export function dayFactors(start, n, defl) {
   const f = new Map(defl.months.map((m, i) => [m, defl.factor[i]]));
@@ -63,11 +80,14 @@ export function dailyView(dec, cfg, { real = false, factors = null } = {}) {
   const px = (a) => (real && factors ? a.map((v, i) => (ok(v) && ok(factors[i]) ? v * factors[i] : null)) : a);
   const pmlCfg = dec.area ? c.pml_avg : p.pml_avg;
   const nominal = ma7Ratio(c.ingreso_dia, c.y_day, pmlCfg, w);
+  // the 7-day value factor is hidden (a gap) where the 7-day mean price is too low for the ratio to mean anything
+  const m7 = ma7(pmlCfg, w), thr = vfThreshold(pmlCfg), vfHidden = nominal.vf.map((v, i) => v !== null && ok(m7[i]) && m7[i] < thr[i]);
+  const vf = nominal.vf.map((v, i) => (vfHidden[i] ? null : v));
   const cap = real ? ma7Ratio(px(c.ingreso_dia), c.y_day, pmlCfg, w).cap : nominal.cap;
   const wSpread = dec.area ? one : p.n_horas.map((h) => (ok(h) && h >= MIN_SPREAD_HOURS ? h : 0));
   return {
-    vf: nominal.vf, cap,
-    revenue: ma7(px(c.ingreso_dia), w), hours: ma7(c.horas_solares, w), output: ma7(c.y_day, w),
+    vf, vfHidden, cap,
+    revenue: ma7(px(c.ingreso_dia), one), hours: ma7(c.horas_solares, one), output: ma7(c.y_day, one), // plain mean of the valid days (TECNICO 13)
     pml: ma7(px(p.pml_avg), w), congestion: ma7(px(p.congestion_avg), w), losses: ma7(px(p.perdidas_avg), w), spread: ma7(px(p.spread), wSpread),
   };
 }

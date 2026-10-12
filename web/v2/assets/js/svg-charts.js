@@ -142,6 +142,9 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
     let d = '', pen = false;
     sr.vals.forEach((v, i) => { if (v === null || v === undefined) { pen = false; return; } d += `${pen ? 'L' : 'M'}${X(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
     out += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="2" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''} stroke-linejoin="round"/>`;
+    if (sr.raw) sr.raw.forEach((rv, i) => { // clamped points: triangle at the edge (hover gives the true value)
+      if (rv !== null && rv !== undefined && sr.vals[i] !== null && rv !== sr.vals[i]) out += `<path transform="translate(${X(i).toFixed(1)} ${y(sr.vals[i]).toFixed(1)})" d="${markerPath('triangle', 4)}" fill="${st.color}"><title>${esc(sr.label)} · ${esc(labels[i])}: ${fmt(rv)}</title></path>`;
+    });
     sr.vals.forEach((v, i) => {
       if (v === null || v === undefined) return;
       const tip = `<title>${esc(sr.label)} · ${esc(labels[i])}: ${fmt(v)}</title>`;
@@ -150,7 +153,7 @@ export function lineChart({ series, labels, refs = [], H = 220, scale = null, fm
   });
   if (hline && hline.v !== null && hline.v !== undefined) out += `<line x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(hline.v)}" y2="${y(hline.v)}" class="hline"><title>${esc(hline.label)}</title></line>`;
   const u = unit ? ` ${unit}` : '';
-  setHover({ vbW: W, H, xs: labels.map((_, i) => X(i)), at: (i) => ({ title: hoverTitle(labels[i]), items: series.map((sr, k) => ({ name: sr.label, color: (sr.style || STYLES[k % 3]).color, text: sr.vals[i] === null || sr.vals[i] === undefined ? 'no data' : `${fmt(sr.vals[i])}${u}` })) }) });
+  setHover({ vbW: W, H, xs: labels.map((_, i) => X(i)), at: (i) => ({ title: hoverTitle(labels[i]), items: series.map((sr, k) => ({ name: sr.label, color: (sr.style || STYLES[k % 3]).color, text: (sr.raw ? sr.raw[i] : sr.vals[i]) === null || (sr.raw ? sr.raw[i] : sr.vals[i]) === undefined ? 'no data' : `${fmt(sr.raw ? sr.raw[i] : sr.vals[i])}${u}` })) }) });
   return frame(H, aria, out, xtitle);
 }
 

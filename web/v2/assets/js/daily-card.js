@@ -3,7 +3,7 @@
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
 import { lineChart, vfAxis, renderChart, chartWidth, thin } from './svg-charts.js';
-import { dailyView, rangeOf, dayFactors, dateOf } from './daily-math.js';
+import { dailyView, rangeOf, dayFactors, dateOf, clampVf, VF_AXIS } from './daily-math.js';
 import { loadDaily, loadDeflator, shouldLoadDaily } from './daily-load.js';
 import { legendHTML, esc, nameOf } from './compare-ui.js';
 import { segment } from './controls.js';
@@ -32,6 +32,9 @@ function plot(el, dates, series, { fmt = (v) => num(v, 1), unit, ytitle, aria, s
   renderChart(el, () => lineChart({ series, labels: dates, ticks: monthTicks(dates, chartWidth(el)), markEvery: 0, H, fmt, unit, ytitle, aria, xtitle: XT, scale, refs, hoverTitle: fmtDate }));
 }
 
+/** re-render finished -> put the focus back on the control that was used (keyboard users keep their place). */
+export const refocus = (done, body, sel) => done.then(() => { const t = body.querySelector(sel); if (t) t.focus(); });
+
 export function mountDaily(root, { entries, shell, winId, view }) {
   const card = root.querySelector('#dl-card'), body = card && card.querySelector('#dl-body');
   if (!body) return;
@@ -51,28 +54,28 @@ export function mountDaily(root, { entries, shell, winId, view }) {
     const missing = entries.filter((_, k) => !docs[k]).map((e) => nameOf(shell, e));
     const notes = `<p class="xp-text">${esc(C.end)} ${esc(C.scope)} Money is shown in ${esc(pesos)}.${missing.length ? esc(` No daily data for: ${missing.join(', ')}.`) : ''}</p>`;
     const leg = `<div class="legend mono">${entries.length > 1 ? legendHTML(entries, shell) : '<span><i style="background:var(--s1)"></i>7-day moving average</span>'}</div>`;
-    const q = (s) => body.querySelector(s), again = (sel) => run().then(() => { const t = body.querySelector(sel); if (t) t.focus(); });
+    const q = (s) => body.querySelector(s), again = (sel) => refocus(run(), body, sel);
     if (view === 'explorer') {
       const one = entries.length === 1 && entries[0].series;
-      body.innerHTML = `${leg}<label class="chk"><input type="checkbox" id="dl-month"${ui.monthly && one ? ' checked' : ''}${one ? '' : ' disabled'}> <span>Show the monthly value factor behind${one ? '' : ' (single selection only)'}</span></label>
+      body.innerHTML = `${leg}<label class="chk"><input type="checkbox" id="dl-month"${ui.monthly && one ? ' checked' : ''}${one ? '' : ' disabled'}> <span>Show the monthly value factor behind (single-axis tracker, yearly-mean weather)${one ? '' : '; single selection only'}</span></label>
         <div class="chart" id="dl-vf"></div>
         <h3 class="mono sub">Also show the 7-day average of</h3><div class="presets" id="dl-chips" role="group" aria-label="Price parts to add">${COMPS.map(([k, l]) => `<button type="button" class="chip-btn" data-c="${k}" aria-pressed="${ui.comps.includes(k)}">${l}</button>`).join('')}</div>
         <div id="dl-comp"></div>
         <h3 class="mono sub">Daily price spread (max PML − min PML), 7-day moving average</h3><p class="xp-text">${esc(C.spread)}</p><div class="chart" id="dl-spread"></div>${notes}`;
-      const vf = seriesOf('vf');
+      const vf = seriesOf('vf').map((sr) => ({ ...sr, ...clampVf(sr.vals) }));
       if (one && ui.monthly) {
         const m = new Map(entries[0].series.months.map((mm, i) => [mm, entries[0].series.vf[i]]));
-        vf.push({ vals: dates.map((d) => (m.has(d.slice(0, 7)) ? m.get(d.slice(0, 7)) : null)), label: 'Monthly value factor', style: { color: 'var(--ink-3)', dash: '2 3', marker: 'circle' } });
+        vf.push({ ...clampVf(dates.map((d) => (m.has(d.slice(0, 7)) ? m.get(d.slice(0, 7)) : null))), label: 'Monthly value factor (tracker, yearly-mean weather)', style: { color: 'var(--ink-3)', dash: '2 3', marker: 'circle' } });
       }
-      const fin = vf.flatMap((s) => s.vals).filter((v) => v !== null), wide = Math.max(...fin, 0) > 3 || Math.min(...fin, 0) < -2;
-      if (wide) q('#dl-vf').insertAdjacentHTML('afterend', `<p class="xp-text">${esc(C.wide)}</p>`);
-      plot(q('#dl-vf'), dates, vf, { fmt: (v) => num(v, 2), unit: '', ytitle: 'Value factor', aria: 'Daily value factor, 7-day moving average', scale: wide ? null : vfAxis(fin), refs: [1], H: 300 });
+      const hid = views.reduce((n, v) => n + (v ? v.vfHidden.slice(i0, i1 + 1).filter(Boolean).length : 0), 0), clip = vf.reduce((n, sr) => n + sr.clipped, 0);
+      q('#dl-vf').insertAdjacentHTML('beforebegin', `${hid ? `<p class="xp-text">${esc(C.hidden(hid))}</p>` : ''}${clip ? `<p class="xp-text">${esc(C.clipped)}</p>` : ''}`);
+      plot(q('#dl-vf'), dates, vf, { fmt: (v) => num(v, 2), unit: '', ytitle: 'Value factor', aria: 'Daily value factor, 7-day moving average', scale: vfAxis(vf.flatMap((sr) => sr.vals)), refs: [1], H: 300 });
       const cmp = q('#dl-comp');
       cmp.innerHTML = COMPS.filter(([k]) => ui.comps.includes(k)).map(([k, l]) => `<h3 class="mono sub">${l}, 7-day moving average (MXN/MWh, ${esc(pesos)})</h3><div class="chart" data-k="${k}"></div>`).join('');
       cmp.querySelectorAll('[data-k]').forEach((el) => plot(el, dates, seriesOf(el.dataset.k), { unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: `${el.dataset.k} per day, 7-day moving average`, H: 220 }));
       plot(q('#dl-spread'), dates, seriesOf('spread'), { unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', H: 240 });
       q('#dl-month').addEventListener('change', (ev) => { ui.monthly = ev.target.checked; again('#dl-month'); });
-      body.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.c; ui.comps = ui.comps.includes(k) ? ui.comps.filter((x) => x !== k) : [...ui.comps, k]; again(); }));
+      body.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.c; ui.comps = ui.comps.includes(k) ? ui.comps.filter((x) => x !== k) : [...ui.comps, k]; again(`[data-c="${k}"]`); }));
       return;
     }
     const [mt, mu, mkey] = METRICS[ui.metric], hcap = ui.metric === 'cap' ? `, ${pesos}` : '';

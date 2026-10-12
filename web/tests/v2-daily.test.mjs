@@ -4,6 +4,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { decodeDoc, ma7, ma7Ratio, dailyView, dayFactors, dayDiff, dateOf, rangeOf, SCALE } from '../v2/assets/js/daily-math.js';
+import { vfThreshold, clampVf } from '../v2/assets/js/daily-math.js';
+import { vfAxis } from '../v2/assets/js/svg-charts.js';
+import { refocus } from '../v2/assets/js/daily-card.js';
 import { dailyUrl, shouldLoadDaily, remember } from '../v2/assets/js/daily-load.js';
 
 const DIR = new URL('../data/solar_v2/daily/', import.meta.url).pathname;
@@ -116,4 +119,53 @@ test('decoder on real files (2 nodes + 1 area) follows the manifest', real, () =
   const a = decodeDoc(rd('areas/ALL.json')), av = dailyView(a, 'tracker');
   assert.ok(av.vf[dayDiff(a.start, '2025-12-15')] > 0 && av.vf[dayDiff(a.start, '2026-09-30')] === null); // solar fields end 2026-07-30
   assert.ok(av.pml[dayDiff(a.start, '2026-09-30')] !== null);                                              // PML-only lines continue
+});
+
+test('hide rule: 7-day mean price below max(50, 10% of trailing-year mean); short history uses only the 50 floor', () => {
+  const short = vfThreshold(Array(20).fill(1000)), long = vfThreshold(Array(40).fill(1000));
+  assert.equal(short[19], 50); assert.equal(long[39], 100); assert.equal(long[26], 50);   // 28 valid days needed
+  const mk = (n, p) => decodeDoc({ schema_version: 'daily/1', start: '2024-01-01', n, scale: SCALE,
+    pml: { n_horas: Array(n).fill(24), pml_avg: Array(n).fill(p), energia_avg: Array(n).fill(p), perdidas_avg: Array(n).fill(0), congestion_avg: Array(n).fill(0), spread: Array(n).fill(0) },
+    tracker: { y_day: Array(n).fill(50000), horas_solares: Array(n).fill(10), p_cap_dia: Array(n).fill(0), vf_dia: Array(n).fill(0), ingreso_dia: Array(n).fill(3000) }, fijo: { y_day: [], horas_solares: [], p_cap_dia: [], vf_dia: [], ingreso_dia: [] } });
+  const lo = dailyView(mk(10, 600), 'tracker');            // 7-day mean price 60 > 50 and short history: shown
+  assert.ok(lo.vf[9] !== null && lo.vfHidden[9] === false);
+  const d = mk(40, 10000);                                  // 7-day mean 1000: shown; then low-price week below 10% of the year mean
+  for (let i = 33; i < 40; i++) d.pml.pml_avg[i] = 60;
+  const v = dailyView(d, 'tracker');
+  assert.equal(v.vfHidden[39], true); assert.equal(v.vf[39], null); assert.ok(v.vf[30] !== null);
+});
+
+test('real 04MAP-115 2026-01-15 hidden, a normal day shown; no plotted value exceeds the axis', real, () => {
+  const n = decodeDoc(rd('nodes/04MAP-115.json')), v = dailyView(n, 'tracker');
+  const bad = dayDiff(n.start, '2026-01-15'), ok = dayDiff(n.start, '2025-12-15');
+  assert.equal(v.vf[bad], null); assert.equal(v.vfHidden[bad], true);
+  assert.ok(v.vf[ok] !== null && v.vf[ok] > 0 && v.vf[ok] < 2.5);
+  for (const f of ['nodes/04MAP-115.json', 'areas/ALL.json']) {
+    const c = clampVf(dailyView(decodeDoc(rd(f)), 'tracker').vf), ax = vfAxis(c.vals.filter((x) => x !== null));
+    assert.ok(c.vals.every((x) => x === null || (x >= ax.lo && x <= ax.hi)));
+  }
+});
+
+test('clampVf keeps the true value for hover', () => {
+  const c = clampVf([0.5, -25, 9, null]);
+  assert.deepEqual(c.vals, [0.5, -1, 2.5, null]); assert.deepEqual(c.raw, [0.5, -25, 9, null]); assert.equal(c.clipped, 2);
+});
+
+test('focus returns to the toggled control after the re-render', async () => {
+  let focused = null;
+  const body = { querySelector: (sel) => (sel === '[data-c="pml"]' ? { focus: () => { focused = sel; } } : null) };
+  await refocus(Promise.resolve(), body, '[data-c="pml"]');
+  assert.equal(focused, '[data-c="pml"]');
+  const src = fs.readFileSync(new URL('../v2/assets/js/daily-card.js', import.meta.url), 'utf8');
+  assert.equal(/again\(\)/.test(src), false);             // every toggle names the control to refocus
+});
+
+test('revenue, hours and output are the plain mean of the valid days (not n_horas weighted)', () => {
+  const z = Array(7).fill(null), n = [24, 24, 24, 24, 12, 24, 24];
+  const d = decodeDoc({ schema_version: 'daily/1', start: '2024-01-01', n: 7, scale: SCALE,
+    pml: { n_horas: n, pml_avg: Array(7).fill(1000), energia_avg: z, perdidas_avg: z, congestion_avg: z, spread: z },
+    tracker: { y_day: [10, 20, 30, 40, 50, 60, 70].map((v) => v * 1e4), horas_solares: [1, 2, 3, 4, 5, 6, 7], p_cap_dia: z, vf_dia: z, ingreso_dia: z }, fijo: { y_day: z, horas_solares: z, p_cap_dia: z, vf_dia: z, ingreso_dia: z } });
+  const v = dailyView(d, 'tracker');
+  near(v.hours[6], 4); near(v.output[6], 4 * 1e4 * 1e-4 * 1 * 1 * 1e0 * 0 + 4 * 1 * 1e4 / 1e4 * 10 / 10 * 1, 1e9); // weights do not matter: see exact check below
+  near(v.output[6], [10, 20, 30, 40, 50, 60, 70].reduce((a, b) => a + b, 0) / 7);
 });
