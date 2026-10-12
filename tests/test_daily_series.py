@@ -221,9 +221,9 @@ def test_real_nodo_independiente(man):
         assert abs(sp[d] - (x.max() - x.min())) <= 0.05 + 1e-9
     for k in ("tracker", "fijo"):
         dec = {f: S.decode(doc[k][f], doc["scale"][f]) for f in S.CFG_FIELDS}
-        ok = np.isfinite(dec["p_cap_dia"]) & (dec["y_day"] > 1)
-        rel = np.abs(dec["ingreso_dia"][ok] - dec["y_day"][ok] * dec["p_cap_dia"][ok]) / np.maximum(
-            np.abs(dec["ingreso_dia"][ok]), 1)
-        assert rel.max() < 1e-3
+        ok = np.isfinite(dec["p_cap_dia"])
+        y, p = dec["y_day"][ok], dec["p_cap_dia"][ok]
+        bound = 0.05 + 0.5e-4 * np.abs(p) + 0.05 * y + 1e-9         # cuantizacion propagada (escala/2 de cada campo)
+        assert (np.abs(dec["ingreso_dia"][ok] - y * p) <= bound).all()
         assert np.nanmax(dec["horas_solares"]) <= 24 and np.nanmin(dec["y_day"]) >= 0
     assert np.isnan(S.decode(doc["tracker"]["y_day"], 1e-4)[-1])     # sin clima despues de 2026-07-30
