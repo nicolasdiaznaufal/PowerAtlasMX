@@ -37,11 +37,13 @@ test('Explorer daily card: one plot for PML, congestion and losses with three co
   assert.equal(/\bvf\b/.test(src('assets/js/copy.js').split('daily: {')[1].split('lazy:')[0]), false); // no 7-day VF copy left
 });
 
-test('Revenue daily card: captured price full width, then solar hours and solar output as separate bar charts; no metric toggle', () => {
+test('Revenue daily card: revenue, captured price, then solar hours and solar output as separate bar charts; no metric toggle', () => {
   const s = src('assets/js/daily-card.js');
   assert.equal(/dl-metric|METRICS|Daily metric/.test(s), false);
-  assert.ok(/bar-pair/.test(s) && /barChart\(/.test(s) && /#dl-cap/.test(s));
-  assert.ok(s.indexOf('id="dl-rev"') < s.indexOf('id="dl-cap"') && s.indexOf('id="dl-cap"') < s.indexOf('bar-pair'));
+  assert.ok(/kind: 'bar'/.test(s) && /barChart\(/.test(s));
+  const o = ['g-rev', 'g-cap', 'g-hours', 'g-out'].map((id) => s.indexOf(`id="${id}"`) > 0 || s.indexOf(`'${id}'`) > 0);
+  assert.ok(o.every(Boolean));
+  assert.ok(s.indexOf("one('g-rev'") < s.indexOf("one('g-cap'") && s.indexOf("one('g-cap'") < s.indexOf("one('g-hours'"));
 });
 
 test('barChart: month ticks and date hover title for daily bars', () => {
@@ -133,7 +135,7 @@ test('Revenue cards: no Shortcut bar, only real revenue and levelized cost; KPI 
   assert.equal(/IRR|NPV/.test(s + c), false); // assumptions are pending: no IRR / NPV on screen
 });
 
-test('maps card: four metrics, regions | states, hover, lazy', () => {
+test('maps card (M13: one map): four metrics, regions | states, hover, lazy', () => {
   const s = src('assets/js/maps-card.js');
   for (const t of ['Value factor', 'Captured price', '% of nodes covering the LCOE', 'Price spread, peak − solar', "'region', 'Regions'", "'state', 'States'", 'IntersectionObserver', 'onHover']) assert.ok(s.includes(t), t);
 });

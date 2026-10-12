@@ -32,5 +32,14 @@ export function assumpBarHTML(real) {
   if (set.rate_pct != null) parts.push(`${real ? 'real' : 'nominal'} rate ${num(set.rate_pct, 2)}%`);
   return `<span class="mono tag">${esc(TAG[st.level])}</span><span>${esc(parts.join(' · ') || 'no values entered')}</span>
     <span class="muted">${real ? "Today's pesos" : 'Nominal pesos'}</span>
-    <button type="button" class="btn btn-ghost btn-sm" data-open-assump>Edit</button>${st.level === 'deck' ? '<span class="muted">Only the deck’s printed values; no verdict.</span>' : ''}`;
+    ${st.level === 'deck' ? '<span class="muted">Only the deck’s printed values; no verdict.</span>' : ''}`;
+}
+
+let bound = false;
+/** mounting follows the page's tracker / fixed-tilt switch (the page is the source: it is also in the URL). Idempotent. */
+export function bindMounting(shell) {
+  if (bound) return;
+  bound = true;
+  setMounting(shell.store.cfg);
+  shell.store.subscribe(() => setMounting(shell.store.cfg));
 }

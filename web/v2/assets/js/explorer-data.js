@@ -5,7 +5,10 @@ import { WIN } from '../../../assets/js/names.js';
 import { num } from '../../../assets/js/format.js';
 import { getJSON } from './json.js';
 
-export const WINDOWS = ['Y2', 'Y1']; // Y2 = Aug 2025 - Jul 2026 (default), Y1 = Aug 2024 - Jul 2025
+// Main time window (the only time control): Y2 = Aug 2025 - Jul 2026 (default), Y1 = Aug 2024 - Jul 2025, ALL = the full history.
+// ALL has published area and node figures (window 'completo'), but no typical day or solar variants: those use the last 12 months.
+if (!WIN.ALL) WIN.ALL = { key: 'completo', label: 'Full history Jan 2020 – Sep 2026', short: '2020–2026', desde: '2020-01', hasta: '2026-09' };
+export const WINDOWS = ['Y2', 'Y1', 'ALL'];
 const U = { nodos: '../data/analysis/analysis_nodos.json', analysis: '../data/analysis/analysis.json', profiles: '../data/derived/node_profiles.json',
   sNodes: '../data/derived/series_nodes.json', sAreas: '../data/derived/series_areas.json' };
 const idxCache = new WeakMap();

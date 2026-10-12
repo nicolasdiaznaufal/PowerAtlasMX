@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { decodeDoc, ma7, ma7Ratio, dailyView, dayFactors, dayDiff, dateOf, rangeOf, SCALE } from '../v2/assets/js/daily-math.js';
-import { dailyUrl, shouldLoadDaily, remember } from '../v2/assets/js/daily-load.js';
+import { dailyUrl, shouldLoadDaily, remember, MAX_FILES } from '../v2/assets/js/daily-load.js';
 
 const DIR = new URL('../data/solar_v2/daily/', import.meta.url).pathname;
 const real = fs.existsSync(`${DIR}manifest.json`) ? {} : { skip: 'web/data/solar_v2/daily absent' };
@@ -69,6 +69,7 @@ test('lazy gate: no daily request until the card is visible; bounded memory cach
   const m = new Map();
   for (let i = 0; i < 12; i++) remember(m, `u${i}`, () => Promise.resolve(i), 8);
   assert.equal(m.size, 8); assert.equal(m.has('u0'), false); assert.equal(m.has('u11'), true);
+  assert.ok(MAX_FILES >= 16);                              // up to 16 compared places stay in memory
   const { dailyUrl: swDaily, evictableUrl } = createRequire(import.meta.url)('../v2/sw-strategy.js');
   assert.equal(swDaily('/data/solar_v2/daily/nodes/01AAN-85.json'), true);
   assert.equal(swDaily('/data/solar_v2/variants/fijo/mean.json'), false);
@@ -76,7 +77,7 @@ test('lazy gate: no daily request until the card is visible; bounded memory cach
   const pre = fs.readFileSync(new URL('../v2/precache.js', import.meta.url), 'utf8');
   assert.equal(/solar_v2\/daily|data\//.test(pre), false);
   const sw = fs.readFileSync(new URL('../v2/sw.js', import.meta.url), 'utf8');
-  assert.match(sw, /DATA_DAILY = 12/);
+  assert.match(sw, /DATA_DAILY = 24/);
 });
 
 test('decoder on real files (2 nodes + 1 area) follows the manifest', real, () => {
@@ -112,7 +113,7 @@ test('decoder on real files (2 nodes + 1 area) follows the manifest', real, () =
 test('the Explorer daily card has no value-factor line, toggle or hide rule', () => {
   const src = fs.readFileSync(new URL('../v2/assets/js/daily-card.js', import.meta.url), 'utf8');
   assert.equal(/clampVf|dl-month|vfHidden|data-c=/.test(src), false);
-  assert.ok(/PML/.test(src) && /dl-parts/.test(src));     // PML, congestion and losses share one plot, always visible
+  assert.ok(/PML/.test(src) && /g-parts/.test(src));     // PML, congestion and losses share one plot, always visible
 });
 
 test('revenue, hours and output are the plain mean of the valid days (not n_horas weighted)', () => {

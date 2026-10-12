@@ -75,8 +75,8 @@ test('URL round trip with 3 slots, removing a chip, Back and Forward', () => {
   i++; router.resolve(hist[i]);                                            // Forward
   assert.equal(hist[i], '#/revenue?sel=01AAN-85,national&real=1');
   assert.equal(store.add({ kind: 'state', id: 'JALISCO' }), true);
-  assert.equal(store.add({ kind: 'region', id: 'NORTE' }), false);        // cap of 3
-  assert.equal(hist[i], '#/revenue?sel=01AAN-85,national,state:JALISCO&real=1');
+  assert.equal(store.add({ kind: 'region', id: 'NORTE' }), true);         // the cap is 16 (see v2-m13)
+  assert.equal(hist[i], '#/revenue?sel=01AAN-85,national,state:JALISCO,region:NORTE&real=1');
 });
 
 test('chip removal: focus moves to the next chip, then to + Add; the announcement names the slot and the count', async () => {

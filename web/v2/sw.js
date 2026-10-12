@@ -6,14 +6,14 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m12-1-20e9fa1c';
+const VERSION = 'v2-m13-1-9292e4b1';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 // Data cache bound: the core JSON (index, analysis, series, profiles, per-config scalars: about 21 MB raw) is pinned; per-variant files
 // (variants/*.json about 4.5 MB, variant_extra about 0.25 MB) are evictable, oldest first, at most DATA_VARIANTS entries (about 25 MB worst case).
 const DATA_VARIANTS = 5;
-// Daily series (data/solar_v2/daily/, 38 area files and one file per node): fetched on demand, about 100 KB each, at most DATA_DAILY kept (about 1.2 MB), never precached.
-const DATA_DAILY = 12;
+// Daily series (data/solar_v2/daily/, 38 area files and one file per node): fetched on demand, about 100 KB each, at most DATA_DAILY kept (about 2.4 MB: 16 compared places), never precached.
+const DATA_DAILY = 24;
 importScripts('sw-strategy.js', 'precache.js');
 
 const OFFLINE_HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · PowerAtlasMx</title>'

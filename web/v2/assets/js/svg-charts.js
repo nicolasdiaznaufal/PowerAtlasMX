@@ -12,10 +12,16 @@ export function thin(n, width, per = 54, unit = 1) {
   const plot = Math.max(120, width - PAD.l - PAD.r), every = Math.max(1, Math.ceil((n * per) / plot));
   return Math.ceil(every / unit) * unit;
 }
-export function renderChart(el, build) {
-  W = chartWidth(el); setHover(null); el.innerHTML = build();
+/** compact: smaller margins for the cells of a comparison grid. Returns the plot geometry { W, l, r } (used by the zoom). */
+export function renderChart(el, build, opts = {}) {
+  W = chartWidth(el); setHover(null);
+  const keep = { ...PAD };
+  if (opts.compact) Object.assign(PAD, { l: 42, r: 8, t: 14, b: 30 });
+  let geom;
+  try { el.innerHTML = build(); geom = { W, l: PAD.l, r: PAD.r }; } finally { Object.assign(PAD, keep); }
   const spec = takeHover();
   if (spec && typeof document !== 'undefined' && el && typeof el.querySelector === 'function') attachHover(el, spec);
+  return geom;
 }
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

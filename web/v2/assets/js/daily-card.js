@@ -1,18 +1,19 @@
-// Daily charts (Explorer: value factor, price parts, spread; Revenue: revenue and one metric): 7-day moving averages at DAILY
-// resolution over the time-span slider, for the node or area slots. Loaded lazily when the card scrolls into view.
+// Daily charts (Explorer: PML / congestion / losses and price spread; Revenue: revenue, captured price, solar hours, solar output):
+// 7-day moving averages at DAILY resolution over the main window, one plot per place in a grid, drag-to-zoom shared by the card.
+// Loaded lazily when the card scrolls into view.
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
-import { lineChart, barChart, renderChart, chartWidth, thin } from './svg-charts.js';
+import { lineChart, barChart, renderChart, chartWidth, thin, niceTicks, niceMax } from './svg-charts.js';
 import { dailyView, rangeOf, dayFactors, dateOf } from './daily-math.js';
 import { loadDaily, loadDeflator, shouldLoadDaily } from './daily-load.js';
-import { legendHTML, esc, nameOf } from './compare-ui.js';
-import { STYLES, swatchStyle } from './series-style.js';
+import { esc, nameOf } from './compare-ui.js';
 import { COPY } from './copy.js';
+import { createZoom } from './zoom.js';
+import { gridHTML, cellHeight } from './grid-plots.js';
 
 const C = COPY.daily, XT = 'Date (Mexico City time, CDMX)';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const fmtDate = (d) => `${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
-// the three price parts share one plot: one colour per part (line style and marker tell the slots apart when several are selected)
 const PARTS = [['pml', 'PML', 'var(--s2)'], ['congestion', 'Congestion', 'var(--s1)'], ['losses', 'Losses', 'var(--s3)']];
 const BAR = { hours: ['Solar hours', 'hours per day', 'var(--c-prod)', 1], output: ['Solar output (NASA POWER)', 'MWh per MWp per day', 'var(--s3)', 2] };
 
@@ -22,22 +23,22 @@ export function dailyCardHTML(view) {
     <p class="xp-text">${esc(C.weather)}</p><div id="dl-body"><p class="xp-text">${esc(C.lazy)}</p></div></section>`;
 }
 
-/** month tick labels at the first day of each month, thinned to the chart width. */
-export function monthTicks(dates, width) {
-  const first = dates.map((d, i) => (d.slice(8) === '01' ? i : -1)).filter((i) => i >= 0);
-  const every = thin(first.length, width, 50);
-  return first.filter((_, j) => j % every === 0).map((i) => ({ i, text: mesCorto(dates[i].slice(0, 7)) }));
+/** tick labels: first day of each month for long ranges, else evenly spaced days. */
+export function axisTicks(dates, width) {
+  const per = 56;
+  if (dates.length > 150) {
+    const first = dates.map((d, i) => (d.slice(8) === '01' ? i : -1)).filter((i) => i >= 0), every = thin(first.length, width, 50);
+    return first.filter((_, j) => j % every === 0).map((i) => ({ i, text: mesCorto(dates[i].slice(0, 7)) }));
+  }
+  const step = Math.max(1, Math.ceil((dates.length * per) / Math.max(120, width - 60)));
+  return dates.map((d, i) => (i % step === 0 ? { i, text: `${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]}` } : null)).filter(Boolean);
 }
-
-function plot(el, dates, series, { fmt = (v) => num(v, 1), unit, ytitle, aria, scale = null, refs = [], H = 260 }) {
-  renderChart(el, () => lineChart({ series, labels: dates, ticks: monthTicks(dates, chartWidth(el)), markEvery: 0, H, fmt, unit, ytitle, aria, xtitle: XT, scale, refs, hoverTitle: fmtDate }));
-}
+export const monthTicks = (dates, width) => axisTicks(dates, width);
 
 export function mountDaily(root, { entries, shell, winId, view }) {
   const card = root.querySelector('#dl-card'), body = card && card.querySelector('#dl-body');
   if (!body) return;
   const slots = entries.map((e) => e.slot), hasSlot = slots.some((s) => s.kind);
-  const ui = (shell.dailyUi = shell.dailyUi || { monthly: true, comps: [], metric: 'cap' });
   const run = async () => {
     const [docs, defl] = await Promise.all([Promise.all(slots.map((s) => loadDaily(s).catch(() => null))), loadDeflator().catch(() => null)]);
     if (!root.isConnected) return;
@@ -47,38 +48,64 @@ export function mountDaily(root, { entries, shell, winId, view }) {
     const [i0, i1] = rangeOf(ref.start, ref.n, span), dates = Array.from({ length: i1 - i0 + 1 }, (_, i) => dateOf(ref.start, i0 + i));
     const fac = real && defl ? dayFactors(ref.start, ref.n, defl) : null;
     const views = docs.map((d) => (d ? dailyView(d, cfg, { real: !!fac, factors: fac }) : null));
-    const seriesOf = (key) => entries.map((e, k) => ({ vals: views[k] ? views[k][key].slice(i0, i1 + 1) : dates.map(() => null), label: nameOf(shell, e) }));
+    const vals = (key, k) => (views[k] ? views[k][key].slice(i0, i1 + 1) : dates.map(() => null));
     const pesos = real && defl ? "today's pesos" : 'nominal';
     const missing = entries.filter((_, k) => !docs[k]).map((e) => nameOf(shell, e));
     const notes = `<p class="xp-text">${esc(C.end)} ${esc(C.scope)} Money is shown in ${esc(pesos)}.${missing.length ? esc(` No daily data for: ${missing.join(', ')}.`) : ''}</p>`;
-    const leg = `<div class="legend mono">${entries.length > 1 ? legendHTML(entries, shell) : '<span><i style="background:var(--s1)"></i>7-day moving average</span>'}</div>`;
-    const q = (s) => body.querySelector(s);
-    if (view === 'explorer') {
-      const multi = entries.length > 1;
-      const parts = PARTS.flatMap(([k, l, color]) => entries.map((e, j) => ({ vals: views[j] ? views[j][k].slice(i0, i1 + 1) : dates.map(() => null), label: multi ? `${l} · ${nameOf(shell, e)}` : l, style: { ...STYLES[multi ? j % 3 : 0], color, dash: multi ? STYLES[j % 3].dash : '' } })));
-      const pleg = `<div class="legend mono">${parts.map((sr) => `<span>${swatchStyle(sr.style)}${esc(sr.label)}</span>`).join('')}</div>`;
-      body.innerHTML = `<h3 class="mono sub">PML, congestion and losses, 7-day moving average (MXN/MWh, ${esc(pesos)})</h3>${pleg}<div class="chart" id="dl-parts"></div>
-        <h3 class="mono sub">Daily price spread (max PML − min PML), 7-day moving average</h3><p class="xp-text">${esc(C.spread)}</p>${leg}<div class="chart" id="dl-spread"></div>${notes}`;
-      plot(q('#dl-parts'), dates, parts, { fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'PML, congestion and losses per day, 7-day moving average', H: 300 });
-      plot(q('#dl-spread'), dates, seriesOf('spread'), { fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', H: 240 });
-      return;
+    const zs = (shell.zoomUi = shell.zoomUi || {});
+    const n = entries.length, multi = n > 1;
+    const cells = entries.map((e, k) => ({ title: nameOf(shell, e), id: String(k) }));
+    const zoom = createZoom({ labels: dates, store: zs, key: `daily-${view}`, onChange: () => draw() });
+    function plotGrid(host, { key, kind = 'line', fmt, unit, scaleOf, build, H }) {
+      const [z0, z1] = zoom.range, d = dates.slice(z0, z1 + 1), tick = axisTicks(d, chartWidth(host.querySelector('.chart')) || 600);
+      const all = entries.flatMap((_, k) => vals(key, k).slice(z0, z1 + 1));
+      const sc = scaleOf ? scaleOf(all) : null;
+      host.querySelectorAll('[data-cell]').forEach((el) => {
+        const k = +el.dataset.cell, v = vals(key, k).slice(z0, z1 + 1);
+        const geom = renderChart(el, () => (kind === 'bar'
+          ? barChart({ bars: d.map((x, i) => ({ v: v[i], label: x, color: build.color })), H, scale: sc, fmt, ytitle: multi ? '' : build.ytitle, xtitle: multi ? '' : XT, aria: build.aria, ticks: tick, hoverTitle: fmtDate, minBw: 0.6, hoverName: build.name })
+          : lineChart({ series: build.series(k, v, z0, z1), labels: d, ticks: tick, markEvery: 0, H, fmt, unit, ytitle: multi ? '' : build.ytitle, xtitle: multi ? '' : XT, aria: build.aria, scale: sc, hoverTitle: fmtDate })), { compact: multi });
+        zoom.attach(el, geom, d.length);
+      });
     }
-    const bars = (key) => entries.map((e, k) => {
-      const [t, u, color, dg] = BAR[key], v = views[k] ? views[k][key].slice(i0, i1 + 1) : dates.map(() => null);
-      return `<div class="bar-one"><h3 class="mono sub">${esc(t)}, 7-day moving average (${esc(u)})${entries.length > 1 ? ` · ${esc(nameOf(shell, e))}` : ''}</h3><p class="xp-text">${esc(C[key])}</p><div class="chart" data-b="${key}" data-k="${k}"></div></div>`;
-    }).join('');
-    body.innerHTML = `${leg}<h3 class="mono sub">Revenue per MWp per day (${esc(pesos)})</h3><div class="chart" id="dl-rev"></div>
-      <h3 class="mono sub">Captured price, 7-day moving average (MXN/MWh, ${esc(pesos)})</h3><p class="xp-text">${esc(C.cap)}</p><div class="chart" id="dl-cap"></div>
-      <div class="bar-pair"><div>${bars('hours')}</div><div>${bars('output')}</div></div>${notes}`;
-    plot(q('#dl-rev'), dates, seriesOf('revenue'), { fmt: (v) => num(v, 0), unit: 'MXN per MWp', ytitle: `MXN per MWp per day (${pesos})`, aria: 'Daily revenue of 1 MWp, 7-day moving average', H: 300 });
-    plot(q('#dl-cap'), dates, seriesOf('cap'), { fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'Captured price per day, 7-day moving average', H: 280 });
-    body.querySelectorAll('[data-b]').forEach((el) => {
-      const key = el.dataset.b, [t, u, color, dg] = BAR[key], v = views[+el.dataset.k];
-      const vals = v ? v[key].slice(i0, i1 + 1) : dates.map(() => null);
-      renderChart(el, () => barChart({ bars: dates.map((d, i) => ({ v: vals[i], label: d, color })), H: 240, fmt: (x) => num(x, dg), ytitle: u, xtitle: XT, aria: `Daily ${t.toLowerCase()}, 7-day moving average`, ticks: monthTicks(dates, chartWidth(el)), hoverTitle: fmtDate, minBw: 0.6, hoverName: t }));
-    });
+    const scale0 = (all) => { const f = all.filter((v) => v !== null && Number.isFinite(v)); return niceTicks(Math.min(0, ...f), niceMax(Math.max(...f, 1e-9))); };
+    function draw() {
+      const grid = () => gridHTML(cells, body.clientWidth || 900);
+      const lh = cellHeight(n, 300), sh = cellHeight(n, 240), bh = cellHeight(n, 240);
+      if (view === 'explorer') {
+        const leg = `<div class="legend mono">${PARTS.map(([, l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>`;
+        body.innerHTML = `${zoom.barHTML()}<h3 class="mono sub">PML, congestion and losses, 7-day moving average (MXN/MWh, ${esc(pesos)})</h3>${leg}<div id="g-parts">${grid()}</div>
+          <h3 class="mono sub">Daily price spread (max PML − min PML), 7-day moving average</h3><p class="xp-text">${esc(C.spread)}</p><div id="g-spread">${grid()}</div>${notes}`;
+        const partsAll = entries.flatMap((_, k) => PARTS.flatMap(([key]) => vals(key, k).slice(zoom.range[0], zoom.range[1] + 1)));
+        const f = partsAll.filter((v) => v !== null && Number.isFinite(v)), psc = niceTicks(Math.min(0, ...f), niceMax(Math.max(...f, 1e-9)));
+        const [z0, z1] = zoom.range, d = dates.slice(z0, z1 + 1), host = body.querySelector('#g-parts');
+        const tick = axisTicks(d, chartWidth(host.querySelector('.chart')) || 600);
+        host.querySelectorAll('[data-cell]').forEach((el) => {
+          const k = +el.dataset.cell;
+          const series = PARTS.map(([key, l, color]) => ({ vals: vals(key, k).slice(z0, z1 + 1), label: l, style: { color, dash: '', marker: 'circle' } }));
+          const geom = renderChart(el, () => lineChart({ series, labels: d, ticks: tick, markEvery: 0, H: lh, fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: multi ? '' : `MXN/MWh (${pesos})`, xtitle: multi ? '' : XT, aria: 'PML, congestion and losses per day, 7-day moving average', scale: psc, hoverTitle: fmtDate }), { compact: multi });
+          zoom.attach(el, geom, d.length);
+        });
+        plotGrid(body.querySelector('#g-spread'), { key: 'spread', fmt: (v) => num(v, 0), unit: 'MXN/MWh', scaleOf: scale0, H: sh,
+          build: { ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', series: (k, v) => [{ vals: v, label: 'Price spread', style: { color: 'var(--s1)', dash: '', marker: 'circle' } }] } });
+      } else {
+        const one = (id, title, text = '') => `<h3 class="mono sub">${esc(title)}</h3>${text ? `<p class="xp-text">${esc(text)}</p>` : ''}<div id="${id}">${grid()}</div>`;
+        body.innerHTML = `${zoom.barHTML()}${one('g-rev', `Revenue per MWp per day (${pesos})`)}${one('g-cap', `Captured price, 7-day moving average (MXN/MWh, ${pesos})`, C.cap)}
+          ${one('g-hours', `${BAR.hours[0]}, 7-day moving average (${BAR.hours[1]})`, C.hours)}${one('g-out', `${BAR.output[0]}, 7-day moving average (${BAR.output[1]})`, C.output)}${notes}`;
+        const line = (id, key, name, ytitle, fmt, unit, H) => plotGrid(body.querySelector(id), { key, fmt, unit, scaleOf: scale0, H, build: { ytitle, aria: `${name} per day, 7-day moving average`, series: (k, v) => [{ vals: v, label: name, style: { color: 'var(--s1)', dash: '', marker: 'circle' } }] } });
+        line('#g-rev', 'revenue', 'Revenue', `MXN per MWp per day (${pesos})`, (v) => num(v, 0), 'MXN per MWp', lh);
+        line('#g-cap', 'cap', 'Captured price', `MXN/MWh (${pesos})`, (v) => num(v, 0), 'MXN/MWh', cellHeight(n, 280));
+        for (const [id, key] of [['#g-hours', 'hours'], ['#g-out', 'output']]) {
+          const [t, u, color, dg] = BAR[key];
+          plotGrid(body.querySelector(id), { key, kind: 'bar', fmt: (v) => num(v, dg), scaleOf: scale0, H: bh, build: { color, ytitle: u, name: t, aria: `Daily ${t.toLowerCase()}, 7-day moving average` } });
+        }
+      }
+      zoom.wire(body);
+      body.querySelectorAll('[data-z="reset"]').forEach((b) => { b.disabled = !zoom.zoomed; });
+    }
+    draw();
   };
-  const gate = () => { if (hasSlot) run().catch(() => { if (root.isConnected) body.innerHTML = '<p class="xp-text">Daily values could not be loaded.</p>'; }); };
+  const gate = () => { if (hasSlot) run().catch((e) => { console.error(e); if (root.isConnected) body.innerHTML = '<p class="xp-text">Daily values could not be loaded.</p>'; }); };
   if (!hasSlot) { body.innerHTML = '<p class="xp-text">No daily data for this selection.</p>'; return; }
   if (typeof IntersectionObserver === 'undefined') { if (shouldLoadDaily(true, hasSlot)) gate(); return; }
   const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting) && shouldLoadDaily(true, hasSlot)) { io.disconnect(); gate(); } });

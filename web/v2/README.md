@@ -95,6 +95,15 @@ Chart widths follow the container so tick labels stay readable on phones; every 
 - **Daily card (Revenue):** revenue, captured price (full width), then solar hours and solar output as two bar charts (7-day averages).
 - **Appendix** (`appendix*.js`, `appendix.css`): A1 to A4 of v1 (A5 is not ported). It is the one place with equations (rendered with the vendored KaTeX, precached) because the section is the equations.
 
+## Corrections (M13)
+- **One time control:** the window toggle (last 12 months | previous 12 months | Full history 2020-2026) is the only one. It is stored as the URL span (`&from=&to=`; last 12 months has no URL part;
+  any other span is normalised to one of the three). The time-span slider and the in-card window toggles are gone. Typical day, revenue and plant economics have no full-history figures
+  (no typical-day profile or solar variants exist for it) and use the last 12 months, with a note; monthly and daily series, maps and the summary cover the whole history.
+- **Compare up to 16 places** (`MAX_SEL`): each place has its own plot in a grid (1 -> 1, 2-4 -> 2x2, 5-9 -> 3x3, 10-16 -> 4x4, at most 2 columns on phones), same scale in a grid,
+  plot height shrinks with the rows so the grid is seen in one view. Daily files kept in memory 20, service-worker daily cache 24.
+- **Zoom** (`zoom.js`): drag on any time plot to zoom, double-click / Escape / Reset to go back; one range per card, Zoom in / out buttons for keyboard users.
+- **Explorer:** simulation box and hourly plot form one card; one map with a metric toggle. **Revenue:** assumptions are inline at the top (no drawer).
+
 ## Roadmap (not built)
 Nothing pending from the solar brief; NSRDB contrast and a daily NASA refresh are held (see docs/SOLAR_V2_PLAN.md section 7).
 

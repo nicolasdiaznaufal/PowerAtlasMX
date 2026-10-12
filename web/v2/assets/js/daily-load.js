@@ -4,7 +4,7 @@ import { decodeDoc } from './daily-math.js';
 import { getJSON } from './json.js';
 
 export const DAILY_BASE = '../data/solar_v2/daily/';
-export const MAX_FILES = 8;
+export const MAX_FILES = 20;
 const files = new Map(); // url -> Promise<decoded>, insertion order = age
 
 /** file of a slot: node -> nodes/{id}.json; national -> areas/ALL.json; region/state -> areas/{kind}-{NAME}.json (non-alphanumerics become _). */

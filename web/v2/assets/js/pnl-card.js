@@ -2,13 +2,13 @@
 import { evaluate, usdToMxn, DECK_FX } from '../../../assets/js/finmodel.js';
 import { WIN } from '../../../assets/js/names.js';
 import { num, signed } from '../../../assets/js/format.js';
-import { segment } from './controls.js';
 import { loadFin, placeInputs } from './fin-data.js';
-import { mountPlacePicker, placeKey } from './place-picker.js';
 import { activeSet, statusOf, subscribe, assumpBarHTML } from './assump.js';
 import { verdictPillHTML } from './verdict.js';
 import { hbarChart } from './hbar-chart.js';
 import { esc } from './compare-ui.js';
+
+const placeKey = (p) => (p ? `${p.kind}:${p.id}` : '');
 
 const f0 = (v) => num(v, 0), f1 = (v) => num(v, 1), f2 = (v) => num(v, 2);
 const SL = [['p', 'Average price (PML), MXN/MWh', 100, 2000, 5], ['v', 'Value factor VF', 0.3, 1.1, 0.01], ['l', 'Losses not in the model, %', 0, 25, 0.5],
@@ -17,7 +17,7 @@ const short = (p) => (p.kind === 'node' ? p.id : p.kind === 'national' ? 'Nation
 
 export function pnlCardHTML() {
   return `<section class="xp-card pnl" id="pl-card" aria-labelledby="pl-h"><h2 class="mono" id="pl-h">Plant economics: one plant, one place, one year</h2>
-    <div class="pl-top"><div id="pl-pick" class="pp"></div><div class="seg" role="radiogroup" aria-label="Window" id="pl-yr" style="grid-template-columns:repeat(2,1fr)"></div></div>
+    <p class="xp-text" id="pl-where"></p>
     <div class="assump-bar" id="pl-bar"></div><div id="pl-verdict"></div>
     <div class="ctrls3">${SL.map(([k, l, mn, mx, st]) => `<label class="pl-ctl" for="pl-${k}"><span>${l}</span><output id="pl-${k}o" class="mono"></output><input type="range" id="pl-${k}" min="${mn}" max="${mx}" step="${st}"></label>`).join('')}
       <div class="pl-ctl"><span>LCOE, MXN/MWh</span><output id="pl-cm" class="mono"></output></div></div>
@@ -28,10 +28,11 @@ export function pnlCardHTML() {
 export function mountPnl(root, { shell, winId }) {
   const card = root.querySelector('#pl-card');
   if (!card) return;
-  const q = (s) => card.querySelector(s), ui = ((shell.revUi = shell.revUi || {}).pnl = shell.revUi.pnl || { yr: winId, place: null, memo: {}, ovr: {}, key: '', selKey: '' });
-  const first = shell.store.get()[0], selKey = placeKey(first);
-  if (first && (!ui.place || ui.selKey !== selKey)) { ui.place = { kind: first.kind, id: first.id }; ui.memo = {}; ui.selKey = selKey; ui.ovr = {}; }
-  if (!ui.place) return;
+  const q = (s) => card.querySelector(s), ui = ((shell.revUi = shell.revUi || {}).pnl = shell.revUi.pnl || { ovr: {}, key: '' });
+  // the place and the window are the page's own: the first selected place and the main time window
+  const first = shell.store.get()[0];
+  if (!first) return;
+  ui.place = { kind: first.kind, id: first.id }; ui.yr = winId;
   let src = null, place = null, off = null;
   const real = () => shell.store.real;
   const paintBar = () => { q('#pl-bar').innerHTML = assumpBarHTML(real()); };
@@ -62,9 +63,7 @@ export function mountPnl(root, { shell, winId }) {
     q('#pl-fine').textContent = `The LCOE slider starts at the active threshold; moving it is a what-if and does not change your assumptions. Merchant energy revenue only, on the MDA reference price (CENACE): no capacity, CEL or contracts.${'p' in o || 'v' in o ? ' Price or VF moved by hand: values no longer match the data of the selected place.' : ''}`;
   }
 
-  mountPlacePicker(q('#pl-pick'), { shell, ui, id: 'pl', onChange: () => { ui.ovr = {}; load(); } });
-  const drawYr = () => segment(q('#pl-yr'), [['Y1', WIN.Y1.short], ['Y2', WIN.Y2.short]], ui.yr, (k) => { ui.yr = k; drawYr(); load(); });
-  drawYr();
+  q('#pl-where').textContent = `${shell.label(first).t} · ${WIN[ui.yr].label}. The place and window are the ones selected on this page.`;
   for (const [k] of SL) q(`#pl-${k}`).addEventListener('input', (e) => { ui.ovr[k] = +e.target.value; upd(); });
   paintBar();
   off = subscribe(() => { if (!card.isConnected) { off(); return; } paintBar(); load(); });

@@ -8,6 +8,8 @@ import { paintMonthPrices } from './price-month.js';
 import { legendHTML, esc, nameOf } from './compare-ui.js';
 import { segment } from './controls.js';
 import { COPY } from './copy.js';
+import { createZoom } from './zoom.js';
+import { gridHTML, cellHeight } from './grid-plots.js';
 import { inSpan } from './span-data.js';
 import { isNeutral } from './query-extras.js';
 import { isDefaultCtx } from './solar-data.js';
@@ -16,7 +18,7 @@ import { isDefaultCtx } from './solar-data.js';
 export function seriesCardHTML() {
   return `<section class="xp-card series"><div class="xp-vhead"><h2 class="mono" id="sr-title">Value factor over time</h2>
     <div class="seg" role="radiogroup" aria-label="Series by month or by year" id="sr-view" style="grid-template-columns:repeat(2,1fr)"></div></div>
-    <div class="legend mono" id="sr-leg"></div><div class="chart" id="sr-vf"></div><div id="sr-pm" hidden></div><div class="chart" id="sr-px" hidden></div>
+    <div id="sr-zoom"></div><div class="legend mono" id="sr-leg"></div><div class="chart" id="sr-vf"></div><div id="sr-pm" hidden></div><div class="chart" id="sr-px" hidden></div>
     <p class="xp-text" id="sr-note"></p><details><summary class="mono">Data table</summary><div class="tbl" id="sr-table"></div></details>
     <h3 class="mono sub">Summary of the time span</h3><div id="sr-summary" aria-live="polite"></div></section>`;
 }
@@ -35,10 +37,19 @@ export function paintSeries(root, { entries, shell, winId, view, onView }) {
   if (!ok.length) { q('#sr-vf').innerHTML = '<p class="xp-text">No series for this selection.</p>'; q('#sr-table').innerHTML = ''; return; }
   const multi = entries.length > 1;
   if (view === 'months') {
-    const allMonths = ok[0].series.months, keep = allMonths.map((m) => inSpan(m, span)), months = allMonths.filter((_, i) => keep[i]), every = thin(months.length, chartWidth(q('#sr-vf')), 56, 6);
+    const allMonths = ok[0].series.months, keep0 = allMonths.map((m) => inSpan(m, span)), months0 = allMonths.filter((_, i) => keep0[i]);
+    const zs = (shell.zoomUi = shell.zoomUi || {});
+    const zoom = createZoom({ labels: months0, store: zs, key: 'series-months', onChange: () => paintSeries(root, { entries, shell, winId, view, onView }) });
+    const [z0, z1] = zoom.range;
+    let c = -1;
+    const keep = keep0.map((k) => { if (k) c++; return k && c >= z0 && c <= z1; });
+    const months = months0.slice(z0, z1 + 1), every = thin(months.length, chartWidth(q('#sr-vf')), 56, 6);
+    q('#sr-zoom').innerHTML = zoom.barHTML(); zoom.wire(q('#sr-zoom'));
+    const rb = q('#sr-zoom [data-z="reset"]'); if (rb) rb.disabled = !zoom.zoomed;
+    const mk = every > 0 ? every : 1;
     if (!multi) {
       const e = ok[0], pb = priceBasis(e.real || e.rec, real), sb = e.real ? priceBasis(e.rec, real) : null; // the bars are published: so is the line
-      const vfs = e.series.vf.filter((_, i) => keep[i]);
+      const vfs = e.series.vf.filter((_, i) => keep0[i]).slice(z0, z1 + 1);
       const inWin = months.map((m) => m >= w.desde && m <= w.hasta), runs = [];
       inWin.forEach((on, i) => { if (on && (i === 0 || !inWin[i - 1])) runs.push([i, i]); else if (on) runs[runs.length - 1][1] = i; });
       const vfTxt = `${num(pb.vf, 2)}${pb.real ? " (today's pesos)" : ' (nominal)'}`;
@@ -46,13 +57,22 @@ export function paintSeries(root, { entries, shell, winId, view, onView }) {
         ? `<span><i class="dash"></i>VF of the window${sim ? ' (published)' : ''}: ${vfTxt}</span>`
         : `<span class="exact">VF of the window, ${esc(ctxLabel)}: ${vfTxt}. The line is tracker, yearly-mean weather.</span>`;
       q('#sr-leg').innerHTML = `<span><i style="background:var(--s1)"></i>Value factor by month</span><span><i style="background:var(--s1);opacity:.35"></i>${esc(w.label)}</span>${winLine}${sb ? `<span class="exact">Simulated VF of the window: ${sb.vf === null ? 'n/a (price ≤ 0)' : num(sb.vf, 2)}</span>` : ''}`;
-      renderChart(q('#sr-vf'), () => lineChart({ series: [{ vals: vfs, label: 'Value factor' }], labels: months.map(mesCorto), bands: runs, hline: dflt ? { v: pb.vf, label: `Window ${num(pb.vf, 2)}` } : null, refs: [1], scale: vfAxis(vfs.concat(dflt ? [pb.vf] : [])), H: 300, xEvery: every, markEvery: 6, aria: 'Value factor by month', ytitle: 'Value factor', xtitle: 'Month' }));
+      const geom = renderChart(q('#sr-vf'), () => lineChart({ series: [{ vals: vfs, label: 'Value factor' }], labels: months.map(mesCorto), bands: runs, hline: dflt ? { v: pb.vf, label: `Window ${num(pb.vf, 2)}` } : null, refs: [1], scale: vfAxis(vfs.concat(dflt ? [pb.vf] : [])), H: 300, xEvery: mk, markEvery: 6, aria: 'Value factor by month', ytitle: 'Value factor', xtitle: 'Month' }));
+      zoom.attach(q('#sr-vf'), geom, months.length);
     } else {
-      q('#sr-leg').innerHTML = legendHTML(entries, shell);
-      const ser = entries.map((e) => ({ vals: e.series ? e.series.vf.filter((_, i) => keep[i]) : months.map(() => null), label: nameOf(shell, e) }));
-      renderChart(q('#sr-vf'), () => lineChart({ series: ser, labels: months.map(mesCorto), refs: [1], H: 300, scale: vfAxis(ser.flatMap((x) => x.vals)), xEvery: every, markEvery: 6, aria: 'Value factor by month for each selected slot', ytitle: 'Value factor', xtitle: 'Month' }));
+      // one plot per place (same value-factor scale in every cell), not an overlay
+      q('#sr-leg').innerHTML = '';
+      const ser = entries.map((e) => (e.series ? e.series.vf.filter((_, i) => keep0[i]).slice(z0, z1 + 1) : months.map(() => null)));
+      const sc = vfAxis(ser.flat()), host = q('#sr-vf');
+      host.innerHTML = gridHTML(entries.map((e, k) => ({ title: nameOf(shell, e), id: String(k) })));
+      const H = cellHeight(entries.length, 260), ev = Math.max(1, Math.ceil(months.length / 8));
+      host.querySelectorAll('[data-cell]').forEach((el) => {
+        const k = +el.dataset.cell;
+        const geom = renderChart(el, () => lineChart({ series: [{ vals: ser[k], label: 'Value factor' }], labels: months.map(mesCorto), refs: [1], H, scale: sc, xEvery: ev, markEvery: 0, aria: `Value factor by month, ${nameOf(shell, entries[k])}`, ytitle: '', xtitle: '' }), { compact: true });
+        zoom.attach(el, geom, months.length);
+      });
     }
-    paintMonthPrices(q('#sr-pm'), { entries, shell, allMonths, keep, real });
+    paintMonthPrices(q('#sr-pm'), { entries, shell, allMonths, keep, real, zoom });
     q('#sr-table').innerHTML = tableHTML(['Month', ...entries.map((e) => nameOf(shell, e))], months.map((m, i) => [mesCorto(m), ...entries.map((e) => (e.series ? e.series.vf.filter((_, j) => keep[j])[i] : null))]), 2);
     return;
   }

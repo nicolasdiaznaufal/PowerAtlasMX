@@ -14,32 +14,29 @@ import { solarUrls, isDefaultCtx } from './solar-data.js';
 import { scenarioEntries } from './scenario.js';
 import { isNeutral } from './query-extras.js';
 import { mountScenarioPanel } from './scenario-panel.js';
-import { mountRangeSlider } from './range-slider.js';
+import { winOfSpan, dataWin } from './query-extras.js';
+import { WINDOWS } from './explorer-data.js';
 import { summaryRows, summaryHTML } from './span-summary.js';
-import { installDrawer } from './assump-drawer.js';
+import { bindMounting } from './assump.js';
+import { mountAssumpInline } from './assump-inline.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function mountView({ host, side, shell, view, build }) {
-  let ctxKey = `${shell.store.cfg}|${shell.store.wx}`, ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), spanMounted = false, sumVer = 0;
+  let ctxKey = `${shell.store.cfg}|${shell.store.wx}`, ver = 0, dead = false, raw = null, entries = null, ctxExtra = {}, selKey = serializeSel(shell.store.get()), sumVer = 0, mainWin = winOfSpan(shell.store.span);
   const sorts = { state: { key: 'vf', dir: -1 }, region: { key: 'vf', dir: -1 } };
-  const winOf = () => shell.winId || 'Y2';
+  // the main window is the only time control: Y2 | Y1 | ALL (kept in the URL span). The 12-month analysis uses dataWin (ALL -> last 12 months).
+  const winOf = () => dataWin(winOfSpan(shell.store.span));
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
-    <div id="vb-span"></div><div id="vb-scn" class="scn-wrap"></div>
+    <div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
   side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
-  installDrawer(shell);
-  const scn = mountScenarioPanel(host.querySelector('#vb-scn'), shell.store);
+  bindMounting(shell);
+  const scn = view === 'explorer' ? mountScenarioPanel(host.querySelector('#vb-scn'), shell.store) : { destroy() {} };
+  const inl = view === 'revenue' ? mountAssumpInline(host.querySelector('#vb-assump'), shell) : { destroy() {} };
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
-  const state = (kind, html) => { const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };
-
-  function mountSpan() {
-    const ok = raw && raw.find((e) => e.series);
-    if (spanMounted || !ok) return;
-    spanMounted = true;
-    mountRangeSlider(q('#vb-span'), { months: ok.series.months, win: WIN[winOf()], span: shell.store.span, onChange: (sp) => shell.store.setSpan(sp) });
-  }
+  const state = (kind, html) => { const sc = q('#vb-scn'); if (sc) sc.hidden = kind !== 'ok'; const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };
 
   async function paintSummary(real, w) {
     const my = ++sumVer, el = q('#sr-summary');
@@ -57,10 +54,12 @@ export function mountView({ host, side, shell, view, build }) {
     side.querySelector('#vb-ind').innerHTML = indicatorsHTML(entries, shell, view);
     const body = q('#vb-body');
     const national = shell.store.get()[0] && shell.store.get()[0].kind === 'national' && ctxExtra.analysis;
-    const banner = isNeutral(shell.store.scenario) ? '' : '<div class="sim-banner" role="note"><span class="badge">Simulated</span><span>These values are a what-if on the typical day, not published data. Published values are shown as ghost lines and as the change next to each indicator.</span></div>';
+    const banner = isNeutral(shell.store.scenario) ? '' : `<div class="sim-banner" role="note"><span class="badge">Simulated</span><span>These values are a what-if on the typical day, not published data.${view === 'explorer' ? ' Published values are shown as ghost lines and as the change next to each indicator.' : ''}</span><button type="button" class="btn btn-ghost btn-sm" data-sim-reset>Reset to real values</button></div>`;
+    const winNote = mainWin === 'ALL' ? `<p class="xp-text" role="note">Full history (${WIN.ALL.label.replace('Full history ', '')}): the monthly and daily series and the maps cover all of it. The typical day, revenue and plant economics have no full-history figures and use the last 12 months (${esc(WIN.Y2.label)}).</p>` : '';
     const note15 = shell.store.wx === 'y2015' && ctxExtra.note2015 ? `<p class="xp-warn" role="note">${esc(ctxExtra.note2015)}</p>` : '';
     const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))}</p>`;
-    body.innerHTML = ctxLine + note15 + banner + build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
+    q('#vb-pre').innerHTML = ctxLine + winNote + note15 + banner;
+    body.innerHTML = build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
     build.draw(body, ctx, { repaint: paint, state: ctxExtra, side });
     paintSummary(real, w);
     if (national) {
@@ -78,7 +77,6 @@ export function mountView({ host, side, shell, view, build }) {
     if (!slots.length) return;
     selKey = serializeSel(slots);
     ctxKey = `${shell.store.cfg}|${shell.store.wx}`;
-    spanMounted = false; // the presets depend on the window
     state('loading', shell.store.cfg === 'fijo' || shell.store.wx !== 'mean' ? 'Loading fixed-tilt / weather-variant data…' : 'Loading data…');
     try {
       const ctx = { cfg: shell.store.cfg, wx: shell.store.wx };
@@ -94,7 +92,6 @@ export function mountView({ host, side, shell, view, build }) {
           ctxExtra.note2015 = raw15 ? `${raw15} ${cnt('Y1').toLocaleString('en-US')} nodes have data in Y1 and ${cnt('Y2').toLocaleString('en-US')} in Y2.` : null;
         } catch { /* note is informative */ }
       }
-      mountSpan();
       if (list.length === 1 && list[0].missing) {
         entries = null;
         side.querySelector('#vb-ind').innerHTML = '';
@@ -112,12 +109,14 @@ export function mountView({ host, side, shell, view, build }) {
   }
 
   load();
+  host.addEventListener('click', (ev) => { if (ev.target.closest && ev.target.closest('[data-sim-reset]')) shell.store.setScenario(null); });
   const off = shell.store.subscribe((l) => {
-    if (serializeSel(l) !== selKey || `${shell.store.cfg}|${shell.store.wx}` !== ctxKey) load();
+    const w = winOfSpan(shell.store.span);
+    if (serializeSel(l) !== selKey || `${shell.store.cfg}|${shell.store.wx}` !== ctxKey || w !== mainWin) { mainWin = w; load(); }
     else paint();
   });
   let timer = 0, lastW = host.clientWidth;
   const onResize = () => { clearTimeout(timer); timer = setTimeout(() => { if (host.clientWidth !== lastW) { lastW = host.clientWidth; paint(); } }, 150); };
   window.addEventListener('resize', onResize);
-  return { destroy() { dead = true; off(); ctl.destroy(); scn.destroy(); window.removeEventListener('resize', onResize); clearTimeout(timer); } };
+  return { destroy() { dead = true; off(); ctl.destroy(); scn.destroy(); inl.destroy(); window.removeEventListener('resize', onResize); clearTimeout(timer); } };
 }

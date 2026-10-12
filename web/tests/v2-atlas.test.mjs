@@ -33,12 +33,12 @@ test('quantile scale spreads a skewed metric across the ramp', () => {
   assert.ok(Math.min(...ts) >= 0 && Math.max(...ts) <= 1);
 });
 
-test('store: max 3, mixed kinds, url round trip', () => {
+test('store: mixed kinds, url round trip, cap 16', () => {
   const s = createStore();
   assert.ok(s.add({ kind: 'node', id: '01AAN-85' }) && s.add({ kind: 'state', id: 'JALISCO' }) && s.add({ kind: 'national', id: 'ALL' }));
-  assert.equal(s.add({ kind: 'region', id: 'NORTE' }), false);
-  assert.equal(serializeSel(s.get()), '01AAN-85,state:JALISCO,national');
-  assert.deepEqual(parseSel('01AAN-85,state:JALISCO,national'), s.get());
+  assert.equal(s.add({ kind: 'region', id: 'NORTE' }), true);
+  assert.equal(serializeSel(s.get()), '01AAN-85,state:JALISCO,national,region:NORTE');
+  assert.deepEqual(parseSel('01AAN-85,state:JALISCO,national,region:NORTE'), s.get());
 });
 
 test('selector filter: id, name and municipality; empty query lists areas only', () => {

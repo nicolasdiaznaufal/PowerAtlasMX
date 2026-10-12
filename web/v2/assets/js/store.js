@@ -1,6 +1,6 @@
-// Selection store: up to 3 slots, any mix of node / state / region / national. Synced to the hash query (?sel=).
+// Selection store: up to 16 slots, any mix of node / state / region / national. Synced to the hash query (?sel=).
 import { spanEquals, scenarioEquals, isNeutral, parseCfg, parseWx } from './query-extras.js';
-export const MAX_SEL = 3;
+export const MAX_SEL = 16;
 const key = (s) => (s.kind === 'national' ? 'national' : s.kind === 'node' ? s.id : `${s.kind}:${s.id}`);
 
 /** Parse ?sel=. valid (optional) = { node(id), state(key), region(key) } predicates: unknown ids are dropped.

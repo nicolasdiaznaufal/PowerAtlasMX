@@ -5,6 +5,7 @@ import { createStore, serializeSel } from '../v2/assets/js/store.js';
 import { createRouter, resolveHash } from '../v2/assets/js/route-logic.js';
 
 const valid = { node: (id) => ['01AAN-85', '01XAL-230'].includes(id), state: (k) => ['JALISCO', 'YUCATAN'].includes(k), region: (k) => ['NORTE'].includes(k) };
+const many = { node: () => false, state: () => true, region: () => false };
 
 /** fake browser history: push = user navigation, back/forward = traversal, replace = replaceState */
 function harness() {
@@ -49,12 +50,19 @@ test('Back and Forward restore each entry exactly', () => {
   assert.deepEqual(h.hist, ['#/map?sel=01AAN-85', '#/choose?sel=01AAN-85', '#/explorer?sel=state:JALISCO']);
 });
 
-test('deep link: unknown ids dropped, cap 3, national counts as one, URL normalised', () => {
+test('deep link: unknown ids dropped, national counts as one, URL normalised', () => {
   const h = harness();
   const r = h.push('#/explorer?sel=01AAN-85,ZZZ-BOGUS,state:JALISCO,national,state:YUCATAN');
   assert.equal(r.path, '/explorer');
-  assert.equal(h.url, '#/explorer?sel=01AAN-85,state:JALISCO,national');
-  assert.equal(h.store.get().length, 3);
+  assert.equal(h.url, '#/explorer?sel=01AAN-85,state:JALISCO,national,state:YUCATAN');
+  assert.equal(h.store.get().length, 4);
+});
+
+test('compare cap is 16 places: the 17th and later ids of a deep link are dropped', () => {
+  const sel = Array.from({ length: 20 }, (_, i) => `state:S${i}`).join(',');
+  const r = resolveHash(`#/explorer?sel=${sel}`, many);
+  assert.equal(r.list.length, 16);
+  assert.equal(r.list[15].id, 'S15');
 });
 
 test('unknown route normalises to #/; selection-less analysis route redirects to #/map', () => {

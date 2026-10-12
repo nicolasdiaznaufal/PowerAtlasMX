@@ -34,3 +34,24 @@ export const WX_DEFAULT = 'mean', CFG_DEFAULT = 'tracker';
 const WX_RE = /^(mean|win|y20(1[5-9]|2[0-5]))$/;
 export const parseCfg = (v) => (v === 'fijo' ? 'fijo' : CFG_DEFAULT);
 export const parseWx = (v) => (WX_RE.test(v || '') ? v : WX_DEFAULT);
+
+// Main time window = the ONE time control. Y2 (last 12 months) is the default and has no URL part; Y1 and the full history are written as
+// &from=YYYY-MM&to=YYYY-MM. Any other span is normalised to one of the three.
+export const Y1_SPAN = Object.freeze({ from: '2024-08', to: '2025-07' });
+export const FULL_SPAN = Object.freeze({ from: '2020-01', to: '2026-09' });
+const monthIdx = (m) => +m.slice(0, 4) * 12 + (+m.slice(5, 7) - 1);
+/** 'Y1' | 'Y2' | 'ALL' of a stored span. */
+export function winOfSpan(span) {
+  if (!span) return 'Y2';
+  if (span.from === Y1_SPAN.from && span.to === Y1_SPAN.to) return 'Y1';
+  return monthIdx(span.to) - monthIdx(span.from) >= 23 ? 'ALL' : 'Y2';
+}
+/** the span stored for a window ('Y2' -> null). `full` overrides the default full-history bounds (the data's own months). */
+export function spanForWin(w, full = null) {
+  if (w === 'Y1') return { ...Y1_SPAN };
+  if (w === 'ALL') return { ...(full || FULL_SPAN) };
+  return null;
+}
+export const normalizeSpan = (span, full = null) => spanForWin(winOfSpan(span), full);
+/** the window whose figures feed the 12-month analysis (typical day, revenue, economics): the full history uses the last 12 months. */
+export const dataWin = (w) => (w === 'ALL' ? 'Y2' : w);

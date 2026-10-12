@@ -7,19 +7,18 @@ import { num, signed } from '../../../assets/js/format.js';
 import { segment } from './controls.js';
 import { barChart, renderChart, chartWidth, niceTicks, niceMax } from './svg-charts.js';
 import { loadFin, loadGeoRaw, placeInputs, areaStat, finEval } from './fin-data.js';
-import { mountPlacePicker, placeKey, placeName } from './place-picker.js';
 import { activeSet, statusOf, subscribe, assumpBarHTML } from './assump.js';
 import { verdictPillHTML } from './verdict.js';
 import { createCanvasMap, tipFor, selectionOf, labelSize } from './geo-canvas.js';
 import { esc } from './compare-ui.js';
 
+const placeKey = (p) => (p ? `${p.kind}:${p.id}` : '');
 const f0 = (v) => num(v, 0), f1 = (v) => num(v, 1), f2 = (v) => num(v, 2);
 
 export function coverageCardHTML() {
   return `<section class="xp-card cover" id="cv-card" aria-labelledby="cv-h"><h2 class="mono" id="cv-h">Where the captured price covers the cost</h2>
-    <div class="pl-top"><div id="cv-pick" class="pp"></div>
-      <div class="cv-segs"><div class="seg" role="radiogroup" aria-label="Window" id="cv-yr" style="grid-template-columns:repeat(2,1fr)"></div>
-      <div class="seg" role="radiogroup" aria-label="Map and bars level" id="cv-lv" style="grid-template-columns:repeat(2,1fr)"></div></div></div>
+    <div class="pl-top"><p class="xp-text" id="cv-where"></p>
+      <div class="seg" role="radiogroup" aria-label="Map and bars level" id="cv-lv" style="grid-template-columns:repeat(2,1fr)"></div></div>
     <div class="assump-bar" id="cv-bar"></div><div id="cv-verdict"></div><div class="kpis" id="cv-kpi"></div>
     <div class="cv-cols"><div><div class="map-wrap"><div id="cv-map" role="img" aria-label="Map of Mexico showing which areas cover the LCOE"></div></div>
       <div class="legend mono"><span><i style="background:var(--map-hi)"></i>Captured price at or above the LCOE</span><span><i style="background:var(--c-energy)"></i>Captured price below the LCOE</span></div></div>
@@ -30,10 +29,11 @@ export function coverageCardHTML() {
 export function mountCoverage(root, { shell, winId }) {
   const card = root.querySelector('#cv-card');
   if (!card) return;
-  const q = (s) => card.querySelector(s), ui = ((shell.revUi = shell.revUi || {}).cov = shell.revUi.cov || { yr: winId, lv: 'region', place: null, memo: {}, selKey: '' });
-  const first = shell.store.get()[0], selKey = placeKey(first);
-  if (first && (!ui.place || ui.selKey !== selKey)) { ui.place = { kind: first.kind, id: first.id }; ui.memo = {}; ui.selKey = selKey; }
-  if (!ui.place) return;
+  const q = (s) => card.querySelector(s), ui = ((shell.revUi = shell.revUi || {}).cov = shell.revUi.cov || { lv: 'region' });
+  const first = shell.store.get()[0];
+  if (!first) return;
+  ui.place = { kind: first.kind, id: first.id }; ui.yr = winId;
+  const placeName = (sh, p) => sh.label(p).t;
   let src = null, raw = null, gm = null, off = null, ver = 0;
   const real = () => shell.store.real;
 
@@ -75,7 +75,7 @@ export function mountCoverage(root, { shell, winId }) {
         const L = res && res.mode && res[lv] && res[lv][k] ? res[lv][k].lcoe : null, p = px(s, 'p_cap', rl);
         return tip(`<b>${esc(lv === 'region' ? regName(k) : stName(k))}</b><span class="hv-row"><em>Captured price</em><strong>${f0(p)}</strong></span>${L == null ? '' : `<span class="hv-row"><em>LCOE</em><strong>${f0(L)}</strong></span><span class="hv-row"><em>Margin</em><strong>${signed(p - L, 0)}</strong></span>`}`, cx, cy);
       },
-      onClick: (h) => { if (h.kind !== 'state') return; const t = lv === 'state' ? { kind: 'state', id: h.key } : h.region !== 'BAJA' ? { kind: 'region', id: h.region } : null; if (t && areaStat(src.analysis, yr, t.kind, t.id)) { ui.place = t; ui.memo = {}; remountPicker(); paint(); } } });
+      onClick: (h) => { if (h.kind !== 'state') return; const t = lv === 'state' ? { kind: 'state', id: h.key } : h.region !== 'BAJA' ? { kind: 'region', id: h.region } : null; if (t && areaStat(src.analysis, yr, t.kind, t.id)) shell.store.set([t, ...shell.store.get().slice(1).filter((x) => !(x.kind === t.kind && x.id === t.id))]); } });
     gm.setFill({ level: lv, color: (k) => { const o = cover(lv, k); return o === null ? null : o ? '#EDE6D0' : '#658169'; },
       label: (k) => { const s = areaStat(src.analysis, yr, 'region', k), L = res && res.region && res.region[k]; return s && L && lv === 'region' ? signed(px(s, 'p_cap', rl) - L.lcoe, 0) : ''; }, name: (k) => RN[k] });
     gm.setSelected({ region: lv === 'region' && pl.kind === 'region' ? pl.id : lv === 'region' && sel.region ? sel.region : null, state: lv === 'state' && (pl.kind === 'state' || pl.kind === 'node') ? sel.state : null });
@@ -92,12 +92,8 @@ export function mountCoverage(root, { shell, winId }) {
     renderChart(el, () => barChart({ bars, H: 320, scale: niceTicks(0, niceMax(top)), fmt: (v) => f0(v), xEvery: every, hline: res && res.mode === 'target' ? { v: res.threshold, label: `LCOE ${f0(res.threshold)} MXN/MWh` } : null,
       aria: 'Captured solar price by region or state, sorted, with the selected area outlined', ytitle: `Captured price, MXN/MWh · ${rl ? "today's pesos" : 'nominal'}`, xtitle: `${lv === 'region' ? 'Control region' : 'State'} (sorted by captured price)` }));
   }
-  const remountPicker = () => mountPlacePicker(q('#cv-pick'), { shell, ui, id: 'cv', onChange: paint });
-  remountPicker();
-  const drawSegs = () => {
-    segment(q('#cv-yr'), [['Y1', WIN.Y1.short], ['Y2', WIN.Y2.short]], ui.yr, (k) => { ui.yr = k; drawSegs(); paint(); });
-    segment(q('#cv-lv'), [['region', 'Regions'], ['state', 'States']], ui.lv, (k) => { ui.lv = k; drawSegs(); paint(); });
-  };
+  q('#cv-where').textContent = `${placeName(shell, first)} · ${WIN[ui.yr].label}. Place and window are the page's own.`;
+  const drawSegs = () => segment(q('#cv-lv'), [['region', 'Regions'], ['state', 'States']], ui.lv, (k) => { ui.lv = k; drawSegs(); paint(); });
   drawSegs();
   off = subscribe(() => { if (!card.isConnected) { off(); return; } paint(); });
   Promise.all([loadFin(), loadGeoRaw()]).then(([s, g]) => { if (card.isConnected) { src = s; raw = g; paint(); } }).catch(() => { q('#cv-text').innerHTML = '<li>The coverage view could not be loaded.</li>'; });

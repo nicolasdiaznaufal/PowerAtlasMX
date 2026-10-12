@@ -36,16 +36,16 @@ test('scenario and span survive the URL, Back and Forward (and are written by hr
   const store = createStore(), hist = []; let i = -1;
   const router = createRouter({ store, valid: () => valid, replace: (h) => { hist[i] = h; }, currentHash: () => hist[i] });
   const push = (h) => { hist.length = i + 1; hist.push(h); i++; router.resolve(h); };
-  push('#/explorer?sel=01AAN-85&from=2023-03&to=2025-08&sc=p:50,m:100,y:10');
-  assert.deepEqual(store.span, { from: '2023-03', to: '2025-08' });
+  push('#/explorer?sel=01AAN-85&from=2024-08&to=2025-07&sc=p:50,m:100,y:10');
+  assert.deepEqual(store.span, { from: '2024-08', to: '2025-07' });
   assert.deepEqual(store.scenario, { price: 50, dip: 100, yield: 10 });
-  assert.equal(hist[i], '#/explorer?sel=01AAN-85&from=2023-03&to=2025-08&sc=p:50,m:100,y:10');
+  assert.equal(hist[i], '#/explorer?sel=01AAN-85&from=2024-08&to=2025-07&sc=p:50,m:100,y:10');
   store.setScenario(null);
-  assert.equal(hist[i], '#/explorer?sel=01AAN-85&from=2023-03&to=2025-08');
+  assert.equal(hist[i], '#/explorer?sel=01AAN-85&from=2024-08&to=2025-07');
   push('#/revenue?sel=01AAN-85');                        // explicit entry without extras = real values, default window
   assert.equal(store.span, null); assert.equal(store.scenario, null);
   i--; router.resolve(hist[i]);
-  assert.deepEqual(store.span, { from: '2023-03', to: '2025-08' });
+  assert.deepEqual(store.span, { from: '2024-08', to: '2025-07' });
   assert.equal(hrefFor('/map', [{ kind: 'node', id: 'A' }], true, { span: null, sc: { price: 1, dip: 100, yield: 0 } }), '#/map?sel=A&real=1&sc=p:1,m:100,y:0');
 });
 

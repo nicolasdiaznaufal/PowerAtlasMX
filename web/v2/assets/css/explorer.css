@@ -246,3 +246,41 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 @media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
 .pp .seg4.pp-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 .foot-btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+
+/* M13: one time control, joined simulation + hourly card, compare grids, zoom, inline assumptions */
+.pgrid { display: grid; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); gap: 12px 14px; }
+.pcell { margin: 0; display: grid; gap: 4px; min-width: 0; align-content: start; }
+.pcell figcaption, .pgrid .slot-head { font-size: 14px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; line-height: 1.25; }
+.pgrid.cols-3 .tick, .pgrid.cols-4 .tick { font-size: 10px; }
+.pgrid.cols-4 .decomp-slot details { display: none; }
+.legend.small { font-size: 10.5px; gap: 6px 12px; }
+.decomp .how { color: var(--ink-2); } .decomp .how summary { cursor: pointer; }
+.zoom-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--ink-3); }
+.zoom-bar .chip-btn { height: 26px; font-size: 12px; } .zoom-bar .chip-btn:disabled { opacity: .45; cursor: default; }
+.chart .zoom-sel { fill: var(--accent); opacity: .18; stroke: var(--accent); stroke-width: 1; pointer-events: none; }
+.chart svg { cursor: crosshair; }
+#vb-scn.scn-wrap { margin-bottom: -20px; }
+#vb-scn .scn { border-bottom-left-radius: 0; border-bottom-right-radius: 0; box-shadow: var(--ring); padding: 8px 12px 6px; gap: 4px 20px; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; }
+#vb-scn .scn legend { grid-column: 1 / 4; padding: 0; float: left; font-size: 10.5px; }
+#vb-scn .scn .hint { grid-column: 1 / 4; font-size: 12px; margin: 0; }
+#vb-scn .scn-row { gap: 0 8px; font-size: 13px; } #vb-scn .scn-row output { font-size: 11px; }
+#vb-scn .scn-row input { height: 16px; margin: 2px 0 0; }
+#vb-scn .scn-help { display: none; }
+#vb-scn .scn-actions { grid-column: 4; grid-row: 2 / span 2; flex-direction: column; align-items: stretch; gap: 6px; }
+#vb-scn .scn-actions .btn { height: 30px; font-size: 13px; padding: 0 12px; }
+#vb-body > .decomp:first-child { border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 10px; gap: 8px; }
+@media (max-width: 760px) { #vb-scn .scn { grid-template-columns: minmax(0, 1fr); } #vb-scn .scn legend, #vb-scn .scn .hint, #vb-scn .scn-actions { grid-column: 1; grid-row: auto; flex-direction: row; } }
+.assump-inline .ai-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.assump-inline .ai-head h2 { margin: 0; } .assump-inline .ai-head .seg { width: 320px; max-width: 100%; }
+.ai-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 14px; }
+.ai-grid .field { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 0; border: 0; }
+.ai-grid .field input { grid-column: 1; grid-row: auto; height: 32px; }
+.ai-grid .field label { font-size: 13px; color: var(--ink-2); } .ai-grid .field small { grid-column: 1; font-size: 11px; }
+.ai-grid .field .seg { grid-column: 1; grid-row: auto; grid-template-columns: repeat(2, 1fr); }
+.ai-foot { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 10px; }
+@media (max-width: 1100px) { .ai-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .ai-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.an-side { max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: thin; }
+.xp-scope { overflow-wrap: anywhere; white-space: normal; padding-right: 4px; }
+.wx select { max-width: 100%; }
+@media (max-width: 999px) { .an-side { max-height: none; overflow: visible; } }
