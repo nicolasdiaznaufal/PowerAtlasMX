@@ -24,7 +24,7 @@ so a fresh clone has no data. Regenerate with `web/tools/build_derived.py` and c
 (see `web/README.md`). Never commit data files. Tests that need the data skip themselves when `web/data` is absent.
 
 ## Routes
-`#/` landing, `#/map`, `#/choose`, `#/explorer`, `#/revenue`. Selection lives in the query: `?sel=01AAN-85,state:JALISCO,national`
+`#/` landing, `#/map`, `#/choose`, `#/explorer`, `#/revenue`, `#/appendix` (standalone page, no selection, opened in a new tab from Revenue). Selection lives in the query: `?sel=01AAN-85,state:JALISCO,national`
 (1 to 3 slots, ids validated against the atlas, unknown ids dropped, URL normalised). Price basis: `&real=1` = today's pesos (nominal is the default and is omitted).
 Back/Forward restore each entry exactly. Explorer and Revenue overlay up to 3 slots and end with a comparison table.
 
@@ -83,6 +83,17 @@ Chart widths follow the container so tick labels stay readable on phones; every 
 - **Monthly value-factor series and the span slider** stay on the single-axis tracker with yearly-mean weather (the published monthly series); the page says so.
 - **Service worker:** the data files are network first; the core JSON (about 21 MB raw) is pinned and at most 5 per-variant files (`variants/*`, `variant_extra/*`, about 25 MB worst case) are kept, oldest evicted first; only code and CSS are precached.
 - **Credits:** Solar resource: NASA POWER (MERRA-2 / CERES SYN1deg); PV model: pvlib-python (footer of Explorer and Revenue, `docs/CREDITS.md`).
+
+## V1 parity (M12)
+- **Explorer order:** price parts by hour, 7-day moving averages of PML / congestion / losses on ONE plot (three colours, always visible) plus the price spread, value factor by month,
+  maps, then irradiance and the comparison table. The simulation box ("What if?") is a horizontal band above the first card (same state and URL as before). The 7-day moving average of the value factor was removed (line, toggle, copy, tests).
+- **Maps** (`maps-card.js`, v1 `GeoMap` canvas, lazy): regional map with names, value factor and node dots (hover shows the value; current selection outlined) and one-at-a-time maps
+  (value factor, captured price, % of nodes covering the LCOE, price spread) with a Regions / States toggle. Window and price basis follow the page.
+- **Revenue economics** (`pnl-card.js`, `coverage-card.js`, `fin-data.js`): v1 Node P&L and Profitability without the shortcut bar (bars: real revenue, levelized cost) and without IRR / NPV.
+  Same inputs and arithmetic as v1 (`finmodel.js`, `params.js`, `finworker.runEval`); the verdict pill is neutral (words and an icon, never a colour) and appears only for a complete user set.
+- **Assumptions drawer** (`assump-drawer.js`, `assump.js`): v1 sets and localStorage key (`nsv4:assumptions`); Mounting is the page's tracker / fixed-tilt switch, in both directions.
+- **Daily card (Revenue):** revenue, captured price (full width), then solar hours and solar output as two bar charts (7-day averages).
+- **Appendix** (`appendix*.js`, `appendix.css`): A1 to A4 of v1 (A5 is not ported). It is the one place with equations (rendered with the vendored KaTeX, precached) because the section is the equations.
 
 ## Roadmap (not built)
 Nothing pending from the solar brief; NSRDB contrast and a daily NASA refresh are held (see docs/SOLAR_V2_PLAN.md section 7).

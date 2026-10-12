@@ -16,6 +16,7 @@ import { isNeutral } from './query-extras.js';
 import { mountScenarioPanel } from './scenario-panel.js';
 import { mountRangeSlider } from './range-slider.js';
 import { summaryRows, summaryHTML } from './span-summary.js';
+import { installDrawer } from './assump-drawer.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -27,6 +28,7 @@ export function mountView({ host, side, shell, view, build }) {
     <div id="vb-span"></div><div id="vb-scn" class="scn-wrap"></div>
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
   side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
+  installDrawer(shell);
   const scn = mountScenarioPanel(host.querySelector('#vb-scn'), shell.store);
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());

@@ -59,8 +59,8 @@ export function mountDaily(root, { entries, shell, winId, view }) {
       const pleg = `<div class="legend mono">${parts.map((sr) => `<span>${swatchStyle(sr.style)}${esc(sr.label)}</span>`).join('')}</div>`;
       body.innerHTML = `<h3 class="mono sub">PML, congestion and losses, 7-day moving average (MXN/MWh, ${esc(pesos)})</h3>${pleg}<div class="chart" id="dl-parts"></div>
         <h3 class="mono sub">Daily price spread (max PML − min PML), 7-day moving average</h3><p class="xp-text">${esc(C.spread)}</p>${leg}<div class="chart" id="dl-spread"></div>${notes}`;
-      plot(q('#dl-parts'), dates, parts, { unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'PML, congestion and losses per day, 7-day moving average', H: 300 });
-      plot(q('#dl-spread'), dates, seriesOf('spread'), { unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', H: 240 });
+      plot(q('#dl-parts'), dates, parts, { fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'PML, congestion and losses per day, 7-day moving average', H: 300 });
+      plot(q('#dl-spread'), dates, seriesOf('spread'), { fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', H: 240 });
       return;
     }
     const bars = (key) => entries.map((e, k) => {

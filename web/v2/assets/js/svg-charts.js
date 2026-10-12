@@ -72,7 +72,7 @@ export function barChart({ bars, hline = null, refs = [], H = 220, scale = null,
     if (b.v !== null && b.v !== undefined) {
       const y1 = y(Math.min(sc.hi, Math.max(sc.lo, b.v)));
       const h = Math.max(0.5, Math.abs(y0 - y1)), top = Math.min(Math.min(y0, y1), H - PAD.b - h);
-      out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}">${ticks ? '' : `<title>${esc(b.tip || `${b.label}: ${fmt(b.v)}`)}</title>`}</rect>`;
+      out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.color}"${b.stroke ? ` stroke="${b.stroke}" stroke-width="3"` : ''}>${ticks ? '' : `<title>${esc(b.tip || `${b.label}: ${fmt(b.v)}`)}</title>`}</rect>`;
     }
     if (tk ? tk.has(i) : i % xEvery === 0) out += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 28}" text-anchor="middle" class="tick">${esc(tk ? tk.get(i) : b.label)}</text>`;
   });

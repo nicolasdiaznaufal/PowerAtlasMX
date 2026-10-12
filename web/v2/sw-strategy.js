@@ -5,7 +5,7 @@
     if (pathname === '/v2/sw.js' || pathname === '/v2/sw-strategy.js') return 'bypass';          // always fresh: the update flow
     if (mode === 'navigate' && pathname.indexOf('/v2/') === 0) return 'navigate';                // cached shell of this release, network only when missing
     if (pathname.indexOf('/v2/') === 0) return 'static';                                         // v2 app files: cache-first within the release
-    if (pathname.indexOf('/assets/js/') === 0 || pathname === '/assets/geo/mx.json') return 'static'; // v1 pure modules + geometry reused by v2 (precached with the release)
+    if (pathname.indexOf('/assets/js/') === 0 || pathname === '/assets/geo/mx.json' || pathname.indexOf('/assets/vendor/katex/') === 0) return 'static'; // v1 pure modules, geometry and the KaTeX files of the appendix (precached with the release)
     if (pathname.indexOf('/data/') === 0) return 'data';                                         // JSON: network first, offline fallback only
     return 'bypass';
   }

@@ -4,6 +4,8 @@ import { isNeutral } from './query-extras.js';
 import { decompSectionHTML, drawDecomp } from './decomposition.js';
 import { seriesCardHTML, paintSeries } from './series-card.js';
 import { dailyCardHTML, mountDaily } from './daily-card.js';
+import { pnlCardHTML, mountPnl } from './pnl-card.js';
+import { coverageCardHTML, mountCoverage } from './coverage-card.js';
 import { compareRows, columnLabels } from './compare-data.js';
 import { tableLabels } from './explorer-data.js';
 import { num } from '../../../assets/js/format.js';
@@ -25,7 +27,7 @@ export function mountRevenue(host, { shell, side }) {
   return mountView({
     host, side, shell, view: 'revenue',
     build: {
-      mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${revenueCardHTML(entries)}${seriesCardHTML()}${dailyCardHTML('revenue')}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
+      mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${revenueCardHTML(entries)}${pnlCardHTML()}${coverageCardHTML()}${seriesCardHTML()}${dailyCardHTML('revenue')}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
       draw(root, { entries, winId, real, w }, { repaint }) {
         drawDecomp(root, entries);
         const rows = compareRows(entries, real), L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), pesos = real ? "today's pesos" : 'nominal';
@@ -50,6 +52,8 @@ export function mountRevenue(host, { shell, side }) {
           root.querySelector('#rv-table').innerHTML = '';
           root.querySelector('#rv-table').closest('details').hidden = true;
         }
+        mountPnl(root, { shell, winId });
+        mountCoverage(root, { shell, winId });
         mountDaily(root, { entries, shell, winId, view: 'revenue' });
         paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
         if (entries.length > 1) {

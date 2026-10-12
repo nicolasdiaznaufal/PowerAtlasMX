@@ -36,6 +36,12 @@ export function precacheList() {
   files.add('assets/fonts/Geist-Variable.woff2'); files.add('assets/fonts/GeistMono-Variable.woff2');
   files.add('assets/img/hero-sun-1000.webp'); files.add('assets/img/hero-sun-2000.webp'); files.add('assets/icons/eclipse.svg');
   files.add('assets/img/clients/manifest.json'); files.add('assets/vendor/deckgl/deck.min.js'); files.add('../assets/geo/mx.json');
+  // appendix equations: KaTeX is vendored under web/assets/vendor/katex (v1); js, css and the woff2 fonts the css names
+  const kdir = join(WEB, 'assets/vendor/katex'), kcss = join(kdir, 'katex.min.css');
+  if (existsSync(kcss)) {
+    files.add('../assets/vendor/katex/katex.min.css'); files.add('../assets/vendor/katex/katex.min.js');
+    for (const m of readFileSync(kcss, 'utf8').matchAll(/url\(([^)]*?\.woff2)\)/g)) files.add(`../assets/vendor/katex/${m[1].replace(/^["']|["']$/g, '')}`);
+  }
   return ['./', ...[...files].sort()];
 }
 

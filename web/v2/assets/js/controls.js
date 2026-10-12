@@ -49,5 +49,10 @@ export function mountControls(host, shell, onChange) {
   wx.addEventListener('change', () => { shell.store.setWx(wx.value); host.querySelector('#ct-live').textContent = `Weather: ${COPY.wxLabel(wx.value)}`; });
   mount();
   draw();
-  return { destroy() {} };
+  // the mounting can also change from the assumptions drawer: keep the switch in step
+  const off = shell.store.subscribe(() => {
+    const chk = host.querySelector('#ct-mount [aria-checked="true"]');
+    if (!chk || (shell.store.cfg === 'fijo') !== /Fixed/.test(chk.textContent)) mount();
+  });
+  return { destroy() { off(); } };
 }
