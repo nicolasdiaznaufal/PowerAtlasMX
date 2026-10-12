@@ -29,7 +29,8 @@ export function mapsCardHTML() {
     <div class="seg seg4 map-tabs" role="radiogroup" aria-label="Map metric" id="mp-metric"></div>
     <p class="xp-text" id="mp-mnote"></p>
     <div class="map-wrap" id="mp-w2"><div id="mp-one" role="img" aria-label="Map of Mexico by area for the selected metric"></div></div>
-    <div class="ramp mono" id="mp-l2"></div></section>`;
+    <div class="ramp mono" id="mp-l2"></div>
+    <details class="mp-table"><summary class="mono">Values as a table</summary><div class="tbl tall" id="mp-tbl"></div></details></section>`;
 }
 
 export function mountMaps(root, { shell, winId }) {
@@ -88,6 +89,10 @@ export function mountMaps(root, { shell, winId }) {
     q('#mp-l2').innerHTML = `<span>${mk.f(mk.lo)}</span><i></i><span>${mk.f(mk.hi)}</span><span class="muted">${esc(mk.label)}${ui.metric === 'cap' ? ` · MXN/MWh` : ui.metric === 'spread' ? ' · MXN/MWh' : ''}</span>`;
     const st = statusOf(real), thr = res && res.mode ? (res.mode === 'own' ? 'each node’s own LCOE' : `${f0(res.threshold)} MXN/MWh`) : 'the deck-scenario LCOE (714 MXN/MWh)';
     q('#mp-mnote').textContent = ui.metric === 'cover' ? `Share of the area's nodes whose captured price covers ${thr} (${TAG[st.level]}). Change it in the Assumptions of the Revenue page.` : '';
+    // the same figures as a table: the canvas maps are hover-only, this is the keyboard and screen-reader path
+    const keys = lv === 'region' ? REGIONS.slice() : Object.keys(src.analysis.ventanas[wk].por_config.tracker.estados).sort((x, y) => stName(x).localeCompare(stName(y)));
+    const cell = (k, key) => { const v = val(k, lv, key); return v == null ? '—' : METRICS[k].f(v); };
+    q('#mp-tbl').innerHTML = `<table><thead><tr><th>${lv === 'region' ? 'Region' : 'State'}</th>${ORDER.map((k) => `<th class="n">${esc(METRICS[k].label)}</th>`).join('')}</tr></thead><tbody>${keys.map((key) => `<tr><td>${esc(lv === 'region' ? regName(key) : stName(key))}</td>${ORDER.map((k) => `<td class="n">${cell(k, key)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     maps = [a, b];
   };
   const go = () => run().catch((e) => { if (card.isConnected) { console.error(e); q('#mp-note').textContent = 'The maps could not be loaded.'; } });
