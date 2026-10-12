@@ -80,7 +80,8 @@ details summary { cursor: pointer; color: var(--ink-2); }
 .an-side .seg4, .seg4 { grid-template-columns: repeat(2, 1fr) !important; }
 .an-main { display: grid; gap: 20px; min-width: 0; }
 .an-intro { margin: 0; color: var(--ink-2); max-width: 74ch; }
-.an-main > .an-intro { min-height: 140px; }
+.an-main > .an-intro { min-height: 140px; max-width: none; }
+@media (min-width: 1700px) { .an-main > .an-intro { max-width: 120ch; } }
 .draft { color: var(--ink-3); border: 1px solid var(--hairline); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
 .inds { display: grid; gap: 14px; }
 .ind { display: grid; gap: 8px; padding: 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); }
