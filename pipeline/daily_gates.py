@@ -78,7 +78,7 @@ def window_cfg(cf: dict, pm: dict, ym: np.ndarray, h, pml, grid, wtab) -> dict:
     for w in ("Y1", "Y2"):
         a, b = WINDOWS[w]
         m = (yh >= a) & (yh <= b)
-        idx = np.array([pos.get(int(x), -1) for x in yh[m]])
+        idx = np.array([pos.get(int(x), -1) for x in yh[m]], dtype=np.int64)
         if (idx < 0).any():
             out["d_exact"][w] = None
             continue
