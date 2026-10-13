@@ -37,13 +37,11 @@ test('Explorer daily card: one plot for PML, congestion and losses with three co
   assert.equal(/\bvf\b/.test(src('assets/js/copy.js').split('daily: {')[1].split('lazy:')[0]), false); // no 7-day VF copy left
 });
 
-test('Revenue daily card: revenue, captured price, then solar hours and solar output as separate bar charts; no metric toggle', () => {
+test('Revenue daily card: captured price with span, national and region lines, then solar hours and solar output side by side', () => {
   const s = src('assets/js/daily-card.js');
-  assert.equal(/dl-metric|METRICS|Daily metric/.test(s), false);
+  assert.equal(/dl-metric|METRICS|Daily metric|g-rev/.test(s), false);
   assert.ok(/kind: 'bar'/.test(s) && /barChart\(/.test(s));
-  const o = ['g-rev', 'g-cap', 'g-hours', 'g-out'].map((id) => s.indexOf(`id="${id}"`) > 0 || s.indexOf(`'${id}'`) > 0);
-  assert.ok(o.every(Boolean));
-  assert.ok(s.indexOf("one('g-rev'") < s.indexOf("one('g-cap'") && s.indexOf("one('g-cap'") < s.indexOf("one('g-hours'"));
+  assert.ok(s.indexOf('id="g-cap"') < s.indexOf('class="bar-pair"') && s.indexOf("one('g-hours'") < s.indexOf("one('g-out'"));
 });
 
 test('barChart: month ticks and date hover title for daily bars', () => {
@@ -63,10 +61,11 @@ test('route #/appendix: bare route, no selection, never touches the store', () =
   assert.match(m, /'\/appendix': async/); assert.match(m, /'\/appendix': 'hidden'/);
 });
 
-test('"Open appendix" is a same-origin link opening a new tab, only on Revenue', () => {
+test('"Open appendix" is a same-origin link opening a new tab, in Explorer and Revenue', () => {
   const s = src('assets/js/analysis.js');
   assert.match(s, /href="#\/appendix" target="_blank" rel="noopener"/);
-  assert.match(s, /view === 'revenue' \? '<a [^']*Open appendix/);
+  assert.match(s, /Open appendix/);
+  assert.equal(/view === 'revenue' \? '<a [^']*Open appendix/.test(s), false);
 });
 
 test('appendix: A1 to A4 present, A5 and the shortcut are not; interactive A4 controls exist', () => {

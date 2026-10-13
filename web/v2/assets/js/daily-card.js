@@ -4,12 +4,13 @@
 import { WIN } from '../../../assets/js/names.js';
 import { num, mesCorto } from '../../../assets/js/format.js';
 import { lineChart, barChart, renderChart, chartWidth, thin, niceTicks, niceMax } from './svg-charts.js';
-import { dailyView, rangeOf, dayFactors, dateOf } from './daily-math.js';
+import { dailyView, rangeOf, dayFactors, dateOf, dayDiff, spanCaptured } from './daily-math.js';
 import { loadDaily, loadDeflator, shouldLoadDaily } from './daily-load.js';
 import { esc, nameOf } from './compare-ui.js';
 import { COPY } from './copy.js';
 import { createZoom } from './zoom.js';
 import { gridHTML, cellHeight } from './grid-plots.js';
+import { swatchStyle } from './series-style.js';
 
 const C = COPY.daily, XT = 'Date (Mexico City time, CDMX)';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -18,7 +19,7 @@ const PARTS = [['pml', 'PML', 'var(--s2)'], ['congestion', 'Congestion', 'var(--
 const BAR = { hours: ['Solar hours', 'hours per day', 'var(--c-prod)', 1], output: ['Solar output (NASA POWER)', 'MWh per MWp per day', 'var(--s3)', 2] };
 
 export function dailyCardHTML(view) {
-  const [title, lines] = view === 'explorer' ? ['Daily price parts, 7-day moving average', [C.avg, C.parts]] : ['Daily revenue, 7-day moving average', [C.avg, C.revenue]];
+  const [title, lines] = view === 'explorer' ? ['Daily price parts, 7-day moving average', [C.avg, C.parts]] : ['Daily captured price, 7-day moving average', [C.avg, C.cap]];
   return `<section class="xp-card daily" id="dl-card"><h2 class="mono">${esc(title)}</h2>${lines.map((l) => `<p class="xp-text">${esc(l)}</p>`).join('')}
     <p class="xp-text">${esc(C.weather)}</p><div id="dl-body"><p class="xp-text">${esc(C.lazy)}</p></div></section>`;
 }
@@ -35,12 +36,23 @@ export function axisTicks(dates, width) {
 }
 export const monthTicks = (dates, width) => axisTicks(dates, width);
 
+/** control region of a slot (null for national or unknown). */
+export function regionOfSlot(slot, shell) {
+  if (slot.kind === 'region') return slot.id;
+  if (slot.kind === 'node') { const n = shell.byId && shell.byId.get(slot.id); return n ? n.region : null; }
+  if (slot.kind === 'state') { const f = shell.geo && shell.geo.states.features.find((x) => x.properties.key === slot.id); return f ? f.properties.region : null; }
+  return null;
+}
+const title = (s) => (s || '').charAt(0) + (s || '').slice(1).toLowerCase();
+
 export function mountDaily(root, { entries, shell, winId, view }) {
   const card = root.querySelector('#dl-card'), body = card && card.querySelector('#dl-body');
   if (!body) return;
   const slots = entries.map((e) => e.slot), hasSlot = slots.some((s) => s.kind);
   const run = async () => {
-    const [docs, defl] = await Promise.all([Promise.all(slots.map((s) => loadDaily(s).catch(() => null))), loadDeflator().catch(() => null)]);
+    const regKeys = view === 'revenue' ? [...new Set(slots.map((s) => regionOfSlot(s, shell)).filter(Boolean))] : [];
+    const [docs, defl, nat, regDocs] = await Promise.all([Promise.all(slots.map((s) => loadDaily(s).catch(() => null))), loadDeflator().catch(() => null),
+      view === 'revenue' ? loadDaily({ kind: 'national', id: 'ALL' }).catch(() => null) : null, Promise.all(regKeys.map((k) => loadDaily({ kind: 'region', id: k }).catch(() => null)))]);
     if (!root.isConnected) return;
     const real = shell.store.real, cfg = shell.store.cfg === 'fijo' ? 'fijo' : 'tracker', span = shell.store.span || { from: WIN[winId].desde, to: WIN[winId].hasta };
     const ref = docs.find(Boolean);
@@ -89,12 +101,31 @@ export function mountDaily(root, { entries, shell, winId, view }) {
         plotGrid(body.querySelector('#g-spread'), { key: 'spread', fmt: (v) => num(v, 0), unit: 'MXN/MWh', scaleOf: scale0, H: sh,
           build: { ytitle: `MXN/MWh (${pesos})`, aria: 'Daily price spread, 7-day moving average', series: (k, v) => [{ vals: v, label: 'Price spread', style: { color: 'var(--s1)', dash: '', marker: 'circle' } }] } });
       } else {
-        const one = (id, title, text = '') => `<h3 class="mono sub">${esc(title)}</h3>${text ? `<p class="xp-text">${esc(text)}</p>` : ''}<div id="${id}">${grid()}</div>`;
-        body.innerHTML = `${zoom.barHTML()}${one('g-rev', `Revenue per MWp per day (${pesos})`)}${one('g-cap', `Captured price, 7-day moving average (MXN/MWh, ${pesos})`, C.cap)}
-          ${one('g-hours', `${BAR.hours[0]}, 7-day moving average (${BAR.hours[1]})`, C.hours)}${one('g-out', `${BAR.output[0]}, 7-day moving average (${BAR.output[1]})`, C.output)}${notes}`;
-        const line = (id, key, name, ytitle, fmt, unit, H) => plotGrid(body.querySelector(id), { key, fmt, unit, scaleOf: scale0, H, build: { ytitle, aria: `${name} per day, 7-day moving average`, series: (k, v) => [{ vals: v, label: name, style: { color: 'var(--s1)', dash: '', marker: 'circle' } }] } });
-        line('#g-rev', 'revenue', 'Revenue', `MXN per MWp per day (${pesos})`, (v) => num(v, 0), 'MXN per MWp', lh);
-        line('#g-cap', 'cap', 'Captured price', `MXN/MWh (${pesos})`, (v) => num(v, 0), 'MXN/MWh', cellHeight(n, 280));
+        const one = (id, title, text = '', wide = null) => `<h3 class="mono sub">${esc(title)}</h3>${text ? `<p class="xp-text">${esc(text)}</p>` : ''}<div id="${id}">${gridHTML(cells, wide || body.clientWidth || 900)}</div>`;
+        body.innerHTML = `${zoom.barHTML()}<h3 class="mono sub">Captured price, 7-day moving average, with the span average, national and control-region averages (MXN/MWh, ${esc(pesos)})</h3><p class="xp-text">${esc(C.cap)}</p><div id="cap-leg"></div><div id="g-cap">${grid()}</div>
+          <div class="bar-pair"><div>${one('g-hours', `${BAR.hours[0]}, 7-day moving average (${BAR.hours[1]})`, C.hours, (body.clientWidth || 900) / 2)}</div><div>${one('g-out', `${BAR.output[0]}, 7-day moving average (${BAR.output[1]})`, C.output, (body.clientWidth || 900) / 2)}</div></div>${notes}`;
+        // captured price: the place, its average over the span (ratio of sums), the national line and the control-region line (existing daily area files)
+        const capOf = (doc) => { if (!doc) return null; const off = dayDiff(ref.start, doc.start); if (off !== 0 || doc.n !== ref.n) return null; return dailyView(doc, cfg, { real: !!fac, factors: fac }).cap.slice(i0, i1 + 1); };
+        const natCap = capOf(nat), regCap = new Map(regKeys.map((k, j) => [k, capOf(regDocs[j])]));
+        const [z0, z1] = zoom.range, d = dates.slice(z0, z1 + 1), host = body.querySelector('#g-cap'), tick = axisTicks(d, chartWidth(host.querySelector('.chart')) || 600);
+        const STY = { place: { color: 'var(--s1)', dash: '', marker: 'circle' }, avg: { color: 'var(--ink-2)', dash: '7 4', marker: 'square' }, nat: { color: 'var(--s2)', dash: '2 4', marker: 'triangle' }, reg: { color: 'var(--s3)', dash: '10 3 2 3', marker: 'circle' } };
+        const linesOf = (k) => {
+          const slot = slots[k], lines = [{ vals: vals('cap', k).slice(z0, z1 + 1), label: nameOf(shell, entries[k]), style: STY.place }];
+          const avg = docs[k] ? spanCaptured(docs[k], cfg, i0, i1, fac) : null;
+          if (avg !== null) lines.push({ vals: d.map(() => avg), label: 'Average over the span', style: STY.avg });
+          if (natCap && slot.kind !== 'national') lines.push({ vals: natCap.slice(z0, z1 + 1), label: 'National', style: STY.nat });
+          const rk = regionOfSlot(slot, shell), rc = rk && slot.kind !== 'region' && slot.kind !== 'national' ? regCap.get(rk) : null;
+          if (rc) lines.push({ vals: rc.slice(z0, z1 + 1), label: `${title(rk)} region`, style: STY.reg });
+          return lines;
+        };
+        const all = entries.flatMap((_, k) => linesOf(k).flatMap((l) => l.vals)).filter((v) => v !== null && Number.isFinite(v));
+        const sc = niceTicks(Math.min(0, ...all), niceMax(Math.max(...all, 1e-9)));
+        body.querySelector('#cap-leg').innerHTML = `<div class="legend mono">${[['Place', STY.place], ['Average over the span', STY.avg], ['National', STY.nat], ['Control region', STY.reg]].map(([l, st]) => `<span>${swatchStyle(st)}${esc(l)}</span>`).join('')}</div>`;
+        host.querySelectorAll('[data-cell]').forEach((el) => {
+          const k = +el.dataset.cell, H = cellHeight(n, 300);
+          const geom = renderChart(el, () => lineChart({ series: linesOf(k), labels: d, ticks: tick, markEvery: 0, H, fmt: (v) => num(v, 0), unit: 'MXN/MWh', ytitle: multi ? '' : `MXN/MWh (${pesos})`, xtitle: multi ? '' : XT, aria: `Captured price per day, 7-day moving average, with the span average, national and region lines, ${nameOf(shell, entries[k])}`, scale: sc, hoverTitle: fmtDate }), { compact: multi });
+          zoom.attach(el, geom, d.length);
+        });
         for (const [id, key] of [['#g-hours', 'hours'], ['#g-out', 'output']]) {
           const [t, u, color, dg] = BAR[key];
           plotGrid(body.querySelector(id), { key, kind: 'bar', fmt: (v) => num(v, dg), scaleOf: scale0, H: bh, build: { color, ytitle: u, name: t, aria: `Daily ${t.toLowerCase()}, 7-day moving average` } });

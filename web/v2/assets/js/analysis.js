@@ -26,7 +26,7 @@ export function mountAnalysis(root, { view, go }) {
       <p class="mono eyebrow">${c.title}</p>
       <h1>${c.title}</h1>
       <div class="an-layout">
-        <aside class="an-side" aria-label="Selection, controls and key indicators">
+        <aside class="an-side ${view === 'revenue' ? 'rev' : ''}" aria-label="Selection, controls and key indicators">
           <ul class="chips" id="chips" aria-label="Selection"></ul>
           <div class="add-row"><button type="button" class="btn btn-ghost btn-sm" id="add-btn" aria-expanded="false">+ Add</button><div id="add-slot"></div><p class="mono xp-scope" id="add-note" role="status"></p></div>
           <div id="scope"></div>
@@ -35,7 +35,7 @@ export function mountAnalysis(root, { view, go }) {
         <div class="an-main" id="an-content"></div>
       </div>
       <footer class="credits mono">${COPY.credits}</footer>
-      <p class="foot-btns"><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real, shell.store.extras)}">Open ${COPY[other].title}</a>${view === 'revenue' ? '<a class="btn btn-ghost btn-sm" id="open-appendix" href="#/appendix" target="_blank" rel="noopener">Open appendix<span class="sr"> (opens in a new tab)</span></a>' : ''}</p>
+      <p class="foot-btns"><a class="btn btn-ghost btn-sm" data-to="/${other}" href="${hrefFor('/' + other, list, shell.store.real, shell.store.extras)}">Open ${COPY[other].title}</a><a class="btn btn-ghost btn-sm" id="open-appendix" href="#/appendix" target="_blank" rel="noopener">Open appendix<span class="sr"> (opens in a new tab)</span></a></p>
     </main>
     <a class="mini-hit" data-to="/map" href="${hrefFor('/map', list, shell.store.real, shell.store.extras)}" aria-label="Back to the map"><span class="mono">Map</span></a>
   </div>`;

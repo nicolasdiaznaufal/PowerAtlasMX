@@ -69,3 +69,15 @@ export function dailyView(dec, cfg, { real = false, factors = null } = {}) {
     pml: ma7(px(p.pml_avg), w), congestion: ma7(px(p.congestion_avg), w), losses: ma7(px(p.perdidas_avg), w), spread: ma7(px(p.spread), wSpread),
   };
 }
+
+/** average captured price over days [i0, i1] of one decoded file, by ratio of sums (revenue / energy) over the days where both exist; null when none.
+ *  factors (today's-pesos factor per day) multiply the revenue of each day, as in dailyView. */
+export function spanCaptured(dec, cfg, i0, i1, factors = null) {
+  const c = dec[cfg];
+  let si = 0, sy = 0;
+  for (let i = i0; i <= i1; i++) {
+    const r = c.ingreso_dia[i], y = c.y_day[i], f = factors ? factors[i] : 1;
+    if (ok(r) && ok(y) && ok(f)) { si += r * f; sy += y; }
+  }
+  return sy > 0 ? si / sy : null;
+}

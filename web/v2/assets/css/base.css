@@ -9,8 +9,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* nav */
 .nav { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; align-items: center; gap: 24px; height: 64px; padding: 0 max(clamp(16px, 3vw, 40px), calc((100vw - var(--max)) / 2 + clamp(16px, 3vw, 40px))); }
-.nav .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 500; font-size: 14px; }
-.nav .brand svg { width: 28px; height: 28px; }
+.nav .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 500; font-size: 16.8px; white-space: nowrap; }
+.nav .brand svg { width: 33.6px; height: 33.6px; flex: none; }
 .nav .by { color: var(--ink-3); }
 .nav .spacer { flex: 1; }
 .nav-links { display: flex; gap: 20px; }

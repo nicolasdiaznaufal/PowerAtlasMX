@@ -152,3 +152,20 @@ test('left column: compact, sticky for the whole page, no inner scroll; one-line
   assert.match(ind, /multi && k !== fi\) return ''/);
   assert.match(ch, /list\.length > 6/); assert.match(ch, /aria-pressed/);
 });
+
+test('M16: assumptions in the left column of Revenue, brand 20% bigger, landing byline halved, appendix pill in Explorer', () => {
+  const vb = src('assets/js/view-base.js');
+  assert.match(vb, /side\.innerHTML = `[^`]*vb-assump/);
+  assert.match(vb, /mountAssumpInline\(side\.querySelector\('#vb-assump'\)/);
+  assert.match(src('assets/css/base.css'), /font-size: 16\.8px;[^}]*\}\n\.nav \.brand svg \{ width: 33\.6px; height: 33\.6px;/);
+  assert.match(src('assets/css/landing.css'), /clamp\(11px, 1\.525vw, 22px\)/);
+  assert.match(src('assets/css/explorer.css'), /\.bar-pair \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test('span captured price is a ratio of sums over the span, in the active pesos', async () => {
+  const { spanCaptured } = await import('../v2/assets/js/daily-math.js');
+  const dec = { tracker: { ingreso_dia: [100, 300, null, 50], y_day: [1, 1, 1, 0.5] } };
+  assert.equal(spanCaptured(dec, 'tracker', 0, 3), (100 + 300 + 50) / 2.5);   // the day without revenue is out of both sums
+  assert.equal(spanCaptured(dec, 'tracker', 0, 1, [2, 1, 1, 1]), (200 + 300) / 2);
+  assert.equal(spanCaptured(dec, 'tracker', 2, 2), null);
+});

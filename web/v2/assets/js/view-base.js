@@ -28,12 +28,12 @@ export function mountView({ host, side, shell, view, build }) {
   // the time span is the only time control (URL from/to). Figures that exist per 12-month window use the window that holds the span end.
   const winOf = () => windowOfSpan(shell.store.span);
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
-    <div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
+    <div id="vb-pre"></div>${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
-  side.innerHTML = `<div id="vb-span"></div><div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
+  side.innerHTML = `<div id="vb-span"></div><div id="vb-ctl"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}<div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
   bindMounting(shell);
   const scn = view === 'explorer' ? mountScenarioPanel(host.querySelector('#vb-scn'), shell.store) : { destroy() {} };
-  const inl = view === 'revenue' ? mountAssumpInline(host.querySelector('#vb-assump'), shell) : { destroy() {} };
+  const inl = view === 'revenue' ? mountAssumpInline(side.querySelector('#vb-assump'), shell) : { destroy() {} };
   const q = (s) => host.querySelector(s);
   const ctl = mountControls(side.querySelector('#vb-ctl'), shell, () => load());
   const state = (kind, html) => { const sc = q('#vb-scn'); if (sc) sc.hidden = kind !== 'ok'; const s = q('#vb-state'); s.hidden = !html; s.className = `xp-state ${kind}`; s.innerHTML = html; s.setAttribute('aria-busy', String(kind === 'loading')); q('#vb-body').hidden = kind !== 'ok'; };
