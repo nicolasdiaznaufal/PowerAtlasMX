@@ -56,6 +56,7 @@ self.PRECACHE = [
  "assets/js/assump-inline.js",
  "assets/js/assump.js",
  "assets/js/atlas.js",
+ "assets/js/card-guard.js",
  "assets/js/chart-decomp.js",
  "assets/js/chips.js",
  "assets/js/choose.js",

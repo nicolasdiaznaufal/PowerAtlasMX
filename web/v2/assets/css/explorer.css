@@ -315,3 +315,12 @@ tr.pick-row:hover, tr.pick-row:focus-visible { background: rgba(232, 162, 102, .
 .ind-note { margin: 0; color: var(--ink-3); font-size: 10px; }
 .an-side .irr-slot, .an-side #vb-irr .ind-head .mono { font-size: 10px; }
 .an-side .xp-warn-inline, .an-side .xp-text { font-size: 12px; }
+
+/* M15: the time span control lives in the sticky left column, compact */
+.an-side .span { padding: 8px 10px; gap: 8px; }
+.an-side .span .presets { gap: 4px; }
+.an-side .span .chip-btn { height: 26px; padding: 0 8px; font-size: 12px; white-space: nowrap; }
+.an-side .span .range { height: 28px; }
+.an-side .span .range .track, .an-side .span .range .fill { top: 12px; }
+.an-side .span .range input { top: 2px; }
+.an-side .span .span-text { font-size: 11px; line-height: 1.3; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -110,6 +110,13 @@ The time span (chips Last 12 months, Previous 12 months, All, 2020 to 2026, plus
 full-history areas). Typical day, revenue, economics and coverage use the 12-month window that holds the span end (Y1 when the span lies inside Aug 2024 - Jul 2025, else Y2), with a note.
 Weather is fixed to the yearly mean 2015-2025 (`&wx=` is accepted and dropped).
 
+## Robustness (M15)
+- A new release takes over at once: the install precaches every file with `cache: 'reload'` (never a stale HTTP-cached copy), then `skipWaiting`; activate runs `clients.claim`;
+  the page reloads once on `controllerchange`; tabs call `registration.update()` on load and when they become visible again.
+- A card that fails (daily, map, series, economics, irradiance) shows a one-line message in its own box (`card-guard.js`); the rest of the page keeps working.
+- `tests/v2-integrity.test.mjs` checks the import graph (files and named exports), loads every pure module and the guard behaviour.
+- The time span control sits in the sticky left column (compact chips, slider, one-line readout).
+
 ## Roadmap (not built)
 Nothing pending from the solar brief; NSRDB contrast and a daily NASA refresh are held (see docs/SOLAR_V2_PLAN.md section 7).
 

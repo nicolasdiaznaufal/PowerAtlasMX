@@ -65,3 +65,15 @@
 .map-loading { pointer-events: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); color: var(--ink-2); }
 .map-loading[hidden] { display: none; }
 @media (min-width: 761px) { .map-loading { left: calc(50% + 190px); } }
+
+/* M15: the map panel never scrolls horizontally: everything wraps and shrinks inside its box */
+.panel { overflow-x: hidden; overflow-y: auto; box-sizing: border-box; max-width: calc(100vw - 24px); }
+.panel > *, .panel .selector, .panel .chips li, .panel .facts div { min-width: 0; }
+.panel .seg { grid-template-columns: repeat(auto-fit, minmax(min(100%, 84px), 1fr)); }
+.panel .seg button { min-width: 0; height: auto; min-height: 32px; padding: 4px 6px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.panel .hint, .panel .lgnote, .panel .facts dd, .panel .live, .panel .selector li { overflow-wrap: anywhere; white-space: normal; }
+.panel .map-legend .lg { gap: 8px; flex-wrap: wrap; }
+.panel .cont { justify-self: start; max-width: 100%; white-space: normal; text-align: center; }
+.panel .chips .ct { overflow: hidden; text-overflow: ellipsis; }
+.panel .selector input { min-width: 0; }
+.panel .selector ul { max-width: 100%; }

@@ -5,6 +5,7 @@ import { seriesCardHTML, paintSeries } from './series-card.js';
 import { dailyCardHTML, mountDaily } from './daily-card.js';
 import { pnlCardHTML, mountPnl } from './pnl-card.js';
 import { coverageCardHTML, mountCoverage } from './coverage-card.js';
+import { guard } from './card-guard.js';
 import { compareRows, columnLabels } from './compare-data.js';
 import { tableLabels } from './explorer-data.js';
 import { num } from '../../../assets/js/format.js';
@@ -44,10 +45,10 @@ export function mountRevenue(host, { shell, side }) {
           const r = rows[0], e = entries[0], lab = tableLabels(real, r.rev.scale), h = e.rec.hours;
           root.querySelector('#rv-table').innerHTML = `<table><thead><tr><th>Hour (CDMX)</th><th class="n">Output, MWh/MWp</th><th class="n">Price (nominal), MXN/MWh</th><th class="n">Output × price, MXN</th><th class="n">${lab.hour}</th></tr></thead><tbody>${h.y.map((y, i) => `<tr><td>${hh(i)}:00</td><td class="n">${num(y, 3)}</td><td class="n">${num(h.pml[i], 0)}</td><td class="n">${num(r.rev.raw[i], 0)}</td><td class="n">${num(r.rev.hours.real[i], 0)}</td></tr>`).join('')}</tbody></table>`;
         } else { root.querySelector('#rv-table').closest('details').hidden = true; }
-        mountPnl(root, { shell, winId });
-        mountCoverage(root, { shell, winId });
-        mountDaily(root, { entries, shell, winId, view: 'revenue' });
-        paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
+        guard(root, '#pl-where', 'The plant economics', () => mountPnl(root, { shell, winId }));
+        guard(root, '#cv-where', 'The coverage view', () => mountCoverage(root, { shell, winId }));
+        guard(root, '#dl-body', 'The daily charts', () => mountDaily(root, { entries, shell, winId, view: 'revenue' }));
+        guard(root, '#sr-vf', 'The monthly series', () => paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } }));
         if (entries.length > 1) {
           const cols = [{ h: L.revenue, get: (r) => (r.na ? NA_HTML : mil(r.rev.total)) }, 
             { h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => (r.na ? NA_HTML : r.tiles.vfDay.text) }];

@@ -156,6 +156,9 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       // a release that finished installing in an earlier session is waiting: apply it now (fresh page load = safe point).
       // A release found during this session just waits and is applied at the next load.
       if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage('SKIP_WAITING');
+      // look for a new release now and whenever the tab comes back (a long-lived tab never stays on an old build)
+      reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
     }).catch((e) => console.warn('service worker not registered', e));
   });
 }

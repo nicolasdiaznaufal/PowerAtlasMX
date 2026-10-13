@@ -28,9 +28,9 @@ export function mountView({ host, side, shell, view, build }) {
   // the time span is the only time control (URL from/to). Figures that exist per 12-month window use the window that holds the span end.
   const winOf = () => windowOfSpan(shell.store.span);
   host.innerHTML = `<p class="an-intro">${esc(COPY[view].intro)} <span class="mono draft">Draft copy</span></p>
-    <div id="vb-span"></div><div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
+    <div id="vb-pre"></div>${view === 'revenue' ? '<div id="vb-assump"></div>' : ''}${view === 'explorer' ? '<div id="vb-scn" class="scn-wrap" hidden></div>' : ''}
     <div class="xp-state" id="vb-state" role="status"></div><div id="vb-body" hidden></div>`;
-  side.innerHTML = `<div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
+  side.innerHTML = `<div id="vb-span"></div><div id="vb-ctl"></div><div id="vb-ind" class="inds"></div><div id="vb-irr" class="inds"></div>`;
   bindMounting(shell);
   const scn = view === 'explorer' ? mountScenarioPanel(host.querySelector('#vb-scn'), shell.store) : { destroy() {} };
   const inl = view === 'revenue' ? mountAssumpInline(host.querySelector('#vb-assump'), shell) : { destroy() {} };
@@ -43,7 +43,7 @@ export function mountView({ host, side, shell, view, build }) {
     if (!ok) return;
     if (sliderOn && spanEquals(sliderSpan, shell.store.span)) return;
     sliderOn = true; sliderSpan = shell.store.span;
-    mountRangeSlider(q('#vb-span'), { months: ok.series.months, win: WIN.Y2, span: shell.store.span, onChange: (sp) => { sliderSpan = sp; shell.store.setSpan(sp); } });
+    mountRangeSlider(side.querySelector('#vb-span'), { months: ok.series.months, win: WIN.Y2, span: shell.store.span, onChange: (sp) => { sliderSpan = sp; shell.store.setSpan(sp); } });
   }
 
   async function paintSummary(real, w) {
@@ -68,7 +68,7 @@ export function mountView({ host, side, shell, view, build }) {
     const ctxLine = `<p class="mono ctxline">${shell.store.cfg === 'fijo' ? 'Fixed tilt' : 'Single-axis tracker'} · ${esc(COPY.wxLabel(shell.store.wx))} · MDA reference price (CENACE): no capacity, CEL or contracts</p>`;
     q('#vb-pre').innerHTML = ctxLine + winNote + note15 + banner;
     body.innerHTML = build.mainHTML(ctx) + (national ? '<div id="vb-areas"></div>' : '');
-    build.draw(body, ctx, { repaint: paint, state: ctxExtra, side });
+    try { build.draw(body, ctx, { repaint: paint, state: ctxExtra, side }); } catch (e) { console.error(e); body.insertAdjacentHTML('beforeend', '<p class="xp-warn" role="alert">Part of this page could not be drawn. Reload the page to try again.</p>'); }
     paintSummary(real, w);
     if (national) {
       const el = body.querySelector('#vb-areas');

@@ -6,7 +6,7 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m14-1-24899a4b';
+const VERSION = 'v2-m15-1-3408d3aa';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 // Data cache bound: the core JSON (index, analysis, series, profiles, per-config scalars: about 21 MB raw) is pinned; per-variant files
@@ -21,12 +21,17 @@ const OFFLINE_HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><meta
   + '<h1 style="font-weight:450;letter-spacing:-.04em;margin:0 0 8px">You are offline</h1><p style="color:#C3BEA9">PowerAtlasMx could not reach the server and this page is not stored on this device yet. Open it again when you are back online.</p></main></body></html>';
 const inlineOffline = () => new Response(OFFLINE_HTML, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
-const precache = () => caches.open(SHELL).then((c) => c.addAll(self.PRECACHE));
+// every file is fetched with cache: 'reload' so a stale HTTP-cached copy (heuristic freshness of a static server) can never enter a new release
+const precache = () => caches.open(SHELL).then((c) => Promise.all(self.PRECACHE.map((u) => fetch(new Request(u, { cache: 'reload' })).then((r) => {
+  if (!r.ok) throw new Error(`precache ${u}: HTTP ${r.status}`);
+  return c.put(new Request(u), r);
+}))));
 
-self.addEventListener('install', (e) => { e.waitUntil(precache()); });
+// a finished install takes over at once (skipWaiting + clients.claim): the page reloads once on controllerchange, so a user is never left on an old release
+self.addEventListener('install', (e) => { e.waitUntil(precache().then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
   const preload = self.registration.navigationPreload ? self.registration.navigationPreload.enable().catch(() => null) : null;
-  e.waitUntil(Promise.all([preload, caches.keys().then((ks) => Promise.all(self.swStrategy.staleCaches(ks, SHELL, DATA).map((k) => caches.delete(k))))]));
+  e.waitUntil(Promise.all([preload, self.clients.claim(), caches.keys().then((ks) => Promise.all(self.swStrategy.staleCaches(ks, SHELL, DATA).map((k) => caches.delete(k))))]));
 });
 self.addEventListener('message', (e) => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
 

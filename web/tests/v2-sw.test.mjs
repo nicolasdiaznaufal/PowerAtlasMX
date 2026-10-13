@@ -49,8 +49,9 @@ test("only stale v2 caches are deleted by the v2 worker; v1's worker would delet
   const v2 = readFileSync(join(HERE, '..', 'v2', 'sw.js'), 'utf8');
   assert.match(v2, /inlineOffline/);                 // the fallback never resolves undefined
   assert.match(v2, /precache\(\)\.catch/);            // missing shell is re-filled from the network
-  assert.doesNotMatch(v2, /clients\.claim/);        // no mid-session takeover
-  assert.doesNotMatch(v2.split("addEventListener('install'")[1].split('\n')[0], /skipWaiting/); // install does not skip waiting
+  assert.match(v2, /clients\.claim/);              // a new release takes over at once; the page reloads on controllerchange
+  assert.match(v2.split("addEventListener('install'")[1].split('\n')[0], /precache\(\)\.then\(\(\) => self\.skipWaiting\(\)\)/); // skip waiting only after the whole shell is cached
+  assert.match(v2, /cache: 'reload'/);               // never a stale HTTP-cached copy in a release
 });
 
 test('storeResponse clones BEFORE async work: the page may consume the body first (regression: v2-data stayed empty)', async () => {

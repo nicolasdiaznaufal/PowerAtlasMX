@@ -11,6 +11,7 @@ import { seriesCardHTML, paintSeries } from './series-card.js';
 import { dailyCardHTML, mountDaily } from './daily-card.js';
 import { mapsCardHTML, mountMaps } from './maps-card.js';
 import { focusIndex } from './indicators.js';
+import { guard } from './card-guard.js';
 import { compareRows } from './compare-data.js';
 import { columnLabels } from './compare-data.js';
 import { tableHTML, esc, NA_HTML } from './compare-ui.js';
@@ -22,7 +23,7 @@ export function mountExplorer(host, { shell, side }) {
     build: {
       mainHTML: ({ entries }) => `${decompSectionHTML(entries, shell)}${dailyCardHTML('explorer')}${seriesCardHTML()}${mapsCardHTML()}${irradianceCardHTML(entries.map((e) => e.slot), !!shell.showClear)}${entries.length > 1 ? '<section class="xp-card" id="cmp-table"></section>' : ''}`,
       draw(root, { entries, winId, real, w }, { repaint, side }) {
-        drawDecomp(root, entries);
+        guard(root, '.decomp', 'The hourly price chart', () => drawDecomp(root, entries));
         const ctx = { cfg: shell.store.cfg, wx: shell.store.wx };
         const irr = async () => {
           const clearOn = !!shell.showClear;
@@ -50,9 +51,9 @@ export function mountExplorer(host, { shell, side }) {
           const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); irr(); } }, { rootMargin: '0px' });
           io.observe(card);
         }
-        mountDaily(root, { entries, shell, winId, view: 'explorer' });
-        mountMaps(root, { shell, winId: mapWinOfSpan(shell.store.span) });
-        paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } });
+        guard(root, '#dl-body', 'The daily charts', () => mountDaily(root, { entries, shell, winId, view: 'explorer' }));
+        guard(root, '#mp-note', 'The map', () => mountMaps(root, { shell, winId: mapWinOfSpan(shell.store.span) }));
+        guard(root, '#sr-vf', 'The monthly series', () => paintSeries(root, { entries, shell, winId, view: seriesView, onView: (v) => { seriesView = v; repaint(); } }));
         if (entries.length > 1) {
           const L = columnLabels(real, !isNeutral(shell.store.scenario), { cfg: shell.store.cfg, wx: shell.store.wx }), rows = compareRows(entries, real);
           const cols = [{ h: L.base, get: (r) => r.tiles.base.text }, { h: L.cap, get: (r) => r.tiles.cap.text }, { h: L.vf, get: (r) => (r.na ? NA_HTML : r.tiles.vf.text) }, { h: L.z, get: (r) => r.tiles.z.text }, { h: L.vfDay, get: (r) => (r.na ? NA_HTML : r.tiles.vfDay.text) }];
