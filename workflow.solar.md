@@ -17,7 +17,11 @@ Tags: [verificado] checked in this repo, [estimado] assumption, [pendiente] need
 | DEM (slope) | [verificado] received | `data/ref/geo/dem/conjunto_de_datos/modelo_relieve_mexico_2025.tif` (INEGI, 3.1 GB, ~81 m pixel, LCC, values -9650..5592 m so it includes bathymetry; treat sea as nodata). Coarse for slope: use as a screen, not a site survey. |
 | Land cover | [verificado] received | `landcover/serie7_cdv/cdv_usuev250sVII_cnal.shp` (INEGI USV Serie VII 1:250k, 179,099 polygons, fields `CLAVE`/`DESCRIPCIO`, Albers equal-area). **Primary.** `serie7_cw/` is a near-duplicate (2023, LCC, no CLAVE); kept as cross-check only. |
 | Protected areas (ANP) | [verificado] received | `protected/shp_anp_20260924/` (CONANP, 2026-09-24, 232 polygons incl. marine, ITRF2008). **Primary.** `protected/anpmx_old/` is an older copy, cross-check only. Federal ANP only: state/municipal reserves, RAMSAR and Indigenous lands are not covered. |
-| Grid lines / substations | [pendiente] **STILL MISSING** | `grid/` has no line or substation geometry. |
+| Grid lines / substations | [verificado] received (OSM-derived) | `grid/atlas-sen/` (github.com/batuenergy/atlas-sen, shallow clone, code not executed). `data/derived/osm_lines.json`: 8,715 lines, 69-400 kV (115 kV 5,190; 230 kV 1,888; 400 kV 798), ~26.8k vertices, `[kV, [[lat,lng],...]]`. `osm_substations.json`: 2,037 substations <=161 kV with lat/lng, 637 named. **Gap:** 230/400 kV substations have no open coordinates (Google-geocoded, not shipped); use line endpoints. Completeness of OSM lines is [estimado], not audited. |
+| Node-ID bridge | [verificado] | `rgd_substations.json` (1,659 CFE substations, no coords) shares the 3-letter+kV code with PML IDs (1,480 matching keys), so it adds division, zone, MVA and bank count per node, not location. |
+| Name match to OSM subs | [estimado] unreliable | 530 exact-name matches against 2,623 nodes, but spot checks are wrong (e.g. "Nacozari" listed in Mexicali municipality). Only usable with a municipality/distance sanity check; do not replace centroids with it yet. |
+| Other useful files | [verificado] | `osm_plants.json` (plant coords), `transmission.json` (planned lines), `projects.json`, `private_generation.json` (pipeline), `region_polys.json` (CENACE regions). |
+| Licence | [verificado] | OSM-derived data is ODbL: attribute "© OpenStreetMap contributors"; do not republish raw geometry in the web app, only derived scores/distances. Others CC-BY 4.0 (attribute CENACE/CFE/CNE). |
 | Power plants (new) | [verificado] received | `grid/centrales/CentralesElectricas.csv` (named .xls, really CSV, latin-1): 1,736 plants, 528 PV (112 operating, 28 under construction). X/Y in Web Mercator (EPSG:3857), 1 row without coords. Not a grid layer, but operating plants imply interconnection exists nearby: use as a **proxy** for grid proximity and as a saturation/competition signal. |
 | Roads (bonus) | [verificado] received | `roads/conjunto_de_datos/rnc2025.gpkg` (INEGI RNC 2025, 2.4 GB). Not in the plan; usable as an access-distance term later. |
 | Raster tooling | [pendiente] | `.venv` has no rasterio/GDAL; `pip install rasterio` needed for slope. DuckDB reads the shapefiles and gpkg directly. |
@@ -101,7 +105,7 @@ FROM viable;
    - terrain 15 %: share of buffer with slope < 3 %
    - resource 25 %: yearly yield from `pipeline/solar*.py`
    - market 25 %: captured price / % PML <= 0 from `kpis.py`
-   - grid 10 %: distance to nearest operating plant (proxy, until line/substation data exists)
+   - grid 10 %: distance to nearest 115-400 kV line or <=161 kV substation (OSM via atlas-sen); voltage-weighted [estimado]
    Starting weights (Nico: changeable later); keep them in `config/supuestos.yaml`.
 3. **No verdict colour** while weights are `PENDIENTE` (same rule as the revenue view): show "provisional".
 4. **Confidence**: lower for centroid-based nodes and for nodes with < 12 months of data (existing `confianza`).
