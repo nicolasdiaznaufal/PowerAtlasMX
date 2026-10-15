@@ -138,3 +138,25 @@ FROM viable;
 - Substation coordinates: is there any source you can obtain? Would remove the centroid caveat.
 - Are the weights set by the team, or should they be derived (e.g. regression against captured price)?
 - Is irrigated/rainfed agriculture allowed (lease) or excluded?
+
+---
+
+## 7. Add-on: grid saturation (verified) and Battery Score (draft, 2026-10-15)
+
+### 7.1 Substation saturation (Batu `subestaciones.csv`)
+- Verification by catalog, not coordinates: normalised name + kV + CFE distribution zone against the CENACE catalog
+  (`zona_distribucion`). Result: **71 PML 230/400 kV nodes verified** (of 313; ~3 % of all nodes); only **13 saturated**.
+- Coverage is far below 50 %, so it cannot be a score component. Rule: **neutral by default; penalty-only modifier
+  on verified saturated nodes (-5 to -15 pts, scaled by saturation)**; verified headroom = no bonus (absence of data
+  must never be rewarded). Show a "grid data: verified / not available" badge.
+
+### 7.2 Battery screening (`pipeline/battery_metrics.py`, 2,551 nodes)
+- Rule-based, out of sample: charge/discharge hours chosen per month from 2023-24, applied to 2025 real prices,
+  RTE 85 % [estimado]. Perfect-foresight spread (max-min and top-k minus bottom-k) is shown only as an upper bound
+  (project rule: no perfect-foresight base case).
+- Measured (MDA only): median 4 h rule-based value **~585 MXN/kW-yr** (p5 424, p95 1,501); median daily spread
+  ~800 MXN/MWh; capture of the perfect-foresight bound ~0.7; negative-price share ~0.2 %.
+- Reading: on MDA arbitrage alone this is thin against any realistic 4 h capex [estimado, capex PENDIENTE]. Outliers
+  (34.5 kV Peninsular nodes with congestion mean > 3,000 MXN/MWh) need an audit before being trusted.
+- Proposed components (weights, strict mode): value 30, daily spread 15, predictability (capture ratio) 15,
+  negative-price share 15, congestion volatility 10, grid 15; saturation modifier as 7.1. No verdict colour.
