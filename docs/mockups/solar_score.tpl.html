@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Solar Plant Score · PowerAtlasMx</title>
+<style>/*CSS*/</style></head><body>
+<nav class="nav"><b>PowerAtlasMx</b><span class="by">by REPSA</span><span class="sp"></span>
+<span class="mono">Solar Plant Score</span><span class="pill mono">Provisional</span></nav>
+<div class="stage" id="stage">
+<canvas id="cv"></canvas><div class="tip" id="tip"></div>
+<div class="card left">
+  <h3 class="mono">Find a node, state or region</h3>
+  <input type="search" id="q" placeholder="e.g. Mochis, Sonora, Noroeste" autocomplete="off">
+  <ul id="hits"></ul>
+  <h3 class="mono">Strictness</h3>
+  <div class="seg" id="mode"><button data-m="strict">Strict</button><button data-m="linear">Balanced</button></div>
+  <div class="sub" id="modeNote" style="margin-top:6px"></div>
+  <h3 class="mono">Weights</h3><div id="wts"></div>
+  <button class="btn" id="reset">Reset weights</button>
+</div>
+<div class="card right" id="detail"></div>
+<div class="card legend"><span class="mono">Score</span><div class="ramp"></div>
+<div style="display:flex;justify-content:space-between"><span>low</span><span>high</span></div>
+<div>dark dot = not scored · drag to pan · scroll to zoom</div></div>
+</div>
+<section class="method" id="method"></section>
+<script>const D=/*DATA*/;const GEO=/*GEO*/;</script>
+<script>/*JS*/</script></body></html>

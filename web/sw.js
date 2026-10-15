@@ -1,6 +1,6 @@
 // Service worker: app shell precached; data network-first with cache fallback so visited nodes work offline.
 // Bump VERSION whenever any app file or the data schema changes.
-const VERSION = 'nsv-v4-deckpalette-2';
+const VERSION = 'nsv-v5-v2bypass';
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 const APP = [
@@ -28,6 +28,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/v2/')) return;
   if (url.pathname.includes('/data/')) {
     e.respondWith(fetch(req).then((r) => { if (r.ok) { const cp = r.clone(); caches.open(DATA).then((c) => c.put(req, cp)); } return r; }).catch(() => caches.match(req)));
     return;

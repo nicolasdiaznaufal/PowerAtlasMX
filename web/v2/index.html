@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerAtlasMx by REPSA Group</title>
+<meta name="description" content="Mexican Solar Atlas by REPSA Group. Hour-by-hour production times price for 2,431 nodes in Mexico.">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="icon" type="image/svg+xml" href="assets/icons/eclipse.svg">
+<link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<script>if (!location.hash || location.hash === "#/") { var l = document.createElement("link"); l.rel = "preload"; l.as = "image"; l.type = "image/webp"; l.href = "assets/img/hero-sun-1000.webp"; l.setAttribute("imagesrcset", "assets/img/hero-sun-1000.webp 1000w, assets/img/hero-sun-2000.webp 2000w"); l.setAttribute("imagesizes", "(max-width: 900px) 560px, 1000px"); document.head.appendChild(l); }</script>
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/map.css">
+<link rel="stylesheet" href="assets/css/landing.css">
+<link rel="stylesheet" href="assets/css/flow.css">
+<link rel="stylesheet" href="assets/css/explorer.css">
+<link rel="stylesheet" href="assets/css/appendix.css">
+</head>
+<body>
+<div id="app">
+  <div id="maphost" class="maphost is-hidden"><div class="map-canvas"></div></div>
+  <div id="view"></div>
+  <p id="live" class="sr" role="status" aria-live="polite"></p>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1320,17 +1320,9 @@ def analisis(agg_dir: Path = AGG_DIR, out_dir: Path = ROOT / "data" / "analysis"
     doc["diapositivas"] = _indice_diapositivas(doc)
     doc["no_reproducible"] = NO_REPRODUCIBLE
     # tabla por nodo (seguidor) para mapa / exploradores
-    cols = ["n_horas", "pml_medio", "p_cap", "vf", "pct_e0", "y_f", "ingreso", "ingreso_atajo", "congestion_media",
-            "spread_punta_solar", "vf_dia_promedio", "pml_medio_real", "p_cap_real", "ingreso_real"]
     ids = sorted(set().union(*[set(t.index) for t in tablas_nodo.values()]))
-    nod = {"schema_version": ANALYSIS_SCHEMA, "config": "tracker", "slide": [4, 6, 7], "ids": ids,
-           "region": [_txt(base_nodos["region"].get(i)) for i in ids], "entidad": [_txt(base_nodos["entidad"].get(i)) for i in ids],
-           "ventanas": {}}
-    for v, t in tablas_nodo.items():
-        tt = t.reindex(ids)
-        nod["ventanas"][v] = {c: [None if pd.isna(x) else (int(x) if c == "n_horas" else round(float(x), 4)) for x in tt[c]]
-                              for c in cols if c in tt and not (c in ("y_f", "ingreso", "ingreso_atajo", "ingreso_real")
-                                                                and v not in VENTANAS_12M)}
+    nod = nodos_json(tablas_nodo, ids, [_txt(base_nodos["region"].get(i)) for i in ids],
+                     [_txt(base_nodos["entidad"].get(i)) for i in ids], "tracker")
     out_dir.mkdir(parents=True, exist_ok=True)
     gen = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
     doc = {"generated_at": gen, **_redondear(doc, 6)}
@@ -1338,6 +1330,23 @@ def analisis(agg_dir: Path = AGG_DIR, out_dir: Path = ROOT / "data" / "analysis"
     (out_dir / "analysis.json").write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     (out_dir / "analysis_nodos.json").write_text(json.dumps(nod, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     return doc
+
+
+COLS_NODOS = ["n_horas", "pml_medio", "p_cap", "vf", "pct_e0", "y_f", "ingreso", "ingreso_atajo", "congestion_media",
+              "spread_punta_solar", "vf_dia_promedio", "pml_medio_real", "p_cap_real", "ingreso_real"]
+SOLO_12M = ("y_f", "ingreso", "ingreso_atajo", "ingreso_real")   # no se anualizan: solo en ventanas de 12 meses
+
+
+def nodos_json(tablas_nodo: dict, ids: list, region: list, entidad: list, config: str) -> dict:
+    """Tabla columnar por nodo y ventana (analysis_nodos*.json): n_horas entero, resto redondeado a 4 decimales,
+    None donde el nodo no entra al universo de la ventana. Usada por analisis() y por kpis_variants."""
+    nod = {"schema_version": ANALYSIS_SCHEMA, "config": config, "slide": [4, 6, 7], "ids": ids,
+           "region": region, "entidad": entidad, "ventanas": {}}
+    for v, t in tablas_nodo.items():
+        tt = t.reindex(ids)
+        nod["ventanas"][v] = {c: [None if pd.isna(x) else (int(x) if c == "n_horas" else round(float(x), 4)) for x in tt[c]]
+                              for c in COLS_NODOS if c in tt and not (c in SOLO_12M and v not in VENTANAS_12M)}
+    return nod
 
 
 # Numeracion de diapositivas COMO LA CUENTA EL USUARIO (portada = 1; el deck tiene dos 'Prices' y dos 'Value factor').

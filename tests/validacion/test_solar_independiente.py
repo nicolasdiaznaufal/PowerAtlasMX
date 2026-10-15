@@ -9,10 +9,10 @@ import pandas as pd
 import pytest
 
 from _pv_indep import baseline_mes_hora
-from conftest import ROOT
+from conftest import DATA_ROOT
 
-BL = ROOT / "data" / "baselines"
-CELDAS = ROOT / "data" / "cache" / "nasa" / "climatologia" / "celdas"
+BL = DATA_ROOT / "data" / "baselines"
+CELDAS = DATA_ROOT / "data" / "cache" / "nasa" / "climatologia" / "celdas"
 DIM365 = pd.Series([calendar.monthrange(2023, m)[1] for m in range(1, 13)], index=range(1, 13))
 # (loc_id, offset del reloj del perfil): todos en reloj CDMX UTC-6 fijo desde la ronda CDMX
 # nodo del ejemplo A4 (SIN), el único nodo BCA, un nodo retirado/renombrado, una celda del noroeste
@@ -28,6 +28,8 @@ def sb():
 
 @pytest.fixture(scope="module")
 def mh():
+    if not (BL / "solar_baselines_month_hour.parquet").exists():
+        pytest.skip("sin baselines mes x hora")
     return pd.read_parquet(BL / "solar_baselines_month_hour.parquet")
 
 

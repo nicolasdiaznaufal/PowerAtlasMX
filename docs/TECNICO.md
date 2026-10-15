@@ -568,3 +568,165 @@ Se genera con `.venv/bin/python pipeline/kpis.py --analisis` (≈15 s; `schema_v
 - determinismo: dos corridas dan el mismo resultado;
 - cuentas a mano de `_area` y de la tolerancia;
 - `supuestos.yaml` sigue PENDIENTE.
+
+## 12. Configuración (seguidor / fijo) × variante de clima (solar v2)
+
+Código: `pipeline/kpis_variants.py` (cálculo y puertas) y `pipeline/kpis_variants_out.py` (JSON web). Pruebas:
+`tests/test_kpis_variants.py`. Plan de solar: `docs/SOLAR_V2_PLAN.md` (§2 variantes, §4 archivos, §5 entrega).
+
+**Fórmulas: sin cambios.** Se reutilizan `kpis._metricas_nodo`, `kpis.a_reales` y `kpis.nodos_json` (extraída de
+`analisis()` sin cambiar su salida). Lo único que cambia es el `y` de cada celda: en vez del baseline
+`y(mes, hora)` se usa la tabla de la variante de `data/solar_v2/tables_month_hour.parquet` [MWh/MWp por hora], con
+clave mes 1..12 (`mean`, `y2015`..`y2025`) o año·100+mes (`win`). Como `y` es constante en cada celda
+(nodo, año, mes, hora) de `agregados_comunes`, las sumas ponderadas son exactas:
+`Σy = y·n_horas`, `Σ(y·PML) = y·sum_pml_cent/100` (error medido contra el Σ horario del pipeline: 4·10⁻¹³ relativo),
+`Σ(y | PML≤0) = y·n_pml_le0`. De ahí, como en §11: `p_cap = Σ(y·PML)/Σy` [MXN/MWh], `vf = p_cap/pml_medio`,
+`pct_e0 = 100·Σ(y|PML≤0)/Σy` [%], `y_f = Σy` [MWh/MWp], `ingreso = Σ(y·PML)` [MXN/MWp], `ingreso_atajo = y_f·pml_medio`,
+`vf_dia_promedio` (día promedio), `p_cap_real`, `ingreso_real` (mismo deflactor INPC por mes CDMX, base = último mes).
+Independientes de config y variante: `n_horas`, `pml_medio`, `pml_medio_real`, `congestion_media`, `spread_punta_solar`.
+Universo por ventana: ids de `analysis_nodos.json` con `n_horas ≥ 7 200` (igual que §11; si no, `null`).
+**No se anualiza** `y_f` ni `ingreso` (nodos con huecos quedan con sus horas); `yf_annual_equiv` (de
+`solar_v2/scalars.parquet`: rendimiento de 12 meses de la variante) viaja aparte, solo informativo.
+
+Dimensiones: config `tracker` / `fijo` (parquet: `fixed`); variantes `mean` = "Yearly mean 2015-2025" (por defecto,
+= publicado), `y2015`..`y2025`, `win` = clima real de cada mes de la ventana. `clear` (cielo despejado) queda solo como
+referencia de irradiancia/producción en `variants/clear.json`, sin KPIs. Ventanas: Y1 = 2024-08..2025-07, Y2 =
+2025-08..2026-07 para todas las variantes; `completo` y las ventanas ago-jun solo para `mean` (en `analysis_nodos_*`).
+**Nota 2015** (mediana entre nodos de `yf_annual_equiv` de `y2015` sobre la referencia, seguidor): en los 2 431 nodos
+del universo KPI, −6.1 % frente a `mean` 2015-2025 (que incluye 2015) y −6.7 % frente al promedio de los otros diez
+años (2016-2025); en los 2 605 nodos de solar, −5.9 % frente a `mean`. Probablemente un cambio de insumos
+MERRA-2/CERES [sin verificar]. Se mantiene dentro de `mean` (decisión de Nico) y la UI lo rotula
+(`note_2015` en `variant_scalars_*.json`).
+
+**Archivos** (`data/solar_v2/web/`, ignorado por git; `web/tools/build_solar_web.py` los copia a `web/data/solar_v2/`
+junto con `variants/{v}.json` y `scalars.json` de solar). Tamaños medidos (gz nivel 9):
+
+| Archivo | Contenido | bytes / gz |
+|---|---|---|
+| `analysis_nodos_tracker.json` | copia byte a byte del `analysis_nodos.json` publicado (verificada) | 1.28 MB / 474 KB |
+| `analysis_nodos_fijo.json` | mismo esquema, config fijo, `mean`, 5 ventanas | 1.28 MB / 473 KB |
+| `variant_scalars_{tracker,fijo}.json` | columnar sobre `ids` (orden de analysis_nodos): `shared[Y1/Y2]` (5 campos comunes) y `data[variante][Y1/Y2]` con `p_cap, vf, y_f, ingreso, yf_annual_equiv` | 3.27 MB / 1.21 MB c/u |
+| `variant_extra/{tracker,fijo}/{variante}.json` | `pct_e0, ingreso_atajo, vf_dia_promedio, p_cap_real, ingreso_real` de una variante (Y1/Y2), exactos | 0.23 MB / 100 KB c/u (26) |
+| `node_profiles_fijo.json` | esquema de `node_profiles.json` (pml, pérdidas, congestión, y; Y1/Y2), config fijo, `mean` | 2.94 MB / 926 KB |
+| `reconciliation.json` | resultado de las puertas, tamaños, estadísticas vf_fijo − vf_tracker | 11 KB |
+
+Decisión de tamaño: con los 9 campos + `yf_annual_equiv` en un archivo por config serían ≈2.4 MB gz (> 2 MB de
+presupuesto), así que `variant_scalars` lleva el núcleo de 5 campos y el resto va **exacto** (no aproximado) en
+`variant_extra`, que la web carga al elegir variante. Redondeo: 4 decimales, como `analysis_nodos.json`.
+
+**Puertas de conciliación** (el build falla sin escribir nada si alguna no se cumple; resultados en `reconciliation.json`):
+1. `mean` por la ruta solar_v2 contra la ruta publicada (`agregados_config`), **ambas configs**, las 5 ventanas,
+   los 14 campos: error relativo máximo 2.3·10⁻⁹ (tolerancia 10⁻⁶).
+2. `analysis_nodos` seguidor recalculado contra el publicado (4 decimales): mismos ids, campos y `null`; error
+   relativo máximo 2.1·10⁻⁹ (tolerancia: 5·10⁻⁵ de redondeo + 10⁻⁶ relativo).
+3. `y_f` y `n_horas` de cada variante × Y1/Y2 × config contra `solar_v2/scalars.parquet`: 2.4·10⁻¹⁶ relativo.
+4. `n_horas` idéntico entre configs y variantes; `y_f` fijo < seguidor en todo nodo y variante.
+5. `node_profiles_fijo`: filas de precio idénticas a `node_profiles.json`; `y` = `variants/mean.json` (fijo).
+
+vf_fijo − vf_tracker (13 variantes × Y1/Y2): mediana −0.016..−0.011 en Y1 y −0.002..0.000 en Y2, |Δ| máximo 0.089;
+ningún nodo fuera de ±0.15. Pruebas: ejemplo a mano (1 nodo, 24 h), deflactor, `win` con clave año-mes, identidades
+(`vf = p_cap/pml_medio`, `ingreso = y_f·p_cap`, `ingreso_real = y_f·p_cap_real`, `ingreso_atajo = y_f·pml_medio`),
+recálculo independiente en numpy de 3 nodos × 3 combinaciones (incluye `win` y `y2020`), sin NaN/−999, presupuestos gz.
+
+Comandos: `NODAL_DATA_ROOT=$PWD .venv/bin/python pipeline/kpis_variants_out.py` (≈1.5 min) y luego
+`.venv/bin/python web/tools/build_solar_web.py`.
+
+## 13. Serie diaria (PML + producción con el clima real del día)
+
+Código: `pipeline/daily_series.py` (fórmulas puras, codificación, áreas), `pipeline/daily_gates.py` (puertas),
+`pipeline/daily_build.py` (orquestación). Copia web: `web/tools/build_daily_web.py`. Pruebas: `tests/test_daily_series.py`.
+Propósito: que la web calcule medias móviles de 7 días **en el navegador** a partir de valores diarios; aquí no se
+calcula ninguna media móvil ni se anualiza nada.
+
+**Eje y cobertura.** Día = día calendario en hora estándar de CDMX (UTC−6 fijo, `clock.ts_cdmx`, la misma de los
+agregados). Primer y último día con 24 horas de PML en algún nodo, derivados de los datos: 2020-01-01 .. 2026-09-30
+(`n` = 2 465 días; el día `i` es `start + i`). Las horas de BCA/BCS que caen el 2026-10-01 CDMX quedan fuera (también
+fuera de toda ventana publicada). Universo: los 2 431 ids de `analysis_nodos.json`, en su orden.
+
+**Clima.** Serie horaria NASA POWER de la celda de 1° del nodo, cargada con `solar_full.load_cell` (cache vieja
+2015-2026-06 + `solar_cache/refresh2026`; BCA/BCS desde `solar_cache/climatologia`), GHI válido hasta
+2026-07-31 23:00 UTC. Día válido = 24 horas con GHI (`solar.valid_day_mask`, la regla de `win`); el último día válido
+es 2026-07-30 CDMX (al 31 le faltan 6 horas UTC). Producción: exactamente `solar.hourly_pv_power(..., geom,
+dni_dhi_source="nasa")` + `solar.to_cdmx`, como `solar_scenarios.run_scenarios` (seguidor y fijo con inclinación
+0.76·|lat|+3.1, derate 0.904, DC/AC 1.0). **Se corre sobre la serie completa de la celda** (no recortada): el modelo
+rellena huecos de T2M/viento con la media por clave de toda la serie, así que recortarla cambia ≈10⁻⁶ algunos meses
+(se detectó con la puerta c). Solo el clima cambia respecto a lo publicado: real del día en vez del día promedio.
+
+**Fórmulas por nodo y día `d`** (H_d = horas del día con PML; `y_h` en MWh/MWp por hora):
+
+| Campo | Fórmula | Unidad | Nulo cuando |
+|---|---|---|---|
+| `n_horas` | \|H_d\| | h | sin PML ese día |
+| `pml_avg` | Σ round(100·PML)/100 / n_horas (centavos, igual que `pml_medio`) | MXN/MWh | sin PML |
+| `energia_avg`, `perdidas_avg`, `congestion_avg` | ídem con cada componente (energía = PML − pérdidas − congestión, nombres de `node_profiles`) | MXN/MWh | sin PML |
+| `spread` | max(PML) − min(PML) sobre H_d | MXN/MWh | sin PML |
+| `y_day` | Σ_{H_d} y_h (mismas horas que `y_f` publicado) | MWh/MWp | sin PML o día sin clima válido |
+| `horas_solares` | #{h ∈ H_d : y_h > 0} | h | ídem |
+| `ingreso_dia` | Σ_{H_d} y_h·PML_h (PML crudo, como `sum_y_pml`) | MXN/MWp | ídem |
+| `p_cap_dia` | ingreso_dia / y_day | MXN/MWh | ídem o y_day = 0 |
+| `vf_dia` | p_cap_dia / pml_avg | — | ídem o pml_avg ≤ 0 |
+
+Identidades exactas (antes de cuantizar): `ingreso_dia = y_day·p_cap_dia`, `vf_dia = p_cap_dia/pml_avg`. Con 24 horas
+de PML, `y_day` = producción física del día. Pesos nominales; pesos de hoy = valor × `deflator_mensual.factor` del mes
+CDMX del día (INPC(2026-09)/INPC(mes), mismo `kpis.deflactor` y base 2026-09 que lo publicado; `vf`, MWh y horas no
+cambian).
+
+**Áreas** (ALL, 7 regiones de `analysis_nodos`, 30 entidades): por día, media simple entre nodos miembros **con dato
+ese día** (como `kpis._area`). Lado PML: miembros con `n_horas > 0`; medias de `pml_avg`, componentes y `spread`.
+Lado config: miembros con `p_cap_dia` no nulo; medias de `y_day`, `horas_solares`, `p_cap_dia`, `ingreso_dia` y
+`pml_avg` sobre **ese** conjunto, y `vf_dia` = media(p_cap_dia) / media(pml_avg) (cociente de promedios). `n_nodos`
+viaja por día y lado.
+
+**Archivos** (`data/solar_v2/daily/`, ignorado por git; se escribe en un temporal y solo se publica si pasan todas
+las puertas; un `daily/` existente solo se reemplaza con `--replace` si lo escribió este módulo):
+`nodes/{id}.json` = `{schema_version:"daily/1", id, start, n, scale, pml:{6 campos}, tracker:{5}, fijo:{5}}`;
+`areas/{ALL|region-<NOMBRE>|state-<NOMBRE>}.json` (mismo esquema + `n_nodos`, índice en `manifest.areas`);
+`deflator_mensual.json` (`months`, `factor`, `base`); `manifest.json` (días, ids, campos, escalas, nulos, áreas,
+tamaños, versiones, resultado de las puertas). Codificación: listas JSON de enteros, valor = entero × `scale[campo]`,
+`null` = sin valor. Escalas: n_horas, horas_solares, n_nodos 1; pml_avg, energia_avg, spread, p_cap_dia, ingreso_dia
+0.1; perdidas_avg, congestion_avg 0.01; y_day 10⁻⁴; vf_dia 10⁻⁴. Error de ida y vuelta ≤ escala/2 (probado).
+Tamaños medidos (gz nivel 9): nodo mediana 79.6 KB, máximo 84.9 KB (presupuesto 120 KB), total nodos 190 MB gz
+(477 MB crudo; la web carga solo los nodos elegidos); cada área ≈91-97 KB gz (38 áreas, 3.5 MB).
+
+**Puertas de conciliación** (`daily_gates.py`; el build falla sin publicar nada; resultado en `manifest.reconciliation`).
+Ventanas: completo 2020-01..2026-09, Y1 2024-08..2025-07, Y2 2025-08..2026-07 (meses CDMX).
+- (a) Media ponderada por horas de `pml_avg` diario = `pml_medio` publicado (`analysis_nodos`, 4 decimales):
+  máx. 2.3·10⁻⁷ rel / 5.0·10⁻⁵ abs (= redondeo); `congestion_media` 5.0·10⁻⁵ abs (el relativo, 2.6·10⁻³, viene del
+  redondeo de valores ≈0). Las 4 sumas en centavos (pml, energía, pérdidas, congestión) y `n_horas` = `agregados_comunes`
+  **exactas** (enteros) en todo nodo y ventana.
+- (b) Σ `n_horas` diario por ventana = `n_horas` publicado: 0 diferencias.
+- (c) Para cada nodo × config × mes de `win` (24 meses): Σ de la producción de día completo (24 h, solo clima) sobre los
+  días de clima válido del mes = Σ_h win[mes,h] × nd(mes) de `tables_month_hour.parquet`, y #días válidos = nd:
+  máx. 7·10⁻¹⁶ rel, 0 discrepancias de nd (nd = días del mes en 23 meses; 2026-07 tiene 30). Además `y_day` = día
+  completo en todo día con 24 h de PML (5·10⁻¹⁵ abs).
+- (d) Exacta: usando en cada hora con PML el `y` del día promedio de `win`, Σ y·PML y Σ y por Y1/Y2 = `ingreso` e `y_f`
+  publicados de `win` (`variant_scalars_*`): máx. 3.6·10⁻⁸ rel (redondeo), ambas configs. Informativa: Σ `ingreso_dia`
+  (clima del día) vs `ingreso` `win` publicado, cota |rel| ≤ 10 %. Distribución (rel): seguidor Y1 p5 −1.9 %,
+  mediana −0.4 %, p95 +1.3 %, extremos −2.8/+2.7 %; Y2 p5 −2.5 %, mediana −0.4 %, p95 +1.7 %, extremos −5.2/+3.2 %;
+  fijo muy parecido (Y2 −4.8/+2.8 %). Causas: emparejamiento diario clima×precio (lo que se quiere medir) y, en Y2, el
+  2026-07-31 sin clima válido (1 día con PML sin `y_day`; en `completo` son 62 días: 2026-07-31..2026-09-30).
+- (e) 5 áreas (ALL, CENTRAL, 3 entidades) recalculadas desde los archivos de nodo **decodificados** = archivo de área
+  decodificado dentro de una unidad de escala (máx. 1.0 en `energia_avg` por dos redondeos de ½), `n_nodos` exacto,
+  `vf_dia` dentro de la tolerancia de cuantización. PML anual ALL (años completos 2020-2025, nodos con 12 meses
+  completos) = `series_areas.json`: máx. 0.032 MXN/MWh (publicado a 0.1), mismo número de nodos cada año.
+- Identidades sobre valores sin cuantizar: máx. 2.2·10⁻¹⁶.
+
+Corrida completa: 353 s con 8 procesos (2 431 nodos, 0 errores, 0 faltantes). Comandos:
+`NODAL_DATA_ROOT=$PWD .venv/bin/python pipeline/daily_build.py [--replace]` y luego
+`.venv/bin/python web/tools/build_daily_web.py` (copia byte a byte a `web/data/solar_v2/daily/`).
+
+**Medias móviles de 7 días (contrato para la web; referencia `daily_series.ma7` / `ma7_ratio`, probadas).**
+Los valores diarios no cambian. `vf_dia` diverge cuando `pml_avg` está apenas sobre 0 (rango medido −1 296..+382;
+1 067 nodo-config-días con |vf| > 5; ej. 04MAP-115 el 2024-04-03), así que **nunca se promedia `vf_dia` ni
+`p_cap_dia`**. Ventana = los 7 días que terminan en el día i; se saltan los días nulos y se exige **≥ 4 días válidos**
+(si no, nulo). Precio capturado 7d = Σ ingreso_dia / Σ y_day; VF 7d = ese cociente / (Σ n_horas·pml_avg / Σ n_horas)
+(día válido: ingreso, y, pml_avg y n_horas no nulos; nulo si Σ y ≤ 0 o el PML ponderado ≤ 0). PML, energía,
+pérdidas, congestión y spread: media ponderada por `n_horas`; `y_day`, `ingreso_dia`, `horas_solares`: misma media
+ponderada por `n_horas` (con 24 h por día equivale a la media simple). Áreas: igual, con sus campos de área.
+**Días con pocas horas:** 39 nodo-días tienen `n_horas` = 1: el primer día de nodos que empiezan en verano con horario
+de verano (2020-22); su hora 1 cae a las 23:00 CDMX del día anterior, correcto con el reloj fijo. La ponderación por
+`n_horas` los vuelve despreciables en PML; recomendación: excluir de la serie de `spread` los días con `n_horas` < 12
+(un max−min de pocas horas no es comparable).
+**Puerta (d) mediana** (`daily_gates.median_gate`): |mediana entre nodos| de (Σ ingreso_dia − ingreso `win`)/ingreso
+`win` ≤ 1.5 % por config y ventana (un desfase de 1 h del reloj la mueve +2..+12 % / −1..−7 %). Medido: seguidor Y1
+−0.44 %, Y2 −0.45 %; fijo Y1 −0.42 %, Y2 −0.45 %.
