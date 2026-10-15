@@ -19,7 +19,7 @@
 .choose-body h1 { margin: 0; color: var(--ink-2); }
 .chips-row { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
 .chips-row li { min-width: 160px; }
-.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: min(900px, 100%); }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: min(1100px, 100%); }
 .card { position: relative; display: block; padding: 24px; min-height: 160px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); text-decoration: none;
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
 .card:hover, .card:focus-visible { transform: translateY(-2px); box-shadow: var(--ring-strong); }
@@ -31,6 +31,7 @@
 .choose-body > .chips-row { animation-delay: 40ms; }
 .cards .card:nth-child(1) { animation-delay: 80ms; }
 .cards .card:nth-child(2) { animation-delay: 120ms; }
+.cards .card:nth-child(3) { animation-delay: 160ms; }
 h1:focus, main:focus { outline: none; }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 

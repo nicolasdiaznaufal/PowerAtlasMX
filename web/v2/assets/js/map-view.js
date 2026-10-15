@@ -30,6 +30,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   let metric = 'vf';
   let dom = domainOf(atlas.nodes, metric);
   let sel = [], areaKey = null, hover = null;
+  let scoreOf = null, scoreData = null; // Score view: id -> score map, with its nodes split once (not per refresh)
   let padding = { top: 72, right: 40, bottom: 40, left: 40 };
   let vs = null;
   const view = new deck.MapView({ repeat: false });
@@ -67,11 +68,11 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
       new L.GeoJsonLayer({ id: 'states', data: geo.states, pickable: true, stroked: true, filled: true, getFillColor: fillState, getLineColor: (f) => (areas.has(`state:${f.properties.key}`) ? [232, 162, 102, 230] : [240, 232, 210, 36]), lineWidthUnits: 'pixels', getLineWidth: (f) => (areas.has(`state:${f.properties.key}`) ? 2 : 1),
         updateTriggers: { getFillColor: [sel], getLineColor: [sel], getLineWidth: [sel] }, autoHighlight: true, highlightColor: [240, 232, 210, 14] }),
       new L.GeoJsonLayer({ id: 'regions', data: geo.regions, pickable: false, stroked: true, filled: false, getLineColor: [240, 232, 210, 92], lineWidthUnits: 'pixels', getLineWidth: 1.5 }),
-      new L.ScatterplotLayer({ id: 'nodata', data: noData, pickable: true, getPosition: (n) => [n.lon, n.lat], getRadius: 2000, radiusUnits: 'meters', radiusMinPixels: 1.5, radiusMaxPixels: 5,
+      new L.ScatterplotLayer({ id: 'nodata', data: scoreData ? scoreData.off : noData, pickable: true, getPosition: (n) => [n.lon, n.lat], getRadius: 2000, radiusUnits: 'meters', radiusMinPixels: 1.5, radiusMaxPixels: 5,
         getFillColor: hexa('#3A453E', 200) }),
-      new L.ScatterplotLayer({ id: 'nodes', data: withData, pickable: true, getPosition: (n) => [n.lon, n.lat], getRadius: 2500, radiusUnits: 'meters', radiusMinPixels: 2.2, radiusMaxPixels: 9,
-        getFillColor: (n) => colorOf(position(n, metric, dom) ?? 0, RAMP.dot, nodeActive(n) ? 240 : 70),
-        updateTriggers: { getFillColor: [metric, sel] }, transitions: { getFillColor: 350 } }),
+      new L.ScatterplotLayer({ id: 'nodes', data: scoreData ? scoreData.on : withData, pickable: true, getPosition: (n) => [n.lon, n.lat], getRadius: 2500, radiusUnits: 'meters', radiusMinPixels: 2.2, radiusMaxPixels: 9,
+        getFillColor: (n) => colorOf(scoreOf ? Math.min(1, scoreOf.get(n.id) / 80) : position(n, metric, dom) ?? 0, RAMP.dot, nodeActive(n) ? 240 : 70),
+        updateTriggers: { getFillColor: [metric, sel, scoreData], getPosition: [scoreData] }, transitions: { getFillColor: 350 } }),
       new L.ScatterplotLayer({ id: 'ring', data: [...selectedNodes(), ...(hover && !hover.__none ? [hover] : [])], pickable: false, filled: false, stroked: true,
         getPosition: (n) => [n.lon, n.lat], getRadius: 2500, radiusUnits: 'meters', radiusMinPixels: 6, radiusMaxPixels: 14,
         getLineColor: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? SAND : [240, 232, 210, 150]), lineWidthUnits: 'pixels', getLineWidth: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? 2.5 : 1.25),
@@ -112,15 +113,21 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     setMetric(m) { metric = m; dom = domainOf(atlas.nodes, m); refresh(); return dom; },
     domain: () => dom,
     setSelection(list) { sel = list; refresh(); },
+    /** colour nodes by a score map (id -> 0..100); null returns to the metric colouring. Nodes absent from the map are drawn as no-data. */
+    setScores(m) {
+      scoreOf = m;
+      scoreData = m ? { on: nodes.filter((n) => m.has(n.id)), off: nodes.filter((n) => !m.has(n.id)) } : null;
+      refresh();
+    },
     setPadding(p) { padding = p; },
     redraw() { inst.redraw('resize'); },
     zoomBy(d) { setVS({ ...vs, zoom: Math.min(13, Math.max(2.5, vs.zoom + d)) }, 350); },
     reset(ms = 700) { setVS(fit(MEXICO), ms); },
     flyToBounds(b, ms = 700, maxZoom = 12) { setVS(fit(b, padding, { maxZoom }), ms); },
     flyToNode(n, ms = 700) { setVS({ ...vs, longitude: n.lon, latitude: n.lat, zoom: Math.max(vs.zoom, 7) }, ms); },
-    setInteractive(on) {
+    setInteractive(on, opts = {}) {
       interactive = on;
-      inst.setProps({ controller: on ? CONTROLLER : false });
+      inst.setProps({ controller: on ? { ...CONTROLLER, ...opts } : false });
       prepCanvas();
       requestAnimationFrame(prepCanvas); // deck re-applies canvas attributes when the controller changes
     },

@@ -1,5 +1,5 @@
 // v2 entry: hash router + transitions. One persistent map host (shell.js) is never remounted.
-//   #/ landing -> #/map -> #/choose -> #/explorer | #/revenue   (selection in ?sel=)
+//   #/ landing -> #/map -> #/choose -> #/explorer | #/revenue | #/score   (selection in ?sel=)
 import { renderLanding } from './assets/js/landing.js';
 import { getShell, frames, reducedMotion } from './assets/js/shell.js';
 import { createRouter } from './assets/js/route-logic.js';
@@ -7,18 +7,19 @@ import { announce as say } from './assets/js/live.js';
 
 const view = document.getElementById('view');
 const EASE = 'cubic-bezier(.2, .8, .2, 1)';
-const MODE = { '/': 'hidden', '/map': 'full', '/choose': 'full', '/explorer': 'mini', '/revenue': 'mini', '/appendix': 'hidden' };
+const MODE = { '/': 'hidden', '/map': 'full', '/choose': 'full', '/explorer': 'mini', '/revenue': 'mini', '/score': 'stage', '/appendix': 'hidden' };
 const LOADERS = {
   '/': async () => renderLanding,
   '/map': async () => (await import('./assets/js/map-page.js')).mountMap,
   '/choose': async () => (await import('./assets/js/choose.js')).mountChoose,
   '/explorer': async () => { const m = (await import('./assets/js/analysis.js')).mountAnalysis; return (r, o) => m(r, { ...o, view: 'explorer' }); },
   '/revenue': async () => { const m = (await import('./assets/js/analysis.js')).mountAnalysis; return (r, o) => m(r, { ...o, view: 'revenue' }); },
+  '/score': async () => (await import('./assets/js/score-view.js')).mountScore,
   '/appendix': async () => (await import('./assets/js/appendix.js')).mountAppendix,
 };
 const go = (href) => { location.hash = href; };
 let cur = null, queue = Promise.resolve();
-const NAMES = { '/': 'Home', '/map': 'Map', '/choose': 'Choose a view', '/explorer': 'Explorer', '/revenue': 'Revenue', '/appendix': 'Appendix' };
+const NAMES = { '/': 'Home', '/map': 'Map', '/choose': 'Choose a view', '/explorer': 'Explorer', '/revenue': 'Revenue', '/score': 'Score', '/appendix': 'Appendix' };
 
 
 async function mount(path) {
@@ -45,7 +46,7 @@ async function viewSwap(path, shell) {
   const update = async () => {
     await mount(path);
     shell.setMode(mode);
-    if (shell.mv && (mode === 'mini' || path === '/map')) shell.fit(0);
+    if (shell.mv && (mode === 'mini' || mode === 'stage' || path === '/map')) shell.fit(0);
     await frames(2);
   };
   if (reducedMotion()) await update();
@@ -118,7 +119,7 @@ function afterFirstPaint(fn) {
 
 async function route() {
   const shell = getShell();
-  if (/^#\/(map|choose|explorer|revenue)\?.*sel=/.test(location.hash)) await shell.dataReady(); // ids are validated against atlas + geometry only
+  if (/^#\/(map|choose|explorer|revenue|score)\?.*sel=/.test(location.hash)) await shell.dataReady(); // ids are validated against atlas + geometry only
   const { path, prev, changed } = router.resolve(location.hash);
   if (prev !== null && !changed) { // same route, other selection (Back/Forward between entries)
     if (path !== '/map' && path !== '/') await mount(path);

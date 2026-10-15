@@ -1,4 +1,4 @@
-// #/choose: two large cards (Explorer, Revenue). Keys 1 and 2. The map eases to the selection behind them.
+// #/choose: three large cards (Explorer, Revenue, Score). Keys 1 to 3. The map eases to the selection behind them.
 import { CONFIG } from '../../config.js';
 import { eclipseSVG } from './logo.js';
 import { mountChips } from './chips.js';
@@ -21,6 +21,7 @@ export function mountChoose(root, { go }) {
       <div class="cards">
         <a class="card" id="c-exp" href="${hrefFor('/explorer', sel(), shell.store.real, shell.store.extras)}"><span class="key mono">1</span><h2>Explorer</h2><p>Price through the day, captured price and value factor, month by month.</p></a>
         <a class="card" id="c-rev" href="${hrefFor('/revenue', sel(), shell.store.real, shell.store.extras)}"><span class="key mono">2</span><h2>Revenue</h2><p>Production times price, hour by hour, and what it adds up to per MWp.</p></a>
+        <a class="card" id="c-score" href="${hrefFor('/score', sel(), shell.store.real, shell.store.extras)}"><span class="key mono">3</span><h2>Score</h2><p>Rank places for a solar plant or a battery, with weights you can change.</p></a>
       </div>
     </main>
   </div>`;
@@ -29,6 +30,7 @@ export function mountChoose(root, { go }) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === '1') go(hrefFor('/explorer', sel(), shell.store.real, shell.store.extras));
     else if (e.key === '2') go(hrefFor('/revenue', sel(), shell.store.real, shell.store.extras));
+    else if (e.key === '3') go(hrefFor('/score', sel(), shell.store.real, shell.store.extras));
   };
   document.addEventListener('keydown', onKey);
   return { destroy() { document.removeEventListener('keydown', onKey); chips.destroy(); } };
