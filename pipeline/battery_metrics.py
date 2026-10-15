@@ -46,7 +46,7 @@ def node_metrics(dates, P, Cg):
     yr = np.array([d.year for d in dates])
     mo = np.array([d.month for d in dates])
     tr, te = np.isin(yr, TRAIN), yr == TEST
-    if tr.sum() < 300 or te.sum() < 250:
+    if tr.sum() < 180 or te.sum() < 250:
         return None
     out = {"days_train": int(tr.sum()), "days_test": int(te.sum())}
     sp = P.max(1) - P.min(1)
@@ -58,8 +58,9 @@ def node_metrics(dates, P, Cg):
     scale = 365.0 / te.sum()
     for k in KS:
         srt = np.sort(P[te], axis=1)
-        pf = k * (srt[:, -k:].mean(1) - srt[:, :k].mean(1) / RTE)           # MXN/MW-day, hindsight
-        rule = np.zeros(te.sum())
+        pf_dis, pf_ch = k * srt[:, -k:].mean(1), k * srt[:, :k].mean(1)     # MXN/MW-day, hindsight
+        pf = pf_dis - pf_ch / RTE
+        rule_dis, rule_ch = np.zeros(te.sum()), np.zeros(te.sum())
         te_idx = np.where(te)[0]
         for m in range(1, 13):
             prof = P[tr & (mo == m)].mean(0) if (tr & (mo == m)).any() else P[tr].mean(0)
@@ -68,7 +69,14 @@ def node_metrics(dates, P, Cg):
             sel = mo[te_idx] == m
             if sel.any():
                 pp = P[te_idx[sel]]
-                rule[sel] = k * (pp[:, dis].mean(1) - pp[:, ch].mean(1) / RTE)
+                rule_dis[sel], rule_ch[sel] = k * pp[:, dis].mean(1), k * pp[:, ch].mean(1)
+        rule = rule_dis - rule_ch / RTE
+        # revenue and charging cost kept apart so the web app can re-price with another RTE:
+        # value(RTE) = dis - ch / RTE   [MXN per kW-year]
+        out[f"dis_kw_yr_{k}h"] = float(rule_dis.sum() * scale / 1000.0)
+        out[f"ch_kw_yr_{k}h"] = float(rule_ch.sum() * scale / 1000.0)
+        out[f"pfdis_kw_yr_{k}h"] = float(pf_dis.sum() * scale / 1000.0)
+        out[f"pfch_kw_yr_{k}h"] = float(pf_ch.sum() * scale / 1000.0)
         out[f"rule_kw_yr_{k}h"] = float(rule.sum() * scale / 1000.0)
         out[f"pf_kw_yr_{k}h"] = float(pf.sum() * scale / 1000.0)
         out[f"capture_{k}h"] = float(rule.sum() / pf.sum()) if pf.sum() > 0 else None

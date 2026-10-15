@@ -73,7 +73,11 @@ def main():
         out[i] = {"components": {k: round(v, 3) for k, v in comp.items()}, "pen": round(pen, 1), "sat": sat_info,
                   "flags": flags, "spread_med": round(m["spread_med"]), "spread_p90": round(m["spread_p90"]),
                   "rule_2h": round(m["rule_kw_yr_2h"]), "rule_4h": round(m["rule_kw_yr_4h"]),
-                  "pf_4h": round(m["pf_kw_yr_4h"]), "capture_4h": round(m["capture_4h"] or 0, 2),
+                  "pf_4h": round(m["pf_kw_yr_4h"]),
+                  "dis_2h": round(m["dis_kw_yr_2h"], 1), "ch_2h": round(m["ch_kw_yr_2h"], 1),
+                  "dis_4h": round(m["dis_kw_yr_4h"], 1), "ch_4h": round(m["ch_kw_yr_4h"], 1),
+                  "pfdis_4h": round(m["pfdis_kw_yr_4h"], 1), "pfch_4h": round(m["pfch_kw_yr_4h"], 1),
+                  "days_train": m["days_train"], "days_test": m["days_test"], "capture_4h": round(m["capture_4h"] or 0, 2),
                   "neg_pct": round(m["neg_share_pct"], 2), "cong_std": round(m["cong_std"]),
                   "cong_mean": round(m["cong_mean"]), "econ_2h": economics(m["rule_kw_yr_2h"], 2),
                   "econ_4h": economics(m["rule_kw_yr_4h"], 4)}
