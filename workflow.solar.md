@@ -92,11 +92,12 @@ FROM viable;
 
 1. **Gate**: `max_patch_ha >= 100` (config). Fails → score null, flagged "no commercial-scale land".
 2. **Components** (normalised 0-1, weights in `config/supuestos.yaml` marked `PENDIENTE`):
-   - land: `max_patch_ha` (log-scaled, capped)
-   - terrain: share of buffer with slope < 3 %
-   - resource: yearly yield from `pipeline/solar*.py`
-   - market: captured price / % PML <= 0 from `kpis.py`
-   - grid: distance to nearest line/substation
+   - land 25 %: `max_patch_ha` (log-scaled, capped)
+   - terrain 15 %: share of buffer with slope < 3 %
+   - resource 25 %: yearly yield from `pipeline/solar*.py`
+   - market 25 %: captured price / % PML <= 0 from `kpis.py`
+   - grid 10 %: distance to nearest line/substation
+   Starting weights (Nico: changeable later); keep them in `config/supuestos.yaml`.
 3. **No verdict colour** while weights are `PENDIENTE` (same rule as the revenue view): show "provisional".
 4. **Confidence**: lower for centroid-based nodes and for nodes with < 12 months of data (existing `confianza`).
 
