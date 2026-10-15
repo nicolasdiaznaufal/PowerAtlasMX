@@ -101,6 +101,7 @@ self.PRECACHE = [
  "assets/js/score-copy.js",
  "assets/js/score-core.js",
  "assets/js/score-detail.js",
+ "assets/js/score-panels.js",
  "assets/js/score-view.js",
  "assets/js/selector.js",
  "assets/js/series-card.js",

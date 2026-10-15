@@ -58,6 +58,8 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   };
   const selectedNodes = () => nodes.filter((n) => sel.some((s) => s.kind === 'node' && s.id === n.id));
   const areaSet = () => new Set(sel.filter((s) => s.kind === 'state' || s.kind === 'region').map((s) => `${s.kind}:${s.id}`));
+  const CREAM = [237, 230, 208, 255];
+  const slotCol = (kind, id) => (scoreOf && sel.findIndex((s) => s.kind === kind && s.id === id) === 1 ? CREAM : SAND);
   const nodeActive = (n) => !sel.length || sel.some((s) => s.kind === 'national' || (s.kind === 'node' && s.id === n.id) || (s.kind === 'state' && s.id === n.state) || (s.kind === 'region' && s.id === n.region));
 
   function layers() {
@@ -65,7 +67,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     const L = deck;
     const fillState = (f) => (areas.has(`state:${f.properties.key}`) || areas.has(`region:${f.properties.region}`) ? hexa('#18211B') : hexa('#111813'));
     return [
-      new L.GeoJsonLayer({ id: 'states', data: geo.states, pickable: true, stroked: true, filled: true, getFillColor: fillState, getLineColor: (f) => (areas.has(`state:${f.properties.key}`) ? [232, 162, 102, 230] : [240, 232, 210, 36]), lineWidthUnits: 'pixels', getLineWidth: (f) => (areas.has(`state:${f.properties.key}`) ? 2 : 1),
+      new L.GeoJsonLayer({ id: 'states', data: geo.states, pickable: true, stroked: true, filled: true, getFillColor: fillState, getLineColor: (f) => (areas.has(`state:${f.properties.key}`) ? slotCol('state', f.properties.key) : [240, 232, 210, 36]), lineWidthUnits: 'pixels', getLineWidth: (f) => (areas.has(`state:${f.properties.key}`) ? 2 : 1),
         updateTriggers: { getFillColor: [sel], getLineColor: [sel], getLineWidth: [sel] }, autoHighlight: true, highlightColor: [240, 232, 210, 14] }),
       new L.GeoJsonLayer({ id: 'regions', data: geo.regions, pickable: false, stroked: true, filled: false, getLineColor: [240, 232, 210, 92], lineWidthUnits: 'pixels', getLineWidth: 1.5 }),
       new L.ScatterplotLayer({ id: 'nodata', data: scoreData ? scoreData.off : noData, pickable: true, getPosition: (n) => [n.lon, n.lat], getRadius: 2000, radiusUnits: 'meters', radiusMinPixels: 1.5, radiusMaxPixels: 5,
@@ -75,14 +77,14 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
         updateTriggers: { getFillColor: [metric, sel, scoreData], getPosition: [scoreData] }, transitions: { getFillColor: 350 } }),
       new L.ScatterplotLayer({ id: 'ring', data: [...selectedNodes(), ...(hover && !hover.__none ? [hover] : [])], pickable: false, filled: false, stroked: true,
         getPosition: (n) => [n.lon, n.lat], getRadius: 2500, radiusUnits: 'meters', radiusMinPixels: 6, radiusMaxPixels: 14,
-        getLineColor: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? SAND : [240, 232, 210, 150]), lineWidthUnits: 'pixels', getLineWidth: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? 2.5 : 1.25),
+        getLineColor: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? slotCol('node', n.id) : [240, 232, 210, 150]), lineWidthUnits: 'pixels', getLineWidth: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? 2.5 : 1.25),
         updateTriggers: { getData: [sel, hover], getLineColor: [sel], getLineWidth: [sel] } }),
     ];
   }
 
   const nodeOf = (info) => (info && info.object && (info.layer.id === 'nodes' || info.layer.id === 'nodata') ? info.object : null);
   const inst = new deck.Deck({
-    parent: container, views: view, controller: CONTROLLER,
+    parent: container, views: view, controller: CONTROLLER, pickingRadius: 8, // nodes are small: pick the nearest dot within 8 px
     viewState: fit(MEXICO), layers: layers(), useDevicePixels: Math.min(window.devicePixelRatio || 1, 2),
     onViewStateChange: ({ viewState }) => { vs = clamp(viewState); inst.setProps({ viewState: vs }); },
     getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
@@ -91,6 +93,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
       const n = nodeOf(info);
       if (n) return callbacks.onPickNode(n);
       if (info && info.object && info.layer.id === 'states') callbacks.onPickState(info.object.properties.key);
+      else if (callbacks.onPickNone) callbacks.onPickNone();
     },
   });
   vs = inst.props.viewState;

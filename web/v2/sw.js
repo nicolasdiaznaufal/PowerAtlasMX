@@ -6,7 +6,7 @@
 //  - v1's worker deletes every cache that does not start with its own VERSION (including ours): if that happens the shell is
 //    re-filled from the network on the next online visit, and offline navigations fall back to an inline page, never undefined.
 // Bump VERSION on every release that changes the shell.
-const VERSION = 'v2-m17-1-daa6b91f';
+const VERSION = 'v2-m17-2-e3df8f36';
 const SHELL = `v2-shell-${VERSION}`;
 const DATA = 'v2-data';
 // Data cache bound: the core JSON (index, analysis, series, profiles, per-config scalars: about 21 MB raw) is pinned; per-variant files

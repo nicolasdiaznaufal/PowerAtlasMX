@@ -12,7 +12,7 @@ export const PAD = {
   full: () => (window.innerWidth < 760 ? { top: 72, right: 12, bottom: 300, left: 12 } : { top: 72, right: 40, bottom: 40, left: 400 }),
   choose: () => (window.innerWidth < 760 ? { top: 72, right: 24, bottom: 320, left: 24 } : { top: 80, right: 80, bottom: 300, left: 80 }),
   mini: () => ({ top: 16, right: 16, bottom: 16, left: 16 }),
-  stage: () => ({ top: 24, right: 24, bottom: 24, left: 24 }), // Score page: the map sits in the page, controls are beside it
+  stage: () => (window.innerWidth >= 900 ? { top: 24, right: window.innerWidth >= 1180 ? 410 : 350, bottom: 24, left: window.innerWidth >= 1180 ? 365 : 315 } : { top: 16, right: 16, bottom: 16, left: 16 }), // Score page: the map sits in the page, controls are beside it
 };
 
 let shell = null;
@@ -36,8 +36,9 @@ export function getShell() {
             onHover: (n, x, y) => s.hoverFn && s.hoverFn(n, x, y),
             onPickNode: (n) => s.toggleNode(n),
             onPickState: (k) => s.pick({ kind: 'state', id: k, label: k }),
+            onPickNone: () => s.noneFn && s.noneFn(), // empty map space (Score page clears the selection)
           } });
-          s.mv.setInteractive(s.mode === 'full' || s.mode === 'stage', s.mode === 'stage' ? { scrollZoom: false } : {}); // a direct load of an analysis route starts in mini mode
+          s.mv.setInteractive(s.mode === 'full' || s.mode === 'stage'); // a direct load of an analysis route starts in mini mode
           s.mv.setPadding(PAD[PAD[s.mode] && s.mode !== 'choose' ? s.mode : 'full']());
           s.mv.reset(0);
           s.mv.setMetric(s.metric);
@@ -98,7 +99,7 @@ export function getShell() {
       s.host.classList.toggle('is-hidden', m === 'hidden');
       s.host.classList.toggle('is-mini', m === 'mini');
       s.host.classList.toggle('is-stage', m === 'stage'); // placed over the Score page's map slot (custom properties set by that view)
-      if (s.mv) s.mv.setInteractive(m === 'full' || m === 'stage', m === 'stage' ? { scrollZoom: false } : {});
+      if (s.mv) s.mv.setInteractive(m === 'full' || m === 'stage');
     },
   };
   // creating a WebGL context is expensive (software GL: ~1 s), so it is probed on first use, never on the landing path

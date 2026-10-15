@@ -1,6 +1,7 @@
 import test from 'node:test';
+import { existsSync, readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { combine, scoreNode, normWeights, norm, buildSearch, search, percentile, areaSummary, modelsOf, FLOOR } from '../v2/assets/js/score-core.js';
+import { combine, scoreNode, normWeights, norm, buildSearch, search, percentile, areaSummary, modelsOf, FLOOR, percentileLin, valueAtRte, valueScale, econ, crf, unit, areaMedian } from '../v2/assets/js/score-core.js';
 
 const K = ['a', 'b'];
 test('strict mode is a weighted geometric mean, a zero is lifted to the floor', () => {
@@ -76,4 +77,52 @@ test('#/score is a route that works without a selection and keeps one when given
   assert.equal(r.path, '/score');
   assert.deepEqual(r.list, [{ kind: 'state', id: 'JALISCO' }]);
   assert.equal(r.hash, '#/score?sel=state:JALISCO');
+});
+
+test('battery value at a given efficiency, linear percentile, economics', () => {
+  const b = { dis_4h: 2000, ch_4h: 850, pfdis_4h: 2300, pfch_4h: 700, dis_2h: 1000, ch_2h: 425 };
+  assert.ok(Math.abs(valueAtRte(b, 4, 0.85) - 1000) < 1e-9);
+  assert.ok(valueAtRte(b, 4, 1) > valueAtRte(b, 4, 0.7));
+  assert.ok(Math.abs(valueAtRte(b, 4, 0.85, true) - (2300 - 700 / 0.85)) < 1e-9);
+  assert.equal(valueAtRte(null, 4, 0.85), null);
+  assert.equal(valueAtRte({}, 4, 0.85), null);
+  assert.equal(percentileLin([1, 2, 3, 4], 50), 2.5);
+  assert.equal(percentileLin([5], 10), 5);
+  assert.equal(percentileLin([], 10), null);
+  assert.equal(unit(5, 0, 10), 0.5); assert.equal(unit(-1, 0, 10), 0); assert.equal(unit(99, 0, 10), 1);
+  assert.ok(Math.abs(crf(0.1, 15) - 0.13147) < 1e-4);
+  assert.equal(crf(0, 10), 0.1);
+  const e = econ(1000, 4, { power: 4500, energy: 3800, om: 1.5, life: 15, disc: 0.1 });
+  assert.equal(e.capex, 19700);
+  assert.ok(Math.abs(e.annual - (19700 * crf(0.1, 15) + 19700 * 0.015)) < 1e-6);
+  assert.ok(Math.abs(e.coverage - 1000 / e.annual) < 1e-12);
+  assert.ok(Math.abs(e.payback - 19700 / (1000 - 295.5)) < 1e-9);
+  assert.equal(econ(200, 4, { power: 4500, energy: 3800, om: 1.5, life: 15, disc: 0.1 }).payback, null);
+  assert.equal(areaMedian([{ state: 'A', v: 1 }, { state: 'A', v: 3 }, { state: 'A', v: null }, { state: 'B', v: 9 }], { kind: 'state', id: 'A' }, (n) => n.v), 2);
+});
+test('value scale moves with the efficiency; component and score stay in range', () => {
+  const nodes = Array.from({ length: 11 }, (_, i) => ({ bat: { dis_4h: 1000 + 100 * i, ch_4h: 300 } }));
+  const a = valueScale(nodes, 0.85), c = valueScale(nodes, 0.6);
+  assert.ok(c[0] < a[0] && c[1] < a[1]);
+  const data = { meta: { config: { weights: {} } }, bat_meta: { config: { weights: { value: 1 }, rte: 0.85, scales: { value_pctl: [10, 90] } } }, nodes };
+  const ctx = { rte: 0.6 };
+  const M = modelsOf(data, ctx);
+  const n = { bat: { components: { value: 0.5 }, dis_4h: 1500, ch_4h: 300 } };
+  assert.ok(M.bat.comp(n).value >= 0 && M.bat.comp(n).value <= 1);
+  ctx.rte = 0.85;
+  assert.equal(M.bat.comp(n).value, 0.5); // the file's own efficiency uses the stored components
+});
+const SCORES = new URL('../data/derived/scores.json', import.meta.url);
+test('at the default efficiency the browser recomputation reproduces the stored battery scores', { skip: !existsSync(SCORES) }, () => {
+  const d = JSON.parse(readFileSync(SCORES, 'utf8'));
+  const ctx = { rte: d.bat_meta.config.rte, force: true };
+  const M = modelsOf(d, ctx);
+  let n = 0, worst = 0;
+  for (const x of d.nodes) {
+    if (!x.bat || x.bat.dis_4h == null) continue;
+    const s = scoreNode(x, M.bat, M.bat.W0, 'strict');
+    worst = Math.max(worst, Math.abs(s - x.bat.score)); n++;
+  }
+  assert.ok(n > 2000, `${n} nodes`);
+  assert.ok(worst < 0.35, `worst difference ${worst}`);
 });
