@@ -3,7 +3,7 @@
 <title>Solar Plant Score · PowerAtlasMx</title>
 <style>/*CSS*/</style></head><body>
 <nav class="nav"><b>PowerAtlasMx</b><span class="by">by REPSA</span><span class="sp"></span>
-<span class="mono">Solar Plant Score</span><span class="pill mono">Provisional</span></nav>
+<div class="seg" id="tabs" style="width:260px"><button data-t="solar" class="on">Solar plant</button><button data-t="bat">Battery</button></div><span class="mono" id="ttl">Solar Plant Score</span><span class="pill mono">Provisional</span></nav>
 <div class="stage" id="stage">
 <canvas id="cv"></canvas><div class="tip" id="tip"></div>
 <div class="card left">
@@ -22,5 +22,5 @@
 <div>dark dot = not scored · drag to pan · scroll to zoom</div></div>
 </div>
 <section class="method" id="method"></section>
-<script>const D=/*DATA*/;const GEO=/*GEO*/;</script>
+<script>const D=/*DATA*/;D.bat=D.bat_meta;const GEO=/*GEO*/;</script>
 <script>/*JS*/</script></body></html>

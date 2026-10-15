@@ -160,3 +160,10 @@ FROM viable;
   (34.5 kV Peninsular nodes with congestion mean > 3,000 MXN/MWh) need an audit before being trusted.
 - Proposed components (weights, strict mode): value 30, daily spread 15, predictability (capture ratio) 15,
   negative-price share 15, congestion volatility 10, grid 15; saturation modifier as 7.1. No verdict colour.
+
+### 7.3 Audit and MXN economics (2026-10-15)
+- Peninsular 34.5 kV outliers audited: real MDA outputs, consistent across 2023-2026 (annual mean PML 4,500-5,600,
+  congestion mean 3,500-4,800, summer peaks above 7,000). Zero-price hours are system-wide holidays (e.g. 2025-12-25),
+  not data gaps. Kept but flagged "structural congestion"; percentile scaling caps their influence.
+- Illustrative cost (config/battery_score.json): 4,500 MXN/kW + 3,800 MXN/kWh (4 h = 19,700 MXN/kW), O&M 1.5 %,
+  15 yr, 10 %. Result: median revenue/annual cost 0.20, p90 0.35, max 1.31 (4 h, MDA only). Mock-up has a Battery tab.

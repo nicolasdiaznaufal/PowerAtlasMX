@@ -1,0 +1,21 @@
+{
+  "_note": "Battery (standalone MDA arbitrage) screening. Costs are ILLUSTRATIVE, editable, MXN. Status: PROVISIONAL.",
+  "rte": 0.85,
+  "train_years": [2023, 2024],
+  "test_year": 2025,
+  "cost": {
+    "power_mxn_per_kw": 4500,
+    "energy_mxn_per_kwh": 3800,
+    "om_pct_capex_yr": 1.5,
+    "life_years": 15,
+    "discount_rate": 0.10
+  },
+  "mode_default": "strict",
+  "weights": {"value": 0.30, "spread": 0.15, "predictability": 0.15, "negative": 0.15, "congvol": 0.10, "grid": 0.15},
+  "scales": {
+    "value_pctl": [10, 90], "spread_pctl": [10, 90], "capture": [0.5, 0.9],
+    "negative_pctl": [10, 90], "congvol_pctl": [10, 90], "grid_km": [0.5, 10]
+  },
+  "saturation_penalty_pts": [5, 15],
+  "structural_congestion_mxn_mwh": 1000
+}

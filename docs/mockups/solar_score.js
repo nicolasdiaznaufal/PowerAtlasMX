@@ -1,12 +1,20 @@
-const C=['land','resource','market','congestion','terrain','grid'];
-const NAME={land:'Land',resource:'Solar resource',market:'Market price',congestion:'Congestion',terrain:'Terrain',grid:'Grid proximity'};
-const W0=D.meta.config.weights,W={...W0};let MODE=D.meta.config.mode_default,SEL=null,HOVER=null;
+const MODELS={
+ solar:{title:'Solar Plant Score',C:['land','resource','market','congestion','terrain','grid'],
+  NAME:{land:'Land',resource:'Solar resource',market:'Market price',congestion:'Congestion',terrain:'Terrain',grid:'Grid proximity'},
+  W0:D.meta.config.weights,comp:n=>n.components,pen:()=>0,flags:n=>n.flags},
+ bat:{title:'Battery Score',C:['value','spread','predictability','negative','congvol','grid'],
+  NAME:{value:'Arbitrage value',spread:'Daily spread',predictability:'Predictability',negative:'Negative prices',congvol:'Congestion volatility',grid:'Grid proximity'},
+  W0:D.bat.config.weights,comp:n=>n.bat&&n.bat.components,pen:n=>n.bat?n.bat.pen:0,flags:n=>n.bat?n.bat.flags:['no battery data']}};
+Object.values(MODELS).forEach(m=>m.W={...m.W0});
+let TAB='solar',C,NAME,W,MODE=D.meta.config.mode_default,SEL=null,HOVER=null;
+function setTab(t){TAB=t;C=MODELS[t].C;NAME=MODELS[t].NAME;W=MODELS[t].W}setTab('solar');
 const f=(x,d=0)=>x==null?'n/a':Number(x).toLocaleString('en-US',{maximumFractionDigits:d});
 const $=id=>document.getElementById(id);
 const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-function score(n){if(!n.components)return null;const tw=C.reduce((a,c)=>a+W[c],0);if(!tw)return null;
-  if(MODE==='linear')return 100*C.reduce((a,c)=>a+W[c]*n.components[c],0)/tw;
-  return 100*Math.exp(C.reduce((a,c)=>a+W[c]*Math.log(Math.max(n.components[c],.02)),0)/tw)}
+function score(n){const M=MODELS[TAB],cp=M.comp(n);if(!cp)return null;const tw=C.reduce((a,c)=>a+W[c],0);if(!tw)return null;
+  const raw=MODE==='linear'?100*C.reduce((a,c)=>a+W[c]*cp[c],0)/tw
+   :100*Math.exp(C.reduce((a,c)=>a+W[c]*Math.log(Math.max(cp[c],.02)),0)/tw);
+  return Math.max(0,raw-M.pen(n))}
 // ---- geometry (same decoding and projection as web/v2)
 const P=GEO.proj,S=GEO.scale;
 function ring(flat){const o=[];let x=0,y=0;for(let i=0;i<flat.length;i+=2){x+=flat[i];y+=flat[i+1];o.push([x/S,y/S])}return o}
@@ -82,18 +90,39 @@ function controls(){$('wts').innerHTML=C.map(c=>`<div class="row"><span>${NAME[c
   $('wts').querySelectorAll('input').forEach(i=>i.oninput=()=>{W[i.dataset.c]=i.value/100;i.nextElementSibling.textContent=i.value;panel();draw()});
   $('mode').querySelectorAll('button').forEach(b=>{b.classList.toggle('on',b.dataset.m===MODE);b.onclick=()=>{MODE=b.dataset.m;controls();panel();draw()}});
   $('modeNote').textContent=MODE==='strict'?'Weighted geometric mean: one weak component pulls the whole score down.':'Weighted average: strengths can offset weaknesses.'}
-$('reset').onclick=()=>{Object.assign(W,W0);controls();panel();draw()};
+$('reset').onclick=()=>{Object.assign(W,MODELS[TAB].W0);controls();panel();draw()};
 // ---- detail panel
 const pct=(a,p)=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(p*s.length))]};
 function listHtml(rows){return`<ul class="rk">${rows.map(([n,s])=>`<li data-id="${n.id}"><span>${n.nombre}<br><span class="sub">${n.entidad||''}</span></span><b>${s.toFixed(0)}</b></li>`).join('')}</ul>`}
-function panel(){const el=$('detail');let h='';
-  if(SEL&&SEL.kind==='node'){const n=D.nodes.find(n=>n.id===SEL.id),s=score(n);
-    h=`<h3 class="mono">${n.id}</h3><div style="font-size:18px;font-weight:500">${n.nombre}</div>
-    <div class="sub">${n.municipio||''}, ${n.entidad||''} · ${n.region||''}</div>
-    <div class="big" style="margin:16px 0">${s==null?'–':s.toFixed(0)}<small> / 100</small></div>
-    ${n.flags.length?`<div class="flag">Not scored: ${n.flags.join(', ')}</div>`:''}
-    ${n.components?C.map(c=>`<div class="bar"><div class="t"><span>${NAME[c]}</span><i>${f(n.components[c]*100)} · weight ${f(W[c]*100)}</i></div><div class="b"><div style="width:${n.components[c]*100}%"></div></div></div>`).join(''):''}
-    <h3 class="mono">Raw values · 15 km circle</h3><table>
+function bars(n){const cp=MODELS[TAB].comp(n);if(!cp)return'';
+  const pen=MODELS[TAB].pen(n);
+  return C.map(c=>`<div class="bar"><div class="t"><span>${NAME[c]}</span><i>${f(cp[c]*100)} · weight ${f(W[c]*100)}</i></div><div class="b"><div style="width:${cp[c]*100}%"></div></div></div>`).join('')
+   +(pen?`<div class="flag">Grid saturation penalty: −${f(pen,1)} pts (verified substation)</div>`:'')}
+function flagsHtml(n){const fl=MODELS[TAB].flags(n)||[];
+  if(TAB==='solar')return fl.length?`<div class="flag">Not scored: ${fl.join(', ')}</div>`:'';
+  return fl.map(x=>`<div class="flag">${x}</div>`).join('')}
+const mxn=x=>x==null?'n/a':'MXN '+f(x);
+function raw(n){if(TAB==='bat'){const b=n.bat;if(!b)return'<div class="sub">No hourly price history for this node.</div>';
+  const e2=b.econ_2h,e4=b.econ_4h;
+  return`<h3 class="mono">Prices · 2023–2025 day-ahead (MDA)</h3><table>
+  <tr><td>Median daily spread (max − min)</td><td>${f(b.spread_med)} MXN/MWh</td></tr>
+  <tr><td>Daily spread, 90th percentile</td><td>${f(b.spread_p90)} MXN/MWh</td></tr>
+  <tr><td>Congestion: mean · volatility</td><td>${f(b.cong_mean)} · ${f(b.cong_std)} MXN/MWh</td></tr>
+  <tr><td>Hours at or below 0</td><td>${f(b.neg_pct,2)} %</td></tr>
+  <tr><td>Share captured vs hindsight (4 h)</td><td>${f(b.capture_4h*100)} %</td></tr></table>
+  <h3 class="mono">Rule-based value 2025 · per kW-year</h3><table>
+  <tr><td>2-hour battery</td><td>${mxn(b.rule_2h)}</td></tr>
+  <tr><td>4-hour battery</td><td>${mxn(b.rule_4h)}</td></tr>
+  <tr><td>4 h with perfect foresight (upper bound)</td><td>${mxn(b.pf_4h)}</td></tr></table>
+  <h3 class="mono">Illustrative economics · editable in config</h3><table>
+  <tr><td>4 h capex</td><td>${mxn(e4.capex_mxn_kw)}/kW</td></tr>
+  <tr><td>4 h annual cost (capital + O&amp;M)</td><td>${mxn(e4.annual_cost_mxn_kw)}/kW-yr</td></tr>
+  <tr><td>4 h revenue ÷ annual cost</td><td>${e4.coverage.toFixed(2)}×</td></tr>
+  <tr><td>4 h simple payback</td><td>${e4.payback_yr==null?'none':f(e4.payback_yr,0)+' yr'}</td></tr>
+  <tr><td>2 h revenue ÷ annual cost</td><td>${e2.coverage.toFixed(2)}×</td></tr></table>
+  ${b.sat?`<h3 class="mono">Substation (verified)</h3><table><tr><td>Capacity · connected generation</td><td>${f(b.sat.mva)} MVA · ${f(b.sat.gen_mw)} MW</td></tr>
+  <tr><td>Saturation</td><td>${f(b.sat.sat,2)}</td></tr></table>`:'<div class="sub" style="margin-top:8px">Grid saturation: not available for this node.</div>'}`}
+  return`<h3 class="mono">Raw values · 15 km circle</h3><table>
     <tr><td>Largest viable patch</td><td>${f(n.max_patch_ha)} ha</td></tr>
     <tr><td>Slope over 7 %</td><td>${f(n.steep_pct,1)} %</td></tr>
     <tr><td>Flat (≤3 %) share</td><td>${f(n.flat3_pct,1)} %</td></tr>
@@ -104,8 +133,16 @@ function panel(){const el=$('detail');let h='';
     <tr><td>Solar yield (fixed tilt)</td><td>${f(n.yf_kwh_kwp)} kWh/kWp·yr</td></tr>
     <tr><td>Captured price (real, MDA)</td><td>${f(n.price_mxn_mwh)} MXN/MWh</td></tr>
     <tr><td>Congestion, solar-weighted</td><td>${f(n.cong_mxn_mwh,1)} MXN/MWh</td></tr>
-    <tr><td>Months of price data</td><td>${f(n.meses)}</td></tr></table>
-    <div class="sub" style="margin-top:10px">Location is the municipality centroid, not the substation.</div>
+    <tr><td>Months of price data</td><td>${f(n.meses)}</td></tr></table>`}
+function panel(){const el=$('detail');let h='';
+  if(SEL&&SEL.kind==='node'){const n=D.nodes.find(n=>n.id===SEL.id),s=score(n);
+    h=`<h3 class="mono">${n.id}</h3><div style="font-size:18px;font-weight:500">${n.nombre}</div>
+    <div class="sub">${n.municipio||''}, ${n.entidad||''} · ${n.region||''}</div>
+    <div class="big" style="margin:16px 0">${s==null?'–':s.toFixed(0)}<small> / 100</small></div>
+    ${flagsHtml(n)}
+    ${bars(n)}
+    ${raw(n)}
+    <div class="sub" style="margin-top:10px">Location is the municipality centroid, not the substation.${TAB==='bat'?' Day-ahead prices only: no capacity, ancillary or real-time income.':''}</div>
     <button class="btn" id="clr">Back to national view</button>`}
   else{const inA=D.nodes.filter(inSel),sc=inA.map(n=>[n,score(n)]).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);
     const title=!SEL?'Mexico':SEL.kind==='state'?states.find(s=>s.k===SEL.id).n:SEL.id[0]+SEL.id.slice(1).toLowerCase()+' region';
@@ -120,7 +157,7 @@ function panel(){const el=$('detail');let h='';
   el.innerHTML=h;const b=$('clr');if(b)b.onclick=()=>choose(null);
   el.querySelectorAll('li[data-id]').forEach(li=>li.onclick=()=>choose({kind:'node',id:li.dataset.id}))}
 // ---- method section
-function method(){const M=D.meta,c=M.config,s=c.scales,w=c.weights;
+function method(){if(TAB==='bat')return methodBat();const M=D.meta,c=M.config,s=c.scales,w=c.weights;
 $('method').innerHTML=`<h2>How the score is built</h2>
 <p>For each PML node we study the land inside a <b>${c.buffer_km} km circle</b> around its location, add its solar resource and market behaviour, and turn six components into a 0–100 score. It ranks places to look at first. It is <b>not</b> a site approval or a financial verdict, and the weights are provisional.</p>
 <h2>1 · Land screen: what is removed</h2>
@@ -143,4 +180,29 @@ $('method').innerHTML=`<h2>How the score is built</h2>
 <li>Land cover is 1:250,000 and slope 81 m: a regional screen, not a site survey. No land ownership, price, water, soil, or interconnection capacity.</li>
 <li>Price and congestion scales are relative to this node set; a high score means "good compared with other nodes".</li>
 <li>OpenStreetMap grid completeness is unaudited. Data: © OpenStreetMap contributors (ODbL), INEGI, CONANP, CENACE, NASA POWER. Generated ${M.generated}.</li></ul>`}
+function methodBat(){const B=D.bat,c=B.config,w=c.weights,s=c.scales,k=c.cost,sc=B.scales;
+$('method').innerHTML=`<h2>How the Battery Score is built</h2>
+<p>A screening of how attractive each PML node looks for a stand-alone battery that buys cheap hours and sells expensive ones in the <b>day-ahead market (MDA)</b>. It ranks nodes against each other. It is <b>not</b> a revenue forecast: capacity payments, ancillary services and real-time imbalance are not included.</p>
+<h2>1 · Realistic trading rule, tested out of sample</h2>
+<p>For every month we learn which hours of the day were cheapest and most expensive in ${c.train_years[0]}–${c.train_years[1]}, then trade exactly those hours on the real prices of ${c.test_year}. No look-ahead. Round-trip efficiency ${f(c.rte*100)} %. The perfect-foresight spread (best vs worst hour of each day, what is often quoted) is shown only as an upper bound.</p>
+<h2>2 · Six components, each scaled 0–1</h2><table>
+<tr><td>Value · ${f(w.value*100)}</td><td>Rule-based 4-hour value, MXN per kW-year. ${f(sc.value[0])} = 0, ${f(sc.value[1])} = 1 (10th–90th percentile).</td></tr>
+<tr><td>Spread · ${f(w.spread*100)}</td><td>Median daily max − min price, MXN/MWh. ${f(sc.spread[0])} = 0, ${f(sc.spread[1])} = 1.</td></tr>
+<tr><td>Predictability · ${f(w.predictability*100)}</td><td>Share of the hindsight value that the rule captures: ${s.capture[0]*100} % = 0, ${s.capture[1]*100} % = 1. Stable daily shapes are easier to trade.</td></tr>
+<tr><td>Negative prices · ${f(w.negative*100)}</td><td>Share of hours at or below zero (free charging). ${f(sc.negative[0],2)} % = 0, ${f(sc.negative[1],2)} % = 1.</td></tr>
+<tr><td>Congestion volatility · ${f(w.congvol*100)}</td><td>Standard deviation of the congestion component: ${f(sc.congvol[0])} = 0, ${f(sc.congvol[1])} = 1 MXN/MWh. A battery earns where congestion moves.</td></tr>
+<tr><td>Grid · ${f(w.grid*100)}</td><td>Distance to the nearest 115–400 kV line or ≤161 kV substation: ≤${s.grid_km[0]} km = 1, ≥${s.grid_km[1]} km = 0.</td></tr></table>
+<h2>3 · Combination and saturation rule</h2>
+<p>Same strict (weighted geometric mean) or balanced (average) options as the solar score. Only ${B.verified_subs} nodes could be checked against substation saturation (name, voltage and CFE zone matched) and ${B.saturated} are saturated. Those lose ${c.saturation_penalty_pts[0]}–${c.saturation_penalty_pts[1]} points; nodes without data are <b>not</b> rewarded or penalised.</p>
+<h2>4 · Illustrative economics (MXN, editable)</h2><table>
+<tr><td>Capex</td><td>${f(k.power_mxn_per_kw)} MXN/kW for power equipment + ${f(k.energy_mxn_per_kwh)} MXN/kWh for the cells: a 4-hour system is ${f(k.power_mxn_per_kw+4*k.energy_mxn_per_kwh)} MXN/kW (about USD 1,000–1,100/kW at 18–19 MXN/USD).</td></tr>
+<tr><td>Annual cost</td><td>Capex spread over ${k.life_years} years at ${f(k.discount_rate*100)} % plus ${k.om_pct_capex_yr} % O&amp;M. "Revenue ÷ annual cost" below 1 means the day-ahead arbitrage alone does not pay for the battery.</td></tr></table>
+<h2>Limits</h2><ul>
+<li>Costs are illustrative placeholders, not a quote. Rates and costs live in <code>config/battery_score.json</code>.</li>
+<li>Prices are the node's own; a battery changes prices it trades against, which this screen ignores.</li>
+<li>Peninsular 34.5 kV nodes show structurally high congestion (flagged). The values are real market outputs but may reflect isolated or constrained pockets that a project could not exploit at scale.</li>
+<li>Location is the municipality centroid. Data: CENACE MDA, CENACE node catalogue, Batu Energy open substations. Generated ${B.generated}.</li></ul>`}
+function tab(t){setTab(t);document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('ttl').textContent=MODELS[t].title;controls();method();panel();draw()}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 controls();method();fit(ALL);panel();draw();window.onresize=()=>{fit(SEL?V:ALL);draw()};

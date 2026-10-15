@@ -1,4 +1,4 @@
-"""Build docs/mockups/solar_score.html (self-contained, no map tiles) from data/analysis/solar_score.json."""
+"""Build docs/mockups/solar_score.html (self-contained, no map tiles) from solar_score.json + battery_score.json."""
 import json
 import re
 import unicodedata
@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 M = ROOT / "docs/mockups"
 KEEP = ("id", "nombre", "region", "entidad", "municipio", "lat", "lon", "meses", "max_patch_ha", "steep_pct",
         "flat3_pct", "landcover_excl_pct", "anp_excl_pct", "dist_hv_line_km", "dist_substation_km", "yf_kwh_kwp",
-        "price_mxn_mwh", "cong_mxn_mwh", "components", "flags", "state")
+        "price_mxn_mwh", "cong_mxn_mwh", "components", "flags", "state", "bat")
 
 
 def norm(s):
@@ -26,6 +26,10 @@ for n in d["nodes"]:
     n["state"] = k if k in keys else None
     if n["state"] is None:
         miss.add(n.get("entidad"))
+bs = json.loads((ROOT / "data/analysis/battery_score.json").read_text())
+for n in d["nodes"]:
+    n["bat"] = bs["nodes"].get(n["id"])
+d["bat_meta"] = {**bs["meta"], "generated": d["meta"]["generated"]}
 d["nodes"] = [{k: n.get(k) for k in KEEP} for n in d["nodes"]]
 html = (M / "solar_score.tpl.html").read_text()
 for tag, val in (("/*CSS*/", (M / "solar_score.css").read_text()), ("/*JS*/", (M / "solar_score.js").read_text()),
