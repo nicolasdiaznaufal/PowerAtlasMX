@@ -150,6 +150,7 @@ def analyse(node, con, dem, buf_km, hv, subs):
         "anp_excl_pct": round(100 * float((valid & anp_ex).sum()) / max(valid.sum(), 1), 1),
         "net_viable_ha": round(float(viable.sum()) * ha),
         "max_patch_ha": round(patch * ha), "passes_100ha": patch * ha >= MIN_PATCH_HA,
+        "flat3_pct": round(100 * float((valid & (slope <= 3.0)).sum()) / max(valid.sum(), 1), 1),
         "median_slope_pct": round(float(np.nanmedian(slope[valid])), 1) if valid.any() else None,
         "dist_hv_line_km": round(seg_dist_m(lat, lon, hv) / 1000, 1),
         "dist_substation_km": round(point_dist_m(lat, lon, subs) / 1000, 1),
