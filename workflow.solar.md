@@ -14,8 +14,12 @@ Tags: [verificado] checked in this repo, [estimado] assumption, [pendiente] need
 | Coordinate precision | [verificado] **proxy** | 2,599 are INEGI **municipality centroids** (`coord_fuente=municipio_catalogo`), 6 inherited from renamed nodes. Only ~815 unique points for 2,623 nodes. Not substation locations. |
 | DuckDB + spatial ext | [verificado] | `.venv` has duckdb 1.5.6; `INSTALL spatial` works. DB at `data/db/pml.duckdb`. |
 | Table `pml_nodes` | [verificado] missing | The original script assumed it. It must be created from `index.json`. |
-| Exclusion masks (slope, land cover, protected areas) | [pendiente] none | No DEM, land-cover or ANP layer in `data/`. Must be downloaded. |
-| Grid lines / substations | [pendiente] none | No line geometry. Needed for the proximity term. |
+| DEM (slope) | [verificado] received | `data/ref/geo/dem/conjunto_de_datos/modelo_relieve_mexico_2025.tif` (INEGI, 3.1 GB, ~81 m pixel, LCC, values -9650..5592 m so it includes bathymetry; treat sea as nodata). Coarse for slope: use as a screen, not a site survey. |
+| Land cover | [verificado] received | `landcover/serie7_cdv/cdv_usuev250sVII_cnal.shp` (INEGI USV Serie VII 1:250k, 179,099 polygons, fields `CLAVE`/`DESCRIPCIO`, Albers equal-area). **Primary.** `serie7_cw/` is a near-duplicate (2023, LCC, no CLAVE); kept as cross-check only. |
+| Protected areas (ANP) | [pendiente] **MISSING** | `data/ref/geo/protected/` is empty. CONANP ANP polygons needed; without them the exclusion is land cover only. |
+| Grid lines / substations | [pendiente] **MISSING** | `data/ref/geo/grid/` is empty. Grid term is skipped (weight redistributed) until provided. |
+| Roads (bonus) | [verificado] received | `roads/conjunto_de_datos/rnc2025.gpkg` (INEGI RNC 2025, 2.4 GB). Not in the plan; usable as an access-distance term later. |
+| Raster tooling | [pendiente] | `.venv` has no rasterio/GDAL; `pip install rasterio` needed for slope. DuckDB reads the shapefiles and gpkg directly. |
 | Solar resource (GHI/yield) | [verificado] | Already produced by `pipeline/solar*.py` per node; reuse, do not recompute. |
 | Price KPIs (captured price, % PML <= 0) | [verificado] | Already in per-node JSON via `pipeline/kpis.py`; reuse. |
 
