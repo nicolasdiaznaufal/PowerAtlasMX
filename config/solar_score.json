@@ -1,13 +1,17 @@
 {
-  "_note": "Starting weights (Nico, 2026-10-14). Changeable. Status: PROVISIONAL, no green/red verdict.",
+  "_note": "Starting weights, v2 of the score (stricter). Changeable in the UI and here. Status: PROVISIONAL, no green/red verdict.",
   "buffer_km": 15,
   "slope_max_pct": 7,
   "min_patch_ha": 100,
-  "weights": {"land": 0.25, "resource": 0.25, "market": 0.25, "terrain": 0.15, "grid": 0.10},
+  "mode_default": "strict",
+  "weights": {"land": 0.20, "resource": 0.20, "market": 0.20, "congestion": 0.15, "terrain": 0.15, "grid": 0.10},
   "scales": {
-    "land_log10_ha": [2.0, 4.0],
-    "grid_km": [1.0, 20.0],
-    "resource_pctl": [5, 95],
-    "market_pctl": [5, 95]
-  }
+    "land_ha": [200, 5000],
+    "resource_kwh_kwp": [1600, 2000],
+    "market_pctl": [10, 90],
+    "congestion_pctl": [10, 90],
+    "flat_pct": [20, 80],
+    "grid_km": [0.5, 10]
+  },
+  "congestion_years": [2023, 2025]
 }

@@ -1,134 +1,26 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Solar Plant Score</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<style>
-:root{--bg:#0a0a0a;--panel:#111;--line:#262626;--tx:#ededed;--mu:#8f8f8f;--ac:#3ecf8e;--warn:#f5a623}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,Inter,Segoe UI,sans-serif}
-header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
-h1{font-size:18px;margin:0}.pill{font-size:11px;border:1px solid var(--warn);color:var(--warn);border-radius:99px;padding:1px 8px}
-.sub{color:var(--mu);font-size:12px}
-main{display:grid;grid-template-columns:300px 1fr 340px;height:calc(100vh - 54px);min-height:560px}
-aside,.right{background:var(--panel);overflow:auto;padding:14px}aside{border-right:1px solid var(--line)}
-.right{border-left:1px solid var(--line)}
-#map{height:100%;background:#0d0d0d}
-h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin:16px 0 8px}
-h2:first-child{margin-top:0}
-.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}.row label{width:70px}
-input[type=range]{flex:1;accent-color:var(--ac)}.row span{width:36px;text-align:right;color:var(--mu)}
-select{width:100%;background:#1a1a1a;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:5px}
-ol{list-style:none;margin:0;padding:0}li.rk{display:flex;justify-content:space-between;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:12px}
-li.rk:hover{background:#1c1c1c}li.rk b{color:var(--ac)}
-.big{font-size:44px;font-weight:600;line-height:1}.big small{font-size:14px;color:var(--mu)}
-.bar{margin:9px 0}.bar .t{display:flex;justify-content:space-between;font-size:12px}
-.bar .t i{color:var(--mu);font-style:normal}.bar .b{height:6px;background:#222;border-radius:4px;margin-top:3px;overflow:hidden}
-.bar .b div{height:100%;background:var(--ac)}
-table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0;border-bottom:1px solid #1d1d1d}td+td{text-align:right}
-.flag{color:var(--warn);font-size:12px;margin-top:6px}
-.legend{position:absolute;z-index:500;left:316px;bottom:16px;background:#111c;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11px}
-.grad{width:140px;height:8px;border-radius:4px;background:linear-gradient(90deg,#3b1f6b,#1f9bb0,#d6f35b)}
-section.method{padding:22px 28px;border-top:1px solid var(--line);max-width:980px}
-section.method h2{font-size:15px;text-transform:none;letter-spacing:0;color:var(--tx)}
-.method code{background:#1a1a1a;padding:1px 5px;border-radius:4px;font-size:12px}
-.method table td{padding:6px 8px;vertical-align:top}.method td:first-child{white-space:nowrap;color:var(--ac)}
-.method td+td{text-align:left}
-@media(max-width:900px){main{grid-template-columns:1fr;height:auto}#map{height:420px}.legend{left:16px}}
-</style></head><body>
-<header><h1>Solar Plant Score</h1><span class="pill">PROVISIONAL</span>
-<span class="sub" id="sub"></span></header>
-<main>
-<aside>
-  <h2>Weights (editable)</h2><div id="wts"></div>
-  <h2>Region</h2><select id="reg"><option value="">All regions</option></select>
-  <h2>Top 25 now</h2><ol id="top"></ol>
-</aside>
-<div style="position:relative"><div id="map"></div>
-<div class="legend">Score<div class="grad"></div><div style="display:flex;justify-content:space-between"><span>0</span><span>100</span></div>
-<div style="color:#8f8f8f;margin-top:3px">grey = not scored</div></div></div>
-<div class="right" id="detail"><div class="sub">Click a node on the map or in the ranking.</div></div>
-</main>
+<title>Solar Plant Score · PowerAtlasMx</title>
+<style>/*CSS*/</style></head><body>
+<nav class="nav"><b>PowerAtlasMx</b><span class="by">by REPSA</span><span class="sp"></span>
+<span class="mono">Solar Plant Score</span><span class="pill mono">Provisional</span></nav>
+<div class="stage" id="stage">
+<canvas id="cv"></canvas><div class="tip" id="tip"></div>
+<div class="card left">
+  <h3 class="mono">Find a node, state or region</h3>
+  <input type="search" id="q" placeholder="e.g. Mochis, Sonora, Noroeste" autocomplete="off">
+  <ul id="hits"></ul>
+  <h3 class="mono">Strictness</h3>
+  <div class="seg" id="mode"><button data-m="strict">Strict</button><button data-m="linear">Balanced</button></div>
+  <div class="sub" id="modeNote" style="margin-top:6px"></div>
+  <h3 class="mono">Weights</h3><div id="wts"></div>
+  <button class="btn" id="reset">Reset weights</button>
+</div>
+<div class="card right" id="detail"></div>
+<div class="card legend"><span class="mono">Score</span><div class="ramp"></div>
+<div style="display:flex;justify-content:space-between"><span>low</span><span>high</span></div>
+<div>dark dot = not scored · drag to pan · scroll to zoom</div></div>
+</div>
 <section class="method" id="method"></section>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script>
-const D=__DATA__;           // {meta, nodes:[{...}]}
-const C=['land','resource','market','terrain','grid'];
-const NAME={land:'Land',resource:'Solar resource',market:'Market (captured price)',terrain:'Terrain flatness',grid:'Grid proximity'};
-const W={...D.meta.config.weights};
-const f=(x,d=0)=>x==null?'n/a':Number(x).toLocaleString('en-US',{maximumFractionDigits:d});
-const score=n=>{if(!n.components)return null;const s=C.reduce((a,c)=>a+W[c],0)||1;
-  return 100*C.reduce((a,c)=>a+W[c]*n.components[c],0)/s};
-const col=v=>{if(v==null)return'#555';const t=v/100;
-  const a=[[59,31,107],[31,155,176],[214,243,91]],p=t<.5?[a[0],a[1],t*2]:[a[1],a[2],(t-.5)*2];
-  return 'rgb('+p[0].map((x,i)=>Math.round(x+(p[1][i]-x)*p[2])).join(',')+')'};
-document.getElementById('sub').textContent=
-  `Land near each node's municipality centroid (not the substation) · ${D.meta.n_scored} of ${D.meta.n_nodes} nodes scored · data ${D.meta.generated}`;
-const map=L.map('map',{preferCanvas:true}).setView([23.6,-102.5],5);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap contributors © CARTO',maxZoom:12}).addTo(map);
-const layer=L.layerGroup().addTo(map);let sel=null,region='';
-function draw(){
-  layer.clearLayers();const seen=new Set();
-  D.nodes.filter(n=>!region||n.region===region).forEach(n=>{
-    const k=n.lat+','+n.lon;if(seen.has(k)&&n.score==null)return;seen.add(k);
-    const s=score(n);
-    L.circleMarker([n.lat,n.lon],{radius:s==null?3:5,color:'#000',weight:.5,fillColor:col(s),fillOpacity:s==null?.5:.9})
-     .on('click',()=>show(n)).bindTooltip(`${n.nombre} · ${s==null?'not scored':s.toFixed(0)}`).addTo(layer);});
-  const top=D.nodes.filter(n=>(!region||n.region===region)&&n.components).map(n=>[n,score(n)])
-    .sort((a,b)=>b[1]-a[1]).slice(0,25);
-  document.getElementById('top').innerHTML=top.map(([n,s],i)=>
-    `<li class="rk" data-i="${D.nodes.indexOf(n)}"><span>${i+1}. ${n.nombre} <span class="sub">${n.entidad||''}</span></span><b>${s.toFixed(0)}</b></li>`).join('');
-  document.querySelectorAll('li.rk').forEach(e=>e.onclick=()=>{const n=D.nodes[+e.dataset.i];show(n);map.setView([n.lat,n.lon],8)});
-  if(sel)show(sel);}
-function show(n){sel=n;const s=score(n);
-  const bars=n.components?C.map(c=>`<div class="bar"><div class="t"><span>${NAME[c]}</span><i>${f(n.components[c]*100)} / 100 · weight ${f(W[c]*100)}%</i></div>
-    <div class="b"><div style="width:${n.components[c]*100}%"></div></div></div>`).join(''):'';
-  document.getElementById('detail').innerHTML=`<h2>${n.id}</h2><div style="font-size:16px;margin-bottom:8px">${n.nombre}</div>
-  <div class="sub">${n.municipio||''}, ${n.entidad||''} · ${n.region||''}</div>
-  <div class="big" style="margin:14px 0">${s==null?'–':s.toFixed(0)}<small> / 100</small></div>
-  ${n.flags.length?`<div class="flag">Not scored: ${n.flags.join(', ')}</div>`:''}${bars}
-  <h2>Raw values (15 km circle)</h2><table>
-  <tr><td>Largest contiguous viable patch</td><td>${f(n.max_patch_ha)} ha</td></tr>
-  <tr><td>Net viable area (all patches)</td><td>${f(n.net_viable_ha)} ha</td></tr>
-  <tr><td>Steeper than 7 %</td><td>${f(n.steep_pct,1)} %</td></tr>
-  <tr><td>Flat (≤3 %) share</td><td>${f(n.flat3_pct,1)} %</td></tr>
-  <tr><td>Land cover excluded</td><td>${f(n.landcover_excl_pct,1)} %</td></tr>
-  <tr><td>Protected area (federal)</td><td>${f(n.anp_excl_pct,1)} %</td></tr>
-  <tr><td>Nearest 115–400 kV line</td><td>${f(n.dist_hv_line_km,1)} km</td></tr>
-  <tr><td>Nearest ≤161 kV substation</td><td>${f(n.dist_substation_km,1)} km</td></tr>
-  <tr><td>Solar yield (fixed tilt)</td><td>${f(n.yf_kwh_kwp)} kWh/kWp·yr</td></tr>
-  <tr><td>Captured price (real, MDA)</td><td>${f(n.price_mxn_mwh)} MXN/MWh</td></tr>
-  <tr><td>Months of price data</td><td>${f(n.meses)}</td></tr></table>
-  <div class="sub" style="margin-top:10px">Location = municipality centroid, not the substation.</div>`;}
-// controls
-const wd=document.getElementById('wts');
-C.forEach(c=>{const r=document.createElement('div');r.className='row';
-  r.innerHTML=`<label>${NAME[c].split(' (')[0]}</label><input type=range min=0 max=100 value=${W[c]*100}><span>${f(W[c]*100)}%</span>`;
-  r.querySelector('input').oninput=e=>{W[c]=e.target.value/100;r.querySelector('span').textContent=e.target.value+'%';draw();};wd.appendChild(r)});
-const rs=[...new Set(D.nodes.map(n=>n.region).filter(Boolean))].sort();
-rs.forEach(r=>document.getElementById('reg').add(new Option(r,r)));
-document.getElementById('reg').onchange=e=>{region=e.target.value;draw()};
-// method
-const M=D.meta,cf=M.config,s=cf.scales;
-document.getElementById('method').innerHTML=`<h2>How the score is built</h2>
-<p>For every PML node we look at the land inside a <b>${cf.buffer_km} km circle</b> around its location, combine it with the node's solar resource and market data, and produce a 0–100 score. The score ranks places to look at first. It is <b>not</b> a site approval and not a financial verdict: weights are provisional.</p>
-<h2>Step 1 · Land screen (hard exclusions)</h2>
-<table><tr><td>Slope</td><td>Cells steeper than <code>${cf.slope_max_pct} %</code> are removed. Source: INEGI relief model 2025 (~81 m cells, Mercator, corrected for latitude). Sea cells are ignored.</td></tr>
-<tr><td>Land cover</td><td>Removed: forest, jungle (primary and secondary), settlements, water bodies, aquaculture, mangrove, wetland, riparian, irrigated and humidity agriculture, palm groves. Allowed: grassland, scrub, desert, rainfed agriculture. Source: INEGI Land Use Serie VII, 1:250,000.</td></tr>
-<tr><td>Protected areas</td><td>Federal natural protected areas (CONANP, 2026-09-24) removed. State, municipal, RAMSAR and Indigenous lands are not included.</td></tr>
-<tr><td>Contiguity</td><td>Remaining cells are joined into patches (8-neighbour). We keep the <b>largest patch</b>; if it is below <code>${cf.min_patch_ha} ha</code> the node gets no score.</td></tr></table>
-<h2>Step 2 · Five components, each scaled 0–1</h2>
-<table>
-<tr><td>Land · ${f(cf.weights.land*100)}%</td><td>log10 of the largest patch in ha, scaled from ${Math.pow(10,s.land_log10_ha[0])} ha (0) to ${f(Math.pow(10,s.land_log10_ha[1]))} ha (1).</td></tr>
-<tr><td>Solar resource · ${f(cf.weights.resource*100)}%</td><td>Yearly yield of a fixed-tilt plant (kWh/kWp·yr, long-term NASA POWER via pvlib). Scaled between the 5th and 95th percentile of all nodes: ${f(M.yf_scale[0])} → ${f(M.yf_scale[1])}.</td></tr>
-<tr><td>Market · ${f(cf.weights.market*100)}%</td><td>Captured MDA price in real pesos (what a solar profile earned at that node, not the average price). Scaled 5th–95th percentile: ${f(M.price_scale[0])} → ${f(M.price_scale[1])} MXN/MWh. Reference only: not the full revenue.</td></tr>
-<tr><td>Terrain · ${f(cf.weights.terrain*100)}%</td><td>Share of valid land in the circle with slope ≤ 3 %. Already a 0–1 fraction.</td></tr>
-<tr><td>Grid · ${f(cf.weights.grid*100)}%</td><td>Distance to the nearest 115–400 kV line or ≤161 kV substation (OpenStreetMap): 1 at ≤${s.grid_km[0]} km, falling linearly to 0 at ≥${s.grid_km[1]} km. Proximity says nothing about spare capacity.</td></tr></table>
-<h2>Step 3 · Combination</h2>
-<p><code>Score = 100 × Σ weight × component</code>. Weights are the ones on the left; moving a slider recalculates scores and ranking live (weights are normalised to sum 100 %).</p>
-<h2>Limits you should keep in mind</h2>
-<ul><li>Node location is the <b>municipality centroid</b> (${M.n_nodes} nodes share fewer distinct points); the real substation can be tens of km away.</li>
-<li>Land cover is 1:250,000 and slope 81 m: this is a regional screen, not a site survey. No ownership, land price, water, soil, or interconnection capacity.</li>
-<li>Percentile scales are relative to this node set: a score of 80 means "good compared with the other Mexican nodes", not an absolute standard.</li>
-<li>Grid distances rely on OpenStreetMap completeness (not audited). Data: © OpenStreetMap contributors (ODbL), INEGI, CONANP, CENACE, NASA POWER.</li></ul>`;
-draw();
-</script></body></html>
+<script>const D=/*DATA*/;const GEO=/*GEO*/;</script>
+<script>/*JS*/</script></body></html>
