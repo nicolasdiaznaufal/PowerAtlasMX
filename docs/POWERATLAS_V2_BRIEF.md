@@ -78,5 +78,7 @@ Verify visually at 1440×900 and 390×844 before each commit (headless Chrome/Pl
 - **M4** `v2-m4-explorer`, **M5** `v2-m5-revenue`, **M6** `v2-m6-compare`.
 - **M7** `v2-m7-polish`: performance (map at 60 fps, first paint of landing < 1 s locally), a11y pass, reduced motion, README, full test suite green.
 
+- **M18** `v2-m18-agent-api` (goal, not started): read-only agent API + OpenAPI + per-user keys, with parity/eval correctness report and correction loop. Spec: `docs/M18_AGENT_API.md`.
+
 ## 11. Inputs needed from Nico (do not block on them)
 `CONTACT_EMAIL` · REPSA client names/logos · GitHub repo name/visibility · approval of landing copy · confirm the §0 reading of "keep #pnl".
