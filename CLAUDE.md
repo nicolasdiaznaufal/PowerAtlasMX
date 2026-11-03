@@ -12,7 +12,7 @@ Owners: see `.claude/agents/*.md` (one agent per folder). UI language: English.
 - Report each milestone in <= 10 lines: what changed, commit hash, screenshot path, open issues.
 
 ## Context file (always)
-- `PROJECT_CONTEXT.md` is the briefing the user feeds to another Claude Project. On any significant change (new milestone, KPI/formula, data window, assumption, config, API/deploy, correction), edit the affected section in the same commit, run `python3 tools/sync_context.py`, and run `--check` before each milestone commit. No secrets in it.
+- `PROJECT_CONTEXT.md` is the briefing the user feeds to another Claude Project. On any significant change (new milestone, KPI/formula, data window, assumption, config, API/deploy, correction), edit the affected section in the same commit, run `python3 tools/sync_context.py`, and run `--check` before each milestone commit. No secrets in it. Also copy it to `main` (single-file commit via a temporary worktree off `origin/main`; never merge the v2 branch into main without Nico's approval).
 
 ## Git (always)
 - Commit AND push after every working increment. Message: `v2: <what>`. Tag milestones `v2-mN-<name>` and push tags. Branch `v2/poweratlas`.
