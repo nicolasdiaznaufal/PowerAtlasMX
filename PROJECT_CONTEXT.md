@@ -20,6 +20,8 @@ How much is a solar plant's electricity worth at a given place in Mexico, and wh
 | Item | Detail |
 |---|---|
 | Prices | CENACE day-ahead (MDA) hourly PML and components (system energy, losses, congestion), 2020-01-01 to 2026-09-30, no missing days. 151,050,393 node-hours. Systems SIN, BCA, BCS. |
+| Real-time prices | CENACE MTR (ex-post, hourly) PML, SIN only, 2020-01 to 2026-09, ingested to `data/parquet/pml_mtr` with the same `ingest_portal.py` (separate folder: never mixed with MDA). Raw files sit in the same `data/raw/cenace` folder as MDA, so file-count tests exclude names containing ` MTR `. |
+| Node catalog | CENACE Catálogo de NodosP v2026-09-23 (`data/ref/catalog_nodosp/`, parsed by `pipeline/catalog_nodes.py` to `data/analysis/catalog_nodes.json`): voltage (kV), load and generation modelling type (direct/indirect), transmission and distribution zones, state, municipality. 2,610 nodes; 36 valid price nodes are no longer in it. |
 | Nodes | 2,431 nodes in the KPI universe (SIN). BCA and BCS are converted to the common clock but outside the KPI universe. Valid node = at least 12 months of data. |
 | Solar resource | NASA POWER hourly (MERRA-2 / CERES SYN1deg), 170 grid cells, 2015 to 2026-07-30. Model estimates, not station data. |
 | Plant model | pvlib-python: single-axis tracker or fixed tilt (0.76 x abs(lat) + 3.1 deg), DC/AC 1.0, derate 0.904 (estimate). Weather fixed to 2015-2025 mean; also real-year and clear-sky variants. |
@@ -66,7 +68,7 @@ Best year is almost always 2022 (high prices); worst is 2020 or 2025. Deck LCOE 
 ## 7. Scores and battery (PROVISIONAL, no verdict colour)
 
 - **Solar score** (`config/solar_score.json`): weights land 0.20, resource 0.20, market 0.20, congestion 0.15, terrain 0.15, grid 0.10. Land screen: 15 km buffer, slope max 7%, min patch 100 ha. Scales: land 200 to 5,000 ha, resource 1,600 to 2,000 kWh/kWp, grid 0.5 to 10 km, congestion years 2023 to 2025.
-- **Battery** (`pipeline/battery_metrics.py`, `battery_score.py`, `config/battery_score.json`): standalone MDA arbitrage screening. Rule-based and out of sample (charge/discharge hours chosen per month on train years 2023 to 2024, applied to test year 2025, no look-ahead). Perfect-foresight spread shown only as an upper bound. RTE 0.85 (re-priceable, charge/discharge totals are kept), illustrative costs 4,500 MXN/kW power, 3,800 MXN/kWh energy, O&M 1.5%, life 15 y, rate 10%. Weights: value 0.30, spread 0.15, predictability 0.15, negative 0.15, congestion volatility 0.10, grid 0.15. Substation saturation is verified only when name, kV and CFE zone all match.
+- **Battery** (`pipeline/battery_metrics.py`, `battery_score.py`, `config/battery_score.json`): standalone MDA arbitrage screening. Rule-based and out of sample (charge/discharge hours chosen per month on train years 2023 to 2024, applied to test year 2025, no look-ahead). Perfect-foresight spread shown only as an upper bound. RTE 0.85 (re-priceable, charge/discharge totals are kept), illustrative costs 4,500 MXN/kW power, 3,800 MXN/kWh energy, O&M 1.5%, life 15 y, rate 10%. Weights (nine components): value 0.25, spread 0.12, predictability 0.12, negative 0.12, congestion volatility 0.08, grid 0.12, real-time value 0.10, imbalance risk 0.04, voltage level 0.05. Real-time value = the same MDA-trained schedule settled at MTR prices (`pipeline/mtr_metrics.py`, test year 2025); imbalance risk = 95th percentile of |MTR minus MDA| (lower is better); voltage level from the catalog (400/230 kV = 1, 161 = 0.85, 138 = 0.8, 115 = 0.65, 69/85 = 0.4, 34.5 = 0.15; [estimated], editable in config). MTR exists for SIN only: BCA/BCS nodes get a neutral 0.5 on the two real-time terms plus a flag. Effect on ranking is small (Spearman 0.997 vs the six-component score; median +2.3 points). Substation saturation is verified only when name, kV and CFE zone all match.
 - Weights and economics are editable in the UI; the UI shows a no-data card for nodes below the 12-month rule.
 
 ## 8. Caveats to quote
@@ -79,7 +81,7 @@ All of these are `PENDIENTE` in `config/supuestos.yaml` and block any verdict: d
 
 ## 10. Product and architecture
 
-- **Web v2** (`web/v2/`, dark Vercel look, English): landing, deck.gl 2D map, place selector, Explorer, Revenue, Compare up to 3, Score full-bleed map with click/clear/compare of 2 places, battery economics editor, no-data card, scenarios, daily profiles, PWA/service worker. v1 (`web/` outside `web/v2/`) is frozen at tag `v1-deck-page`.
+- **Web v2** (`web/v2/`, dark Vercel look, English): landing, deck.gl 2D map, place selector, Explorer, Revenue, Compare up to 3, **Network Atlas** window (`#/network`, `network-view.js`, own deck.gl map; modelled on the atlas-sen layout: grid lines by voltage, nodes coloured by battery score, real-time gap, congestion or voltage, filters by voltage/system/load/generation, medians by control region/state/transmission zone/distribution zone, top 10, node card; data `web/data/derived/network.json` from `pipeline/export_network.py`; lines are OpenStreetMap, ODbL, credited on the page), Score full-bleed map with click/clear/compare of 2 places, battery economics editor, no-data card, scenarios, daily profiles, PWA/service worker. v1 (`web/` outside `web/v2/`) is frozen at tag `v1-deck-page`.
 - **Hosting**: Cloudflare Pages (`wrangler.toml`, project `poweratlasmx`) with a shared-password Pages Function (`functions/_middleware.js`) that protects HTML and data JSON. Secrets never go in git.
 - **Data contract**: `index.json` and `nodes/{id}.json`, schema 1.2.0 (`docs/TECNICO.md` section 6). Data folders (`data/`, `web/data/`) are git-ignored.
 - **M18 (planned, `v2-m18-agent-api`)**: read-only JSON API under `functions/api/v1/`, OpenAPI 3.1 and `/llms.txt`, per-user bearer keys in KV, coverage test (every UI metric has an endpoint field), parity test, independent recomputation by `validador`, agent eval of 30+ questions with pass rate >= 95%, correction loop through `docs/CORRECCIONES.md` and `corrections_version` in `/meta`. Spec: `docs/M18_AGENT_API.md`. We host data, never an LLM.
@@ -108,8 +110,8 @@ All of these are `PENDIENTE` in `config/supuestos.yaml` and block any verdict: d
 ## 13. Sync status (auto)
 
 <!-- AUTO:BEGIN -->
-- Last sync: 2026-11-03 at commit `a292f51` (branch `v2/poweratlas`)
+- Last sync: 2026-11-05 at commit `2cc1a09` (branch `v2/poweratlas`)
 - Latest milestone tag: `v2-m17-score-2` (27 v2 tags)
-- Source fingerprint: `97e671b63db9`
+- Source fingerprint: `012606107a23`
 - Milestone tags (oldest first): v2-m1-landing, v2-m2-map, v2-m3-flow, v2-m3-flow-r2, v2-m4-explorer, v2-m5-revenue, v2-m6-compare, v2-m7-polish, v2-m7-polish-r2, v2-m7-polish-r3, v2-m8-ui, v2-m9-scenarios, v2-m9-scenarios-r2, v2-m10-solar, v2-m10-solar-r2, v2-m10-solar-r3, v2-m10-solar-r4, v2-m11-daily, v2-m11-daily-r2, v2-m12-v1-parity, v2-m13-corrections, v2-m14-timetoggle, v2-m14-leftcolumn, v2-m15-fixes, v2-m16-tweaks, v2-m17-score, v2-m17-score-2
 <!-- AUTO:END -->
