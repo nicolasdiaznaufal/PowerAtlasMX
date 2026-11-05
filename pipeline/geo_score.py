@@ -11,11 +11,14 @@ import time
 
 import duckdb
 import numpy as np
+
+import site_components
 import rasterio
 
 from geo_pilot import DEM, ROOT, analyse, duck, load_grid
 
 CFG = json.loads((ROOT / "config/solar_score.json").read_text())
+SR = site_components.load()
 LAND_KEYS = ("total_ha", "valid_ha", "steep_pct", "flat3_pct", "landcover_excl_pct", "anp_excl_pct",
              "net_viable_ha", "max_patch_ha", "median_slope_pct", "dist_hv_line_km", "dist_substation_km")
 
@@ -48,7 +51,7 @@ def land_screen(nodes, buf):
 
 def score(comp, w, mode):
     """Strict = weighted geometric mean (a weak component drags the score); linear = weighted average."""
-    tw = sum(w.values())
+    tw = sum(w[c] for c in comp)   # only the components present (a layer without data is left out)
     if mode == "linear":
         return round(100 * sum(w[c] * v for c, v in comp.items()) / tw, 1)
     return round(100 * math.exp(sum(w[c] * math.log(max(v, 0.02)) for c, v in comp.items()) / tw), 1)
@@ -122,6 +125,10 @@ def main():
             "terrain": unit(r["flat3_pct"], *s["flat_pct"]),
             "grid": 1 - unit(min(r["dist_hv_line_km"], r["dist_substation_km"]), *s["grid_km"]),
         }.items()}
+        sc_, sf_, sm_ = site_components.for_node(SR, r["id"])
+        r["components"].update({k: round(v, 3) for k, v in sc_.items()})
+        r["flags"] = list(r["flags"]) + sf_
+        r["site"] = sm_ or None
         r["score"] = score(r["components"], CFG["weights"], CFG["mode_default"])
     ranked = sorted((r["score"] for r in rows if r["score"] is not None), reverse=True)
     meta = {"generated": time.strftime("%Y-%m-%d"), "config": CFG, "n_nodes": len(rows),

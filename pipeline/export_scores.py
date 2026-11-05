@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 KEEP = ("id", "nombre", "region", "entidad", "municipio", "lat", "lon", "meses", "max_patch_ha", "steep_pct",
         "flat3_pct", "landcover_excl_pct", "anp_excl_pct", "dist_hv_line_km", "dist_substation_km", "yf_kwh_kwp",
-        "price_mxn_mwh", "cong_mxn_mwh", "components", "flags", "state", "bat")
+        "price_mxn_mwh", "cong_mxn_mwh", "components", "flags", "state", "bat", "site")
 
 
 def norm(s):

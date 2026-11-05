@@ -11,7 +11,7 @@
     "discount_rate": 0.10
   },
   "mode_default": "strict",
-  "weights": {"value": 0.25, "spread": 0.12, "predictability": 0.12, "negative": 0.12, "congvol": 0.08, "grid": 0.12, "realtime": 0.10, "imbalance": 0.04, "voltage": 0.05},
+  "weights": {"value": 0.25, "spread": 0.12, "predictability": 0.12, "negative": 0.12, "congvol": 0.08, "grid": 0.12, "realtime": 0.10, "imbalance": 0.04, "voltage": 0.05, "arch": 0.10, "indig": 0.06, "access": 0.05},
   "scales": {
     "value_pctl": [10, 90], "spread_pctl": [10, 90], "capture": [0.5, 0.9],
     "negative_pctl": [10, 90], "congvol_pctl": [10, 90], "grid_km": [0.5, 10], "realtime_pctl": [10, 90], "imbalance_pctl": [10, 90]

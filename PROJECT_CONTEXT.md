@@ -69,6 +69,8 @@ Best year is almost always 2022 (high prices); worst is 2020 or 2025. Deck LCOE 
 
 - **Solar score** (`config/solar_score.json`): weights land 0.20, resource 0.20, market 0.20, congestion 0.15, terrain 0.15, grid 0.10. Land screen: 15 km buffer, slope max 7%, min patch 100 ha. Scales: land 200 to 5,000 ha, resource 1,600 to 2,000 kWh/kWp, grid 0.5 to 10 km, congestion years 2023 to 2025.
 - **Battery** (`pipeline/battery_metrics.py`, `battery_score.py`, `config/battery_score.json`): standalone MDA arbitrage screening. Rule-based and out of sample (charge/discharge hours chosen per month on train years 2023 to 2024, applied to test year 2025, no look-ahead). Perfect-foresight spread shown only as an upper bound. RTE 0.85 (re-priceable, charge/discharge totals are kept), illustrative costs 4,500 MXN/kW power, 3,800 MXN/kWh energy, O&M 1.5%, life 15 y, rate 10%. Weights (nine components): value 0.25, spread 0.12, predictability 0.12, negative 0.12, congestion volatility 0.08, grid 0.12, real-time value 0.10, imbalance risk 0.04, voltage level 0.05. Real-time value = the same MDA-trained schedule settled at MTR prices (`pipeline/mtr_metrics.py`, test year 2025); imbalance risk = 95th percentile of |MTR minus MDA| (lower is better); voltage level from the catalog (400/230 kV = 1, 161 = 0.85, 138 = 0.8, 115 = 0.65, 69/85 = 0.4, 34.5 = 0.15; [estimated], editable in config). MTR exists for SIN only: BCA/BCS nodes get a neutral 0.5 on the two real-time terms plus a flag. Effect on ranking is small (Spearman 0.997 vs the six-component score; median +2.3 points). Substation saturation is verified only when name, kV and CFE zone all match.
+- **Site risk** (`pipeline/site_risk.py`, `config/site_risk.json`, all values [estimated]): three components added to both scores, weights arch 0.10, indig 0.06, access 0.05 on top of the existing ones (the score normalises by the sum). Archaeology (nearest site, density in 15 km; 537 geocoded points from OSM + INAH list, 55 INAH zones still need manual coordinates in `data/ref/geo/arqueologia/pendientes_geocodificar.csv`); road access (Red Nacional de Caminos, paved/major roads); indigenous locality within 5 km (INEGI ITER 2020; **layer not loaded yet**, the component is left out until the CSV is placed in `data/ref/geo/indigena/iter_00_cpv2020/`). Nodes without data get a neutral 0.5 plus a flag. Rank effect: solar Spearman 0.943, battery 0.981. Pending: grid strength from the short-circuit PDF, node lifecycle, MTR forward validation, ranking stability.
+- **Archaeology limitation:** no mapped site nearby does not mean no heritage; Mexico has many unregistered sites and INAH requires the procedure anyway. Node coordinates are municipal centroids, so km-scale flags are coarse.
 - Weights and economics are editable in the UI; the UI shows a no-data card for nodes below the 12-month rule.
 
 ## 8. Caveats to quote
@@ -110,8 +112,8 @@ All of these are `PENDIENTE` in `config/supuestos.yaml` and block any verdict: d
 ## 13. Sync status (auto)
 
 <!-- AUTO:BEGIN -->
-- Last sync: 2026-11-05 at commit `ddf018f` (branch `v2/poweratlas`)
+- Last sync: 2026-11-05 at commit `1f16b91` (branch `v2/site-risk`)
 - Latest milestone tag: `v2-m17-score-2` (27 v2 tags)
-- Source fingerprint: `012606107a23`
+- Source fingerprint: `29ff723845b5`
 - Milestone tags (oldest first): v2-m1-landing, v2-m2-map, v2-m3-flow, v2-m3-flow-r2, v2-m4-explorer, v2-m5-revenue, v2-m6-compare, v2-m7-polish, v2-m7-polish-r2, v2-m7-polish-r3, v2-m8-ui, v2-m9-scenarios, v2-m9-scenarios-r2, v2-m10-solar, v2-m10-solar-r2, v2-m10-solar-r3, v2-m10-solar-r4, v2-m11-daily, v2-m11-daily-r2, v2-m12-v1-parity, v2-m13-corrections, v2-m14-timetoggle, v2-m14-leftcolumn, v2-m15-fixes, v2-m16-tweaks, v2-m17-score, v2-m17-score-2
 <!-- AUTO:END -->

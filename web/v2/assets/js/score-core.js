@@ -2,8 +2,8 @@
 export const FLOOR = 0.02; // strict mode: a component is never below this, so one zero does not collapse the score to 0
 
 export const NAMES = {
-  solar: { land: 'Land', resource: 'Solar resource', market: 'Market price', congestion: 'Congestion', terrain: 'Terrain', grid: 'Grid proximity' },
-  bat: { value: 'Arbitrage value', spread: 'Daily spread', predictability: 'Predictability', negative: 'Negative prices', congvol: 'Congestion volatility', grid: 'Grid proximity', realtime: 'Real-time value', imbalance: 'Imbalance risk', voltage: 'Voltage level' },
+  solar: { land: 'Land', resource: 'Solar resource', market: 'Market price', congestion: 'Congestion', terrain: 'Terrain', grid: 'Grid proximity', arch: 'Archaeology', indig: 'Indigenous land', access: 'Road access' },
+  bat: { value: 'Arbitrage value', spread: 'Daily spread', predictability: 'Predictability', negative: 'Negative prices', congvol: 'Congestion volatility', grid: 'Grid proximity', realtime: 'Real-time value', imbalance: 'Imbalance risk', voltage: 'Voltage level', arch: 'Archaeology', indig: 'Indigenous land', access: 'Road access' },
 };
 
 /** Battery economics and trading value, recomputed with the user's round-trip efficiency and costs. */
@@ -70,10 +70,13 @@ export function normWeights(keys, W) {
 
 /** 0..100 combination of components cp (each 0..1). mode 'strict' = weighted geometric mean with a floor, 'linear' = weighted average. */
 export function combine(cp, keys, W, mode = 'strict') {
-  const nw = normWeights(keys, W);
-  if (!cp || !nw) return null;
+  if (!cp) return null;
+  // a component absent from the node (layer without data) is left out and the weights renormalise over the rest
+  const present = keys.filter((k) => cp[k] !== undefined);
+  const nw = normWeights(present, W);
+  if (!nw) return null;
   let s = 0;
-  for (const k of keys) {
+  for (const k of present) {
     const v = Number(cp[k]);
     if (!Number.isFinite(v)) return null;
     s += mode === 'linear' ? nw[k] * v : nw[k] * Math.log(Math.max(v, FLOOR));

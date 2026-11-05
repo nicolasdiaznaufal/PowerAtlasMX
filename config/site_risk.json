@@ -1,0 +1,11 @@
+{
+  "_note": "Site risk layers (archaeology, indigenous localities, road access). Every number is [estimated] and editable. Status: PROVISIONAL, no verdict colour.",
+  "indig": {"share_min": 0.40, "radius_km": 5.0, "pop_per_full_weight": 2000, "base_intensity": 0.5, "flag_risk": 0.3,
+            "pop_column_preference": ["P3YM_HLI", "PHOG_IND"], "tot_column": "POBTOT"},
+  "arch": {"near_full_km": 2.0, "near_zero_km": 10.0, "density_radius_km": 15.0, "density_n_full": 10, "density_weight": 0.3,
+           "critical_km": 1.0, "critical_component": 0.05, "flag_critical_km": 2.0, "flag_minor_km": 5.0},
+  "access": {"min_width_m": 6, "dist_km_scale": [0.5, 15.0], "route_radius_km": 1.0},
+  "neutral_missing": 0.5,
+  "weights": {"arch": 0.10, "indig": 0.06, "access": 0.05, "strength": 0.08},
+  "weights_note": "[estimated] added to the existing weights without touching them (score() normalises by the sum); archaeology is the heaviest territory layer by Nico's decision"
+}

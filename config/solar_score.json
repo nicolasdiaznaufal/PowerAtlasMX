@@ -4,7 +4,7 @@
   "slope_max_pct": 7,
   "min_patch_ha": 100,
   "mode_default": "strict",
-  "weights": {"land": 0.20, "resource": 0.20, "market": 0.20, "congestion": 0.15, "terrain": 0.15, "grid": 0.10},
+  "weights": {"land": 0.20, "resource": 0.20, "market": 0.20, "congestion": 0.15, "terrain": 0.15, "grid": 0.10, "arch": 0.10, "indig": 0.06, "access": 0.05},
   "scales": {
     "land_ha": [200, 5000],
     "resource_kwh_kwp": [1600, 2000],

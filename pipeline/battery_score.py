@@ -10,6 +10,8 @@ from pathlib import Path
 
 import numpy as np
 
+import site_components
+
 ROOT = Path(__file__).resolve().parents[1]
 CFG = json.loads((ROOT / "config/battery_score.json").read_text())
 
@@ -19,7 +21,7 @@ def unit(x, lo, hi):
 
 
 def strict(comp, w):
-    tw = sum(w.values())
+    tw = sum(w[c] for c in comp)   # only the components present
     return 100 * math.exp(sum(w[c] * math.log(max(v, .02)) for c, v in comp.items()) / tw)
 
 
@@ -42,6 +44,7 @@ def main():
     mt = json.loads((ROOT / "data/analysis/mtr_metrics.json").read_text())["nodes"]
     cat = json.loads((ROOT / "data/analysis/catalog_nodes.json").read_text())["nodes"]
     ids = [i for i in bm if i in sol]
+    sr = site_components.load()
 
     def col(k):
         return np.array([bm[i][k] for i in ids if bm[i].get(k) is not None], dtype=float)
@@ -71,7 +74,10 @@ def main():
         else:
             comp["realtime"] = comp["imbalance"] = CFG["neutral_missing_mtr"]
         comp["voltage"] = CFG["kv_score"].get(str(c["kv"]).rstrip("0").rstrip(".") if c else "", CFG["neutral_missing_mtr"])
-        flags = [] if t else ["no real-time (MTR) data: neutral score for real-time terms"]
+        site_comp, site_flags, site_m = site_components.for_node(sr, i)
+        comp.update(site_comp)
+        flags = ["no real-time (MTR) data: neutral score for real-time terms"] if not t else []
+        flags += site_flags
         if not c:
             flags.append("node not in current CENACE catalog")
         if m["cong_mean"] > CFG["structural_congestion_mxn_mwh"]:
@@ -96,12 +102,14 @@ def main():
                   "neg_pct": round(m["neg_share_pct"], 2), "cong_std": round(m["cong_std"]),
                   "cong_mean": round(m["cong_mean"]), "rt": {k: round(t[k], 1) for k in ("mda_mean", "mtr_mean", "dev_mean", "dev_std", "dev_p95_abs", "mtr_spread_med",
                  "mtr_kw_yr_4h", "mtr_kw_yr_2h", "mtr_pf_kw_yr_4h")} | {"rt_wider": round(t["rt_wider_share"], 2)} if t else None,
+                  "site": site_m or None,
                   "cat": {k: c[k] for k in ("kv", "carga", "gen", "zot", "grt", "zd", "gdd", "crc")} if c else None,
                   "econ_2h": economics(m["rule_kw_yr_2h"], 2),
                   "econ_4h": economics(m["rule_kw_yr_4h"], 4)}
         out[i]["score"] = round(max(0.0, strict(comp, CFG["weights"]) - pen), 1)
     sc_v = [v["score"] for v in out.values()]
     meta = {"config": CFG, "n": len(out), "scales": {k: [round(a, 2) for a in v] for k, v in sc.items()},
+            "site_layers": sr.get("layers", {}), "effective_weights": site_components.effective_weights(CFG["weights"], next(iter(out.values()))["components"]) if out else {},
             "verified_subs": len(sat), "saturated": sum(1 for v in out.values() if v["pen"] > 0)}
     (ROOT / "data/analysis/battery_score.json").write_text(json.dumps({"meta": meta, "nodes": out}))
     print(meta["n"], "nodes; score pctl 10/50/90:", [round(float(np.percentile(sc_v, p)), 1) for p in (10, 50, 90)],
