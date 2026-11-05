@@ -16,14 +16,14 @@ export function methodSolar(M) {
 <tr><th>Land cover</th><td>Forest and jungle (primary and secondary), settlements, water, aquaculture, mangrove, wetland, riparian, irrigated and humidity agriculture, palm groves. Allowed: grassland, scrub, desert, rainfed agriculture. INEGI Serie VII, 1:250,000.</td></tr>
 <tr><th>Protected areas</th><td>Federal natural protected areas (CONANP, 2026-09-24). State, municipal, RAMSAR and Indigenous lands are not included.</td></tr>
 <tr><th>Patch</th><td>Remaining cells are joined into contiguous patches; the largest is kept. Under ${c.min_patch_ha} ha the node receives no score.</td></tr></table>
-<h2>2 · Six components, each scaled 0 to 1</h2>
+<h2>2 · Nine components, each scaled 0 to 1</h2>
 <table>
 <tr><th>Land · ${f(w.land * 100)}</th><td>Largest patch, log scale: ${f(s.land_ha[0])} ha = 0, ${f(s.land_ha[1])} ha = 1.</td></tr>
 <tr><th>Solar resource · ${f(w.resource * 100)}</th><td>Yearly yield of a fixed-tilt plant (kWh/kWp·yr, NASA POWER via pvlib): ${f(s.resource_kwh_kwp[0])} = 0, ${f(s.resource_kwh_kwp[1])} = 1.</td></tr>
 <tr><th>Market · ${f(w.market * 100)}</th><td>Real MDA reference price (CENACE) captured by a solar profile at that node, ${f(M.price_scale[0])} MXN/MWh = 0 (10th percentile) to ${f(M.price_scale[1])} = 1 (90th). Reference only, not full revenue.</td></tr>
 <tr><th>Congestion · ${f(w.congestion * 100)}</th><td>Congestion component of the price, weighted by solar output, ${c.congestion_years[0]} to ${c.congestion_years[1]}. Negative means congestion lowers the price a plant would get: ${f(M.cong_scale[0])} MXN/MWh = 0, ${f(M.cong_scale[1])} = 1 (10th to 90th percentile).</td></tr>
 <tr><th>Terrain · ${f(w.terrain * 100)}</th><td>Share of valid land with slope up to 3 %: ${s.flat_pct[0]} % = 0, ${s.flat_pct[1]} % = 1.</td></tr>
-<tr><th>Grid · ${f(w.grid * 100)}</th><td>Distance to the nearest 115 to 400 kV line or substation up to 161 kV (OpenStreetMap): up to ${s.grid_km[0]} km = 1, ${s.grid_km[1]} km or more = 0. Says nothing about spare capacity.</td></tr></table>
+<tr><th>Grid · ${f(w.grid * 100)}</th><td>Distance to the nearest 115 to 400 kV line or substation up to 161 kV (OpenStreetMap): up to ${s.grid_km[0]} km = 1, ${s.grid_km[1]} km or more = 0. Says nothing about spare capacity.</td></tr>
 <h2>3 · Combination</h2>
 <p><b>Strict</b> (default): a weighted geometric mean. A node that is poor in one component cannot be rescued by the others, so scores spread out and few nodes reach the top. <b>Balanced</b>: plain weighted average. Weights are normalised to sum to 100 and every slider recalculates the map, ranking and panels live.</p>
 <h2>Limits</h2><ul>
@@ -39,13 +39,16 @@ export function methodBat(B) {
 <p>A screening of how attractive each PML node looks for a stand-alone battery that buys cheap hours and sells expensive ones in the <b>day-ahead market (MDA)</b>. It ranks nodes against each other. It is <b>not</b> a revenue forecast: capacity payments, ancillary services and real-time imbalance are not included.</p>
 <h2>1 · Realistic trading rule, tested out of sample</h2>
 <p>For every month we learn which hours of the day were cheapest and most expensive in ${c.train_years[0]} to ${c.train_years[1]}, then trade exactly those hours on the real prices of ${c.test_year}. No look-ahead. Round-trip efficiency ${f(c.rte * 100)} %. The perfect-foresight spread (best against worst hour of each day, what is often quoted) is shown only as an upper bound.</p>
-<h2>2 · Six components, each scaled 0 to 1</h2><table>
+<h2>2 · Nine components, each scaled 0 to 1</h2><table>
 <tr><th>Value · ${f(w.value * 100)}</th><td>Rule-based 4-hour value, MXN per kW-year. ${f(sc.value[0])} = 0, ${f(sc.value[1])} = 1 (10th to 90th percentile).</td></tr>
 <tr><th>Spread · ${f(w.spread * 100)}</th><td>Median daily max minus min price, MXN/MWh. ${f(sc.spread[0])} = 0, ${f(sc.spread[1])} = 1.</td></tr>
 <tr><th>Predictability · ${f(w.predictability * 100)}</th><td>Share of the hindsight value that the rule captures: ${s.capture[0] * 100} % = 0, ${s.capture[1] * 100} % = 1. Stable daily shapes are easier to trade.</td></tr>
 <tr><th>Negative prices · ${f(w.negative * 100)}</th><td>Share of hours at or below zero (free charging). ${f(sc.negative[0], 2)} % = 0, ${f(sc.negative[1], 2)} % = 1.</td></tr>
 <tr><th>Congestion volatility · ${f(w.congvol * 100)}</th><td>Standard deviation of the congestion component: ${f(sc.congvol[0])} = 0, ${f(sc.congvol[1])} = 1 MXN/MWh. A battery earns where congestion moves.</td></tr>
-<tr><th>Grid · ${f(w.grid * 100)}</th><td>Distance to the nearest 115 to 400 kV line or substation up to 161 kV: up to ${s.grid_km[0]} km = 1, ${s.grid_km[1]} km or more = 0.</td></tr></table>
+<tr><th>Grid · ${f(w.grid * 100)}</th><td>Distance to the nearest 115 to 400 kV line or substation up to 161 kV: up to ${s.grid_km[0]} km = 1, ${s.grid_km[1]} km or more = 0.</td></tr>
+<tr><th>Real-time value · ${f(w.realtime * 100)}</th><td>The same day-ahead schedule, settled at real-time (MTR, ex-post) prices instead: 4-hour MXN per kW-year, ${f(sc.realtime[0])} = 0, ${f(sc.realtime[1])} = 1. MTR exists for the main grid only; Baja California nodes get a neutral ${f(c.neutral_missing_mtr, 1)} here and a flag.</td></tr>
+<tr><th>Imbalance risk · ${f(w.imbalance * 100)}</th><td>95th percentile of the absolute gap between real-time and day-ahead price, MXN/MWh: ${f(sc.imbalance[0])} = 1, ${f(sc.imbalance[1])} = 0. A wide gap makes schedule errors expensive.</td></tr>
+<tr><th>Voltage level · ${f(w.voltage * 100)}</th><td>Node voltage from the CENACE node catalog: 230 and 400 kV = 1, 115 kV = 0.65, 69 to 85 kV = 0.4 [estimated, editable in config]. Higher voltage hosts larger systems.</td></tr></table>
 <h2>3 · Combination and saturation rule</h2>
 <p>Same strict (weighted geometric mean) or balanced (average) options as the solar score. Only ${B.verified_subs} nodes could be checked against substation saturation (name, voltage and CFE zone matched) and ${B.saturated} are saturated. Those lose ${c.saturation_penalty_pts[0]} to ${c.saturation_penalty_pts[1]} points; nodes without data are <b>not</b> rewarded or penalised.</p>
 <h2>4 · Illustrative economics (MXN, editable)</h2><table>

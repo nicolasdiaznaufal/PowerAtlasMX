@@ -26,7 +26,7 @@ export function mountScore(root) {
   <div class="page analysis score">
     <header class="nav">
       <a class="brand" href="#/" aria-label="${CONFIG.PRODUCT}, home">${eclipseSVG()}<span>${CONFIG.PRODUCT}</span></a>
-      <nav class="tabs mono" aria-label="Views">${tab('/explorer', 'Explorer')}${tab('/revenue', 'Revenue')}${tab('/score', 'Score', true)}</nav>
+      <nav class="tabs mono" aria-label="Views">${tab('/explorer', 'Explorer')}${tab('/revenue', 'Revenue')}${tab('/score', 'Score', true)}<a href="#/network">Network Atlas</a></nav>
     </header>
     <main class="sc-main">
       <section class="sc-intro" aria-label="What the scores mean">

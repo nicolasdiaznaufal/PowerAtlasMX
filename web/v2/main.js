@@ -7,7 +7,7 @@ import { announce as say } from './assets/js/live.js';
 
 const view = document.getElementById('view');
 const EASE = 'cubic-bezier(.2, .8, .2, 1)';
-const MODE = { '/': 'hidden', '/map': 'full', '/choose': 'full', '/explorer': 'mini', '/revenue': 'mini', '/score': 'stage', '/appendix': 'hidden' };
+const MODE = { '/': 'hidden', '/map': 'full', '/choose': 'full', '/explorer': 'mini', '/revenue': 'mini', '/score': 'stage', '/network': 'hidden', '/appendix': 'hidden' };
 const LOADERS = {
   '/': async () => renderLanding,
   '/map': async () => (await import('./assets/js/map-page.js')).mountMap,
@@ -15,11 +15,12 @@ const LOADERS = {
   '/explorer': async () => { const m = (await import('./assets/js/analysis.js')).mountAnalysis; return (r, o) => m(r, { ...o, view: 'explorer' }); },
   '/revenue': async () => { const m = (await import('./assets/js/analysis.js')).mountAnalysis; return (r, o) => m(r, { ...o, view: 'revenue' }); },
   '/score': async () => (await import('./assets/js/score-view.js')).mountScore,
+  '/network': async () => (await import('./assets/js/network-view.js')).mountNetwork,
   '/appendix': async () => (await import('./assets/js/appendix.js')).mountAppendix,
 };
 const go = (href) => { location.hash = href; };
 let cur = null, queue = Promise.resolve();
-const NAMES = { '/': 'Home', '/map': 'Map', '/choose': 'Choose a view', '/explorer': 'Explorer', '/revenue': 'Revenue', '/score': 'Score', '/appendix': 'Appendix' };
+const NAMES = { '/': 'Home', '/map': 'Map', '/choose': 'Choose a view', '/explorer': 'Explorer', '/revenue': 'Revenue', '/score': 'Score', '/network': 'Network Atlas', '/appendix': 'Appendix' };
 
 
 async function mount(path) {
@@ -130,7 +131,7 @@ async function route() {
   if (prev === null) {
     await mount(path); shell.setMode(MODE[path]);
     if (path === '/') afterFirstPaint(() => { shell.init(); import('./assets/js/explorer-data.js').then((m) => m.prefetch()); });
-    else if (path === '/appendix') { /* standalone page: no map, no analysis data */ }
+    else if (path === '/appendix' || path === '/network') { /* standalone page: own map or none, no shell data */ }
     else shell.init().then(() => shell.fit(0, path === '/choose' ? 'choose' : null));
     announce(path);
     return;

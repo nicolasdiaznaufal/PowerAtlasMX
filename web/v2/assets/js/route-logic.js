@@ -2,9 +2,9 @@
 import { parseSel, serializeSel } from './store.js';
 import { parseSpan, parseScenario, serializeScenario, spanEquals, scenarioEquals, parseCfg, parseWx } from './query-extras.js';
 
-export const ROUTES = ['/', '/map', '/choose', '/explorer', '/revenue', '/score', '/appendix'];
+export const ROUTES = ['/', '/map', '/choose', '/explorer', '/revenue', '/score', '/network', '/appendix'];
 /** routes with no selection or analysis state: they never carry ?sel and never touch the store (landing, appendix). */
-const BARE = (p) => p === '/' || p === '/appendix';
+const BARE = (p) => p === '/' || p === '/appendix' || p === '/network';
 const NEEDS_SEL = new Set(['/choose', '/explorer', '/revenue']);
 /** `real` (today's pesos) is written as &real=1 only when on; nominal is the default and is omitted. */
 export const hrefFor = (path, list, real = false, extras = null) => {

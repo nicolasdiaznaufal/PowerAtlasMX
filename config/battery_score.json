@@ -11,11 +11,14 @@
     "discount_rate": 0.10
   },
   "mode_default": "strict",
-  "weights": {"value": 0.30, "spread": 0.15, "predictability": 0.15, "negative": 0.15, "congvol": 0.10, "grid": 0.15},
+  "weights": {"value": 0.25, "spread": 0.12, "predictability": 0.12, "negative": 0.12, "congvol": 0.08, "grid": 0.12, "realtime": 0.10, "imbalance": 0.04, "voltage": 0.05},
   "scales": {
     "value_pctl": [10, 90], "spread_pctl": [10, 90], "capture": [0.5, 0.9],
-    "negative_pctl": [10, 90], "congvol_pctl": [10, 90], "grid_km": [0.5, 10]
+    "negative_pctl": [10, 90], "congvol_pctl": [10, 90], "grid_km": [0.5, 10], "realtime_pctl": [10, 90], "imbalance_pctl": [10, 90]
   },
+  "kv_score": {"400": 1.0, "230": 1.0, "161": 0.85, "138": 0.8, "115": 0.65, "85": 0.4, "69": 0.4, "34.5": 0.15},
+  "kv_note": "[estimated] higher interconnection voltage = more hosting capacity for MW-scale storage; editable",
+  "neutral_missing_mtr": 0.5,
   "saturation_penalty_pts": [5, 15],
   "structural_congestion_mxn_mwh": 1000
 }

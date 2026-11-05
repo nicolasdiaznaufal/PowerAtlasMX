@@ -21,6 +21,7 @@ export function mountAnalysis(root, { view, go }) {
         <a data-to="/explorer" href="${hrefFor('/explorer', list, shell.store.real, shell.store.extras)}" ${view === 'explorer' ? 'aria-current="page"' : ''}>Explorer</a>
         <a data-to="/revenue" href="${hrefFor('/revenue', list, shell.store.real, shell.store.extras)}" ${view === 'revenue' ? 'aria-current="page"' : ''}>Revenue</a>
         <a data-to="/score" href="${hrefFor('/score', list, shell.store.real, shell.store.extras)}">Score</a>
+        <a data-to="/network" href="#/network">Network Atlas</a>
       </nav>
     </header>
     <main class="an-body">

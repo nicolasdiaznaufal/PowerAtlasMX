@@ -36,7 +36,7 @@ MUESTRA = [
 
 
 def _csvs() -> list[Path]:
-    return sorted(RAW_ROOT.rglob("*.csv")) if RAW_ROOT.exists() else []
+    return sorted(p for p in RAW_ROOT.rglob("*.csv") if " MTR " not in p.name) if RAW_ROOT.exists() else []
 
 
 def _meta(f: Path) -> dict:

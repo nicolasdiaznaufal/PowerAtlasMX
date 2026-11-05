@@ -39,14 +39,20 @@ def main():
     bm = json.loads((ROOT / "data/analysis/battery_metrics.json").read_text())["nodes"]
     sol = {r["id"]: r for r in json.loads((ROOT / "data/analysis/solar_score.json").read_text())["nodes"]}
     sat = {r["clave"]: r for r in csv.DictReader(open(ROOT / "data/analysis/subs_verified.csv"))}
+    mt = json.loads((ROOT / "data/analysis/mtr_metrics.json").read_text())["nodes"]
+    cat = json.loads((ROOT / "data/analysis/catalog_nodes.json").read_text())["nodes"]
     ids = [i for i in bm if i in sol]
 
     def col(k):
         return np.array([bm[i][k] for i in ids if bm[i].get(k) is not None], dtype=float)
     S = CFG["scales"]
     pc = lambda k, key: (float(np.percentile(col(k), S[key][0])), float(np.percentile(col(k), S[key][1])))
+    mcol = lambda k: np.array([mt[i][k] for i in ids if i in mt], dtype=float)
+    sc_rt = tuple(float(np.percentile(mcol("mtr_kw_yr_4h"), q)) for q in S["realtime_pctl"])
+    sc_im = tuple(float(np.percentile(mcol("dev_p95_abs"), q)) for q in S["imbalance_pctl"])
     sc = {"value": pc("rule_kw_yr_4h", "value_pctl"), "spread": pc("spread_med", "spread_pctl"),
           "negative": pc("neg_share_pct", "negative_pctl"), "congvol": pc("cong_std", "congvol_pctl")}
+    sc.update(realtime=sc_rt, imbalance=sc_im)
     out, p0, p1 = {}, *CFG["saturation_penalty_pts"]
     for i in ids:
         m, s = bm[i], sol[i]
@@ -58,7 +64,16 @@ def main():
             "congvol": unit(m["cong_std"], *sc["congvol"]),
             "grid": 1 - unit(min(s["dist_hv_line_km"], s["dist_substation_km"]), *S["grid_km"]),
         }
-        flags = []
+        t, c = mt.get(i), cat.get(i)
+        if t:   # MTR exists for SIN only; BCA/BCS get a neutral value and a flag instead of a guess
+            comp["realtime"] = unit(t["mtr_kw_yr_4h"], *sc_rt)
+            comp["imbalance"] = 1 - unit(t["dev_p95_abs"], *sc_im)
+        else:
+            comp["realtime"] = comp["imbalance"] = CFG["neutral_missing_mtr"]
+        comp["voltage"] = CFG["kv_score"].get(str(c["kv"]).rstrip("0").rstrip(".") if c else "", CFG["neutral_missing_mtr"])
+        flags = [] if t else ["no real-time (MTR) data: neutral score for real-time terms"]
+        if not c:
+            flags.append("node not in current CENACE catalog")
         if m["cong_mean"] > CFG["structural_congestion_mxn_mwh"]:
             flags.append("structural congestion (mean congestion above %d MXN/MWh)" % CFG["structural_congestion_mxn_mwh"])
         sv, pen = sat.get(i), 0.0
@@ -79,7 +94,10 @@ def main():
                   "pfdis_4h": round(m["pfdis_kw_yr_4h"], 1), "pfch_4h": round(m["pfch_kw_yr_4h"], 1),
                   "days_train": m["days_train"], "days_test": m["days_test"], "capture_4h": round(m["capture_4h"] or 0, 2),
                   "neg_pct": round(m["neg_share_pct"], 2), "cong_std": round(m["cong_std"]),
-                  "cong_mean": round(m["cong_mean"]), "econ_2h": economics(m["rule_kw_yr_2h"], 2),
+                  "cong_mean": round(m["cong_mean"]), "rt": {k: round(t[k], 1) for k in ("mda_mean", "mtr_mean", "dev_mean", "dev_std", "dev_p95_abs", "mtr_spread_med",
+                 "mtr_kw_yr_4h", "mtr_kw_yr_2h", "mtr_pf_kw_yr_4h")} | {"rt_wider": round(t["rt_wider_share"], 2)} if t else None,
+                  "cat": {k: c[k] for k in ("kv", "carga", "gen", "zot", "grt", "zd", "gdd", "crc")} if c else None,
+                  "econ_2h": economics(m["rule_kw_yr_2h"], 2),
                   "econ_4h": economics(m["rule_kw_yr_4h"], 4)}
         out[i]["score"] = round(max(0.0, strict(comp, CFG["weights"]) - pen), 1)
     sc_v = [v["score"] for v in out.values()]

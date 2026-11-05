@@ -3,7 +3,7 @@ export const FLOOR = 0.02; // strict mode: a component is never below this, so o
 
 export const NAMES = {
   solar: { land: 'Land', resource: 'Solar resource', market: 'Market price', congestion: 'Congestion', terrain: 'Terrain', grid: 'Grid proximity' },
-  bat: { value: 'Arbitrage value', spread: 'Daily spread', predictability: 'Predictability', negative: 'Negative prices', congvol: 'Congestion volatility', grid: 'Grid proximity' },
+  bat: { value: 'Arbitrage value', spread: 'Daily spread', predictability: 'Predictability', negative: 'Negative prices', congvol: 'Congestion volatility', grid: 'Grid proximity', realtime: 'Real-time value', imbalance: 'Imbalance risk', voltage: 'Voltage level' },
 };
 
 /** Battery economics and trading value, recomputed with the user's round-trip efficiency and costs. */
