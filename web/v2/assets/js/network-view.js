@@ -7,7 +7,9 @@ import { hrefFor } from './nav.js';
 import { loadDeck, webglAvailable } from './map-view.js';
 import { loadGeo } from './geo.js';
 import { esc } from './score-detail.js';
-import { KV_BANDS, METRICS, bandOf, colorOf, domainOf, filterNodes, groupStats, lineStyle, rampCSS, topNodes, LOAD_TXT } from './network-core.js';
+import { KV_BANDS, METRICS, LINE_LEGEND, bandOf, colorOf, domainOf, filterNodes, groupStats, lineStyle, rampCSS, topNodes, LOAD_TXT } from './network-core.js';
+import { PERMIT_GROUPS, filterPlants, plantCard, techColor, ringOf, radiusOf } from './network-plants.js';
+import { cityLayer, tierAt } from './cities.js';
 
 const GROUPS = { crc: 'Control region', ent: 'State', zot: 'Transmission zone', zd: 'Distribution zone' };
 const num = (v, d = 0) => (v == null ? 'n/a' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d }));
@@ -15,8 +17,8 @@ const sgn = (v) => (v == null ? 'n/a' : (v > 0 ? '+' : '') + Math.round(v).toLoc
 const chip = (attr, id, label, on) => `<button type="button" class="nw-chip" data-${attr}="${id}" aria-pressed="${on}">${label}</button>`;
 
 export function mountNetwork(root) {
-  const S = { metric: 'score', bands: new Set(KV_BANDS.map((b) => b.id)), sis: new Set(['SIN', 'BCA', 'BCS']), load: 'all', gen: 'all', q: '', lines: true, group: 'crc', sel: null };
-  let D = null, deckInst = null, deck = null, geo = null, dead = false, shown = [], dom = [0, 1];
+  const S = { metric: 'score', bands: new Set(KV_BANDS.map((b) => b.id)), sis: new Set(['SIN', 'BCA', 'BCS']), load: 'all', gen: 'all', q: '', lines: true, group: 'crc', sel: null, plants: true, pg: new Set(PERMIT_GROUPS.map((g) => g.id)), selP: null };
+  let plantsAll = [], pShown = [], D = null, deckInst = null, deck = null, geo = null, dead = false, shown = [], dom = [0, 1];
   const tab = (to, label, cur) => `<a href="${hrefFor(to, [])}"${cur ? ' aria-current="page"' : ''}>${label}</a>`;
   root.innerHTML = `
   <div class="page analysis network">
@@ -29,7 +31,7 @@ export function mountNetwork(root) {
         <div class="nw-map" id="nw-map"></div>
         <div class="nw-legend"><span class="mono" id="nw-lt"></span><div class="nw-ramp" id="nw-ramp" aria-hidden="true"></div><div class="mono nw-lg"><span id="nw-lo"></span><span id="nw-hi"></span></div></div>
         <div class="tip" id="nw-tip" hidden></div>
-        <p class="nw-credit mono">Lines © OpenStreetMap contributors (ODbL). Nodes: CENACE catalog <span id="nw-cat"></span>. Screening view, not a revenue forecast.</p>
+        <p class="nw-credit mono">Lines © OpenStreetMap contributors (ODbL). Plants: CRE list; permit dates: CNE via atlas-sen (CC-BY). Nodes: CENACE catalog <span id="nw-cat"></span>. Screening view, not a revenue forecast.</p>
         <div class="xp-state loading" id="nw-state" role="status">Loading network…</div>
       </section>
       <aside class="nw-panel" aria-label="Filters and statistics">
@@ -43,7 +45,12 @@ export function mountNetwork(root) {
           <label class="mono">Generation<select id="nw-gen"><option value="all">All</option><option value="any">Has generation</option><option value="D">Directly modelled</option><option value="I">Indirectly modelled</option></select></label>
         </div>
         <div class="nw-blk"><input id="nw-q" type="search" placeholder="Search node, municipality, state" aria-label="Search nodes" autocomplete="off">
-          <label class="nw-chk"><input type="checkbox" id="nw-lines" checked> Transmission lines (OpenStreetMap)</label></div>
+          <label class="nw-chk"><input type="checkbox" id="nw-lines" checked> Transmission lines (OpenStreetMap)</label>
+          <div class="nw-lines mono">${LINE_LEGEND.map(([t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div></div>
+        <div class="nw-blk"><h2 class="mono">Plants and permits</h2>
+          <label class="nw-chk"><input type="checkbox" id="nw-plants" checked> Show plants (CRE permit status, CNE grant and expiry)</label>
+          <div class="nw-seg" id="nw-pg">${PERMIT_GROUPS.map((g) => chip('g', g.id, g.label, true)).join('')}</div>
+          <p class="hint mono" id="nw-pn"></p></div>
         <div class="nw-blk" id="nw-card" aria-live="polite"><p class="hint">Click a node for its catalog entry and prices.</p></div>
         <div class="nw-blk"><h2 class="mono">Median by <select id="nw-group" aria-label="Group by">${Object.entries(GROUPS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></h2><div class="nw-tbl" id="nw-stats"></div></div>
         <div class="nw-blk"><h2 class="mono" id="nw-toph"></h2><ol class="nw-top" id="nw-top"></ol></div>
@@ -88,22 +95,31 @@ export function mountNetwork(root) {
       const vis = D.lines.filter((l) => S.bands.has(bandOf(l[0])));
       out.push(new L.PathLayer({ id: 'lines', data: vis, getPath: (l) => l[1].map(([a, o]) => [o, a]), getColor: (l) => lineStyle(l[0]).c, getWidth: (l) => lineStyle(l[0]).w, widthUnits: 'pixels', capRounded: true, updateTriggers: { data: [[...S.bands].join()] } }));
     }
+    if (S.plants) {
+      out.push(new L.ScatterplotLayer({ id: 'plants', data: pShown, pickable: true, getPosition: (p) => [p.lo, p.la], getRadius: radiusOf, radiusUnits: 'meters', radiusMinPixels: 3, radiusMaxPixels: 16,
+        getFillColor: (p) => techColor(p.t), stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1.5, getLineColor: ringOf, updateTriggers: { getData: [pShown] } }));
+    }
     out.push(
       new L.ScatterplotLayer({ id: 'nodes', data: shown, pickable: true, getPosition: (n) => [n.lo, n.la], getRadius: (n) => (n.kv >= 230 ? 4200 : 2800), radiusUnits: 'meters', radiusMinPixels: 2.5, radiusMaxPixels: 11,
         getFillColor: (n) => colorOf(m, m.get(n), dom), updateTriggers: { getFillColor: [S.metric, dom[0], dom[1]] } }),
       new L.ScatterplotLayer({ id: 'gen', data: shown.filter((n) => n.gen === 'D'), getPosition: (n) => [n.lo, n.la], getRadius: 4200, radiusUnits: 'meters', radiusMinPixels: 5, radiusMaxPixels: 13, filled: false, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: [237, 230, 208, 170] }),
-      new L.ScatterplotLayer({ id: 'sel', data: sel, getPosition: (n) => [n.lo, n.la], getRadius: 5000, radiusUnits: 'meters', radiusMinPixels: 9, radiusMaxPixels: 16, filled: false, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 2, getLineColor: [232, 162, 102, 255] }));
+      new L.ScatterplotLayer({ id: 'sel', data: sel, getPosition: (n) => [n.lo, n.la], getRadius: 5000, radiusUnits: 'meters', radiusMinPixels: 9, radiusMaxPixels: 16, filled: false, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 2, getLineColor: [232, 162, 102, 255] }),
+      new L.ScatterplotLayer({ id: 'selp', data: S.selP ? [S.selP] : [], getPosition: (p) => [p.lo, p.la], getRadius: 9000, radiusUnits: 'meters', radiusMinPixels: 10, radiusMaxPixels: 18, filled: false, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 2, getLineColor: [237, 230, 208, 255] }),
+      cityLayer(L, cur.zoom));
     return out;
   }
 
   function refresh(rescale = true) {
     shown = filterNodes(D.nodes, S);
     if (rescale) dom = domainOf(shown.length ? shown : D.nodes, METRICS[S.metric]);
+    pShown = filterPlants(plantsAll, S.pg, S.q);
+    q('#nw-pn').textContent = `${pShown.length.toLocaleString('en-US')} of ${plantsAll.length.toLocaleString('en-US')} plants`;
     legend(); stats();
     if (deckInst) deckInst.setProps({ layers: layers() });
     q('#nw-state').hidden = true;
   }
-  const pick = (n) => { S.sel = n; q('#nw-card').innerHTML = card(n); if (deckInst) deckInst.setProps({ layers: layers() }); };
+  const pickP = (p) => { S.selP = p; S.sel = null; q('#nw-card').innerHTML = p ? plantCard(p, esc) : card(null); if (deckInst) deckInst.setProps({ layers: layers() }); };
+  const pick = (n) => { S.sel = n; S.selP = null; q('#nw-card').innerHTML = card(n); if (deckInst) deckInst.setProps({ layers: layers() }); };
   const toggle = (set, id, btn) => { set.has(id) ? set.delete(id) : set.add(id); btn.setAttribute('aria-pressed', set.has(id)); if (!set.size) { set.add(id); btn.setAttribute('aria-pressed', 'true'); } refresh(); };
 
   q('#nw-metric').onclick = (e) => { const b = e.target.closest('[data-m]'); if (!b) return; S.metric = b.dataset.m; q('#nw-metric').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); refresh(); };
@@ -112,6 +128,8 @@ export function mountNetwork(root) {
   q('#nw-load').onchange = (e) => { S.load = e.target.value; refresh(); };
   q('#nw-gen').onchange = (e) => { S.gen = e.target.value; refresh(); };
   q('#nw-group').onchange = (e) => { S.group = e.target.value; stats(); };
+  q('#nw-plants').onchange = (e) => { S.plants = e.target.checked; refresh(false); };
+  q('#nw-pg').onclick = (e) => { const b = e.target.closest('[data-g]'); if (b) toggle(S.pg, b.dataset.g, b); };
   q('#nw-lines').onchange = (e) => { S.lines = e.target.checked; refresh(false); };
   let qt = 0;
   q('#nw-q').oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.target.value; refresh(); }, 160); };
@@ -125,9 +143,9 @@ export function mountNetwork(root) {
   const vs = () => cur;
 
   async function load() {
-    const [data, g] = await Promise.all([getJSON('../data/derived/network.json'), loadGeo()]);
+    const [data, g, pl] = await Promise.all([getJSON('../data/derived/network.json'), loadGeo(), getJSON('../data/derived/plants.json').catch(() => ({ plants: [] }))]);
     if (dead) return;
-    D = data; D.byId = new Map(D.nodes.map((n) => [n.id, n])); geo = g;
+    plantsAll = pl.plants; D = data; D.byId = new Map(D.nodes.map((n) => [n.id, n])); geo = g;
     q('#nw-cat').textContent = D.meta.catalog.replace(/^.*\((.*)\).*$/, '$1');
     if (!webglAvailable()) { q('#nw-state').textContent = 'WebGL is not available in this browser, so the map cannot be drawn. The tables still work.'; shown = filterNodes(D.nodes, S); dom = domainOf(shown, METRICS[S.metric]); legend(); stats(); return; }
     deck = await loadDeck();
@@ -135,16 +153,18 @@ export function mountNetwork(root) {
     shown = filterNodes(D.nodes, S); dom = domainOf(shown, METRICS[S.metric]);
     deckInst = new deck.Deck({ parent: q('#nw-map'), views: new deck.MapView({ repeat: false }), controller: { keyboard: true, doubleClickZoom: true, inertia: false, dragRotate: false, touchRotate: false },
       viewState: cur, pickingRadius: 8, layers: layers(), useDevicePixels: Math.min(window.devicePixelRatio || 1, 2),
-      onViewStateChange: ({ viewState }) => { cur = viewState; deckInst.setProps({ viewState: cur }); tip.hidden = true; },
+      onViewStateChange: ({ viewState }) => { const t = tierAt(cur.zoom); cur = viewState; deckInst.setProps(tierAt(cur.zoom) !== t ? { viewState: cur, layers: layers() } : { viewState: cur }); tip.hidden = true; },
       getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
       onHover: (i) => {
+        const pp = i && i.layer && i.layer.id === 'plants' ? i.object : null;
+        if (pp) { tip.innerHTML = `<b>${esc(pp.n)}</b><span class="mono">${esc(pp.t || '')} · ${pp.mw == null ? 'n/a' : pp.mw + ' MW'}</span><span>${esc(pp.fase)}</span>`; tip.style.left = `${i.x + 14}px`; tip.style.top = `${i.y + 14}px`; tip.hidden = false; return; }
         const n = i && i.layer && i.layer.id === 'nodes' ? i.object : null;
         if (!n) { tip.hidden = true; return; }
         const m = METRICS[S.metric], v = m.get(n);
         tip.innerHTML = `<b>${esc(n.n)}</b><span class="mono">${esc(n.id)} · ${n.kv} kV</span><span>${m.label}: ${v == null ? 'n/a' : m.fmt(v)}</span>`;
         tip.style.left = `${i.x + 14}px`; tip.style.top = `${i.y + 14}px`; tip.hidden = false;
       },
-      onClick: (i) => pick(i && i.layer && i.layer.id === 'nodes' ? i.object : null) });
+      onClick: (i) => (i && i.layer && i.layer.id === 'plants' ? pickP(i.object) : pick(i && i.layer && i.layer.id === 'nodes' ? i.object : null)) });
     refresh();
   }
   load().catch((e) => { console.error(e); q('#nw-state').textContent = 'Could not load the network data.'; q('#nw-state').classList.remove('loading'); });

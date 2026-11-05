@@ -49,13 +49,14 @@ export function colorOf(m, v, dom) {
 }
 export const rampCSS = (m) => `linear-gradient(90deg, ${(m.dir === 'div' ? DIV : SEQ).map((c) => `rgb(${c})`).join(', ')})`;
 
-/** line colour and pixel width by voltage (OSM power lines). */
-export function lineStyle(kv) {
-  if (kv >= 400) return { c: [244, 230, 196, 210], w: 1.8 };
-  if (kv >= 230) return { c: [232, 162, 102, 190], w: 1.3 };
-  if (kv >= 138) return { c: [141, 168, 146, 150], w: 1 };
-  return { c: [141, 168, 146, 80], w: 0.6 };
+
+export function lineStyle(kv) {   // atlas-sen palette and opacities
+  if (kv >= 400) return { c: [163, 45, 45, 153], w: 1.6 };
+  if (kv >= 230) return { c: [194, 65, 12, 133], w: 1.2 };
+  if (kv >= 115) return { c: [124, 138, 160, 117], w: 0.8 };
+  return { c: [184, 179, 168, 102], w: 0.6 };
 }
+export const LINE_LEGEND = [['400 kV', '#A32D2D'], ['230 kV', '#C2410C'], ['115-161 kV', '#7C8AA0'], ['below 115 kV', '#B8B3A8']];
 
 /** f: { bands:Set<string>, sis:Set<string>, load:'all'|'D'|'I', gen:'all'|'D'|'I'|'any', q:string } */
 export const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

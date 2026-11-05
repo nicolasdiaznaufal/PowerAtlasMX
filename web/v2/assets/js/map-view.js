@@ -1,6 +1,7 @@
 // Map: one persistent deck.gl Deck (2D MapView, no tiles). Layers: states, regions, no-data nodes, nodes by metric, selection ring.
 import { METRICS, domainOf, position, colorOf, RAMP } from './metrics.js';
 import { featureBounds, featureContains } from './geo.js';
+import { cityLayer, tierAt } from './cities.js';
 
 const MEXICO = [-118.6, 14.4, -86.6, 32.8];
 const LIM = { lon: [-122, -83], lat: [12, 35] };
@@ -50,6 +51,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
     callbacks.onHover(null);
     if (ms && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ms = 0;
     inst.setProps({ viewState: ms ? { ...vs, transitionDuration: ms, transitionInterpolator: new deck.FlyToInterpolator() } : vs });
+    if (!ms) inst.setProps({ layers: layers() }); // city-name tier follows the zoom
   };
 
   const inArea = (n) => {
@@ -79,6 +81,7 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
         getPosition: (n) => [n.lon, n.lat], getRadius: 2500, radiusUnits: 'meters', radiusMinPixels: 6, radiusMaxPixels: 14,
         getLineColor: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? slotCol('node', n.id) : [240, 232, 210, 150]), lineWidthUnits: 'pixels', getLineWidth: (n) => (sel.some((s) => s.kind === 'node' && s.id === n.id) ? 2.5 : 1.25),
         updateTriggers: { getData: [sel, hover], getLineColor: [sel], getLineWidth: [sel] } }),
+      cityLayer(L, (vs && vs.zoom) || 0),
     ];
   }
 
@@ -86,7 +89,11 @@ export function createMapView({ deck, container, geo, atlas, callbacks }) {
   const inst = new deck.Deck({
     parent: container, views: view, controller: CONTROLLER, pickingRadius: 8, // nodes are small: pick the nearest dot within 8 px
     viewState: fit(MEXICO), layers: layers(), useDevicePixels: Math.min(window.devicePixelRatio || 1, 2),
-    onViewStateChange: ({ viewState }) => { vs = clamp(viewState); inst.setProps({ viewState: vs }); },
+    onViewStateChange: ({ viewState }) => {
+      const t = tierAt(vs ? vs.zoom : 0);
+      vs = clamp(viewState);
+      inst.setProps(tierAt(vs.zoom) !== t ? { viewState: vs, layers: layers() } : { viewState: vs });
+    },
     getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
     onHover: (info) => { const n = nodeOf(info); if (n !== hover) { hover = n; refresh(); } callbacks.onHover(n, info && info.x, info && info.y); },
     onClick: (info) => {

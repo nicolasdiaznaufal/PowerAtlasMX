@@ -37,3 +37,25 @@ test('#/network is a bare route: no selection is added or required', () => {
   const r = resolveHash('#/network', null, [{ kind: 'node', id: 'X' }]);
   assert.equal(r.path, '/network'); assert.equal(r.hash, '#/network'); assert.deepEqual(r.list, []);
 });
+
+import { PERMIT_GROUPS, groupOf, filterPlants, techHex, plantCard } from '../v2/assets/js/network-plants.js';
+import { CITIES, tierAt } from '../v2/assets/js/cities.js';
+import { lineStyle } from '../v2/assets/js/network-core.js';
+
+test('line colours are the atlas-sen voltage palette', () => {
+  assert.deepEqual(lineStyle(400).c.slice(0, 3), [163, 45, 45]); assert.deepEqual(lineStyle(230).c.slice(0, 3), [194, 65, 12]);
+  assert.deepEqual(lineStyle(115).c.slice(0, 3), [124, 138, 160]); assert.deepEqual(lineStyle(69).c.slice(0, 3), [184, 179, 168]);
+});
+test('plants: every status belongs to one permit group; technology colours; filter; card shows permit dates', () => {
+  const sts = ['operating', 'building', 'permit', 'requested', 'none', 'revoked', 'ended', 'denied', 'cancelled', 'retired'];
+  sts.forEach((s) => assert.equal(PERMIT_GROUPS.filter((g) => g.sts.includes(s)).length, 1, s));
+  assert.equal(groupOf('revoked'), 'bad'); assert.equal(techHex('Fotovoltaica'), '#F5B301'); assert.equal(techHex('Ciclo Combinado'), '#A98B63');
+  const P = [{ n: 'Sol', co: 'X', st: 'operating', num: 'E/1' }, { n: 'Mal', co: 'Y', st: 'revoked' }];
+  assert.equal(filterPlants(P, new Set(['bad'])).length, 1); assert.equal(filterPlants(P, new Set(['ok', 'bad']), 'e/1').length, 1);
+  assert.match(plantCard({ n: 'Sol', st: 'operating', grant: '2017-08-03', exp: '2047-08-03', num: 'E/1' }, (x) => x), /2047-08-03/);
+});
+test('cities: tiers, valid Mexican coordinates, tier by zoom', () => {
+  CITIES.forEach(([n, lo, la, t]) => { assert.ok(n && lo > -120 && lo < -86 && la > 14 && la < 33 && [1, 2, 3].includes(t), n); });
+  assert.equal(new Set(CITIES.map((c) => c[0])).size, CITIES.length);
+  assert.deepEqual([3, 5, 6].map(tierAt), [1, 2, 3]);
+});
