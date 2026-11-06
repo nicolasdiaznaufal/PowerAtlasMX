@@ -4,6 +4,7 @@ Inputs: data/analysis/battery_metrics.json, solar_score.json (grid distances, no
 Out: data/analysis/battery_score.json. Weights/costs: config/battery_score.json. No verdict colour.
 """
 import csv
+import datetime
 import json
 import math
 from pathlib import Path
@@ -45,6 +46,10 @@ def main():
     cat = json.loads((ROOT / "data/analysis/catalog_nodes.json").read_text())["nodes"]
     ids = [i for i in bm if i in sol]
     sr = site_components.load()
+    LIFE = json.loads((ROOT / "data/analysis/node_lifecycle.json").read_text())["nodes"] if (ROOT / "data/analysis/node_lifecycle.json").exists() else {}
+    RECENT = (datetime.date.today() - datetime.timedelta(days=365)).isoformat()
+    FWD = json.loads((ROOT / "data/analysis/mtr_forward.json").read_text())["nodes"] if (ROOT / "data/analysis/mtr_forward.json").exists() else {}
+    STR = json.loads((ROOT / "data/analysis/strength.json").read_text())["nodes"] if (ROOT / "data/analysis/strength.json").exists() else {}
 
     def col(k):
         return np.array([bm[i][k] for i in ids if bm[i].get(k) is not None], dtype=float)
@@ -76,10 +81,24 @@ def main():
         comp["voltage"] = CFG["kv_score"].get(str(c["kv"]).rstrip("0").rstrip(".") if c else "", CFG["neutral_missing_mtr"])
         site_comp, site_flags, site_m = site_components.for_node(sr, i)
         comp.update(site_comp)
+        st = STR.get(i)
+        if st:
+            comp["strength"] = unit(st["scr_ref"], *CFG["strength"]["scr_scale"])
+        else:
+            comp["strength"] = CFG["neutral_missing_mtr"]
+        strength_flags = ["grid strength not available (not in RNT 2028 short-circuit study): neutral"] if not st else []
+        if st and st["icc_flag"]:
+            strength_flags.append("Icc3F max > %g kA: possible breaker replacement" % CFG["strength"]["icc_max_flag_ka"])
         flags = ["no real-time (MTR) data: neutral score for real-time terms"] if not t else []
-        flags += site_flags
+        flags += site_flags + strength_flags
+        if FWD.get(i, {}).get("unstable"):
+            flags.append("real-time value rank unstable between the 2025 and 2026 tests")
+        lf = LIFE.get(i, {})
         if not c:
-            flags.append("node not in current CENACE catalog")
+            flags.append("node removed from CENACE catalog on %s: leave out of rankings" % lf["removed"] if lf.get("removed")
+                         else "node not in current CENACE catalog (no change record)")
+        elif lf.get("added") and lf["added"] > RECENT:
+            flags.append("node added %s: short price history, not penalised" % lf["added"])
         if m["cong_mean"] > CFG["structural_congestion_mxn_mwh"]:
             flags.append("structural congestion (mean congestion above %d MXN/MWh)" % CFG["structural_congestion_mxn_mwh"])
         sv, pen = sat.get(i), 0.0
@@ -92,7 +111,7 @@ def main():
             if x > 0:
                 pen = p0 + (p1 - p0) * min(1.0, x / 5.0)
         out[i] = {"components": {k: round(v, 3) for k, v in comp.items()}, "pen": round(pen, 1), "sat": sat_info,
-                  "flags": flags, "spread_med": round(m["spread_med"]), "spread_p90": round(m["spread_p90"]),
+                  "flags": flags, "strength": st, "spread_med": round(m["spread_med"]), "spread_p90": round(m["spread_p90"]),
                   "rule_2h": round(m["rule_kw_yr_2h"]), "rule_4h": round(m["rule_kw_yr_4h"]),
                   "pf_4h": round(m["pf_kw_yr_4h"]),
                   "dis_2h": round(m["dis_kw_yr_2h"], 1), "ch_2h": round(m["ch_kw_yr_2h"], 1),

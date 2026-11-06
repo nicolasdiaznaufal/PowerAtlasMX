@@ -18,18 +18,18 @@ from battery_metrics import KS, RTE, TEST, TRAIN
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_days(chunk=40):
+def load_days(chunk=40, train=TRAIN, test=TEST):
     """Yield (node, dates, MDA[n,24], MTR[n,24]) for days with 24 h in both markets (SIN only: MTR exists there)."""
     con = duckdb.connect()
     con.execute("PRAGMA threads=2; PRAGMA memory_limit='4GB'; SET preserve_insertion_order=false")
     a = f"read_parquet('{ROOT}/data/parquet/pml_mda/sistema=SIN/**/*.parquet', hive_partitioning=true)"
     b = f"read_parquet('{ROOT}/data/parquet/pml_mtr/sistema=SIN/**/*.parquet', hive_partitioning=true)"
-    nodes = [r[0] for r in con.execute(f"select distinct nodo from {b} where anio={TEST} order by 1").fetchall()]
+    nodes = [r[0] for r in con.execute(f"select distinct nodo from {b} where anio={test} order by 1").fetchall()]
     for i in range(0, len(nodes), chunk):
         ids = ",".join("'" + n + "'" for n in nodes[i:i + chunk])
         q = (f"select a.nodo, a.fecha, list(a.pml order by a.hora) pa, list(b.pml order by a.hora) pb "
-             f"from (select nodo, fecha, hora, pml from {a} where nodo in ({ids}) and anio between {TRAIN[0]} and {TEST}) a "
-             f"join (select nodo, fecha, hora, pml from {b} where nodo in ({ids}) and anio between {TRAIN[0]} and {TEST}) b "
+             f"from (select nodo, fecha, hora, pml from {a} where nodo in ({ids}) and anio between {min(train)} and {test}) a "
+             f"join (select nodo, fecha, hora, pml from {b} where nodo in ({ids}) and anio between {min(train)} and {test}) b "
              f"on a.nodo=b.nodo and a.fecha=b.fecha and a.hora=b.hora "
              f"group by a.nodo, a.fecha having count(*) = 24 order by a.nodo, a.fecha")
         cache = {}
@@ -40,11 +40,13 @@ def load_days(chunk=40):
             yield n, dates, np.array(A, dtype=np.float32), np.array(B, dtype=np.float32)
 
 
-def node_metrics(dates, A, B):
+def node_metrics(dates, A, B, train=TRAIN, test=TEST, months=None):
     yr = np.array([d.year for d in dates])
     mo = np.array([d.month for d in dates])
-    tr, te = np.isin(yr, TRAIN), yr == TEST
-    if tr.sum() < 180 or te.sum() < 250:
+    tr, te = np.isin(yr, train), yr == test
+    if months:   # compare the same months across tests (no seasonal mixing)
+        tr, te = tr & np.isin(mo, months), te & np.isin(mo, months)
+    if tr.sum() < 90 * len(set(train)) * (len(months) / 12 if months else 1) or te.sum() < (25 * len(months) if months else 250):
         return None
     dev = B[te] - A[te]
     sp_a, sp_b = A[te].max(1) - A[te].min(1), B[te].max(1) - B[te].min(1)
@@ -54,8 +56,10 @@ def node_metrics(dates, A, B):
            "mtr_spread_med": float(np.median(sp_b)), "mtr_spread_p90": float(np.percentile(sp_b, 90)),
            "mda_spread_med": float(np.median(sp_a)),
            "mtr_neg_share_pct": float(100 * (B[te] <= 0).mean()),
+           "mtr_p99": float(np.percentile(B[te], 99)), "mtr_p01": float(np.percentile(B[te], 1)),
+           "mtr_nonpos_share_pct": float(100 * (B[te] <= 0).mean()),
            "rt_wider_share": float((sp_b > sp_a).mean())}   # share of days the real-time spread beats day-ahead
-    scale, te_idx = 365.0 / te.sum(), np.where(te)[0]
+    scale, te_idx = 365.0 / te.sum(), np.where(te)[0]   # per-year equivalent
     for k in KS:
         dis_a, ch_a, dis_b, ch_b = (np.zeros(te.sum()) for _ in range(4))
         for m in range(1, 13):
@@ -76,18 +80,23 @@ def node_metrics(dates, A, B):
     return out
 
 
-def main():
+def main(train=TRAIN, test=TEST, months=None, out_name="mtr_metrics.json"):
     t0, res = time.time(), {}
-    for i, (node, dates, A, B) in enumerate(load_days(), 1):
-        m = node_metrics(dates, A, B)
+    for i, (node, dates, A, B) in enumerate(load_days(train=train, test=test), 1):
+        m = node_metrics(dates, A, B, train, test, months)
         if m:
             res[node] = m
         if i % 200 == 0:
             print(i, f"{time.time() - t0:.0f}s", flush=True)
-    meta = {"train": TRAIN, "test": TEST, "rte": RTE, "n": len(res), "generated": time.strftime("%Y-%m-%d")}
-    (ROOT / "data/analysis/mtr_metrics.json").write_text(json.dumps({"meta": meta, "nodes": res}))
+    meta = {"train": list(train), "test": test, "months": months, "rte": RTE, "n": len(res), "generated": time.strftime("%Y-%m-%d")}
+    (ROOT / "data/analysis" / out_name).write_text(json.dumps({"meta": meta, "nodes": res}))
     print(meta)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if sys.argv[1:] == ["forward"]:   # train 2024-25, test Jan-Sep 2026; the 2025 test is recomputed on the same months for comparison
+        main(train=(2024, 2025), test=2026, months=list(range(1, 10)), out_name="mtr_metrics_fwd2026.json")
+        main(train=TRAIN, test=TEST, months=list(range(1, 10)), out_name="mtr_metrics_2025_jan_sep.json")
+    else:
+        main()

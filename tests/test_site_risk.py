@@ -40,3 +40,25 @@ def test_teotihuacan_and_sonora():
                                    {"key": "son", "lat": 30.5, "lon": -113.0}])
     assert r["teo"]["metrics"]["dist_arch_km"] < 1.0 and r["teo"]["components"]["arch"] <= 0.06
     assert r["son"]["components"]["arch"] > 0.9
+
+
+def test_cc_parser_counts_against_document():
+    import cc_parse
+    if not cc_parse.PDF.exists():
+        pytest.skip("no PDF")
+    rows, bad = cc_parse.parse()
+    assert len(rows) >= 3425 and not bad
+    r = next(x for x in rows if x["acr_kv"] == "ACO-230")
+    assert (r["icc3f_min"], r["icc3f_max"], r["region"]) == (25.31, 29.55, "Central")
+    assert r["zth1_min"] == complex(0.877, 5.173)
+
+
+def test_strength_formula_and_unifilar_search():
+    import strength
+    import unifilares
+    d = strength.build(p_ref=100)
+    assert d["meta"]["n_matched"] > 2250
+    n = d["nodes"][next(iter(d["nodes"]))]
+    assert n["max_mw_scr3"] == pytest.approx(n["ssc_min_mva"] / 3, abs=1)
+    if unifilares.IDX.exists():
+        assert unifilares.unifilar_pages("Arcelia Nueva") == [6, 8]

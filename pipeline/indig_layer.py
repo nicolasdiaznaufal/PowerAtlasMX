@@ -42,11 +42,14 @@ def to_num(series):
 
 def load_iter(cfg, path=None):
     """-> DataFrame(lat, lon, pob, ind, share, is_ind) plus info dict, or (None, info) when the file is not there."""
-    files = sorted((Path(path) if path else DIR).glob("*.csv")) if (Path(path) if path else DIR).exists() else []
+    base = Path(path) if path else DIR
+    files = sorted(base.rglob("conjunto_de_datos*.csv")) if base.exists() else []   # the INEGI zip nests it two folders deep
     if not files:
         return None, {"available": False}
     d = pd.read_csv(files[0], dtype=str, encoding="utf-8-sig", low_memory=False)
     d.columns = [c.strip().upper() for c in d.columns]
+    if "LOC" in d.columns:   # LOC 0000 = entity/municipality totals, 9998/9999 = scattered localities without coordinates
+        d = d[~d["LOC"].str.strip().isin(["0", "00", "000", "0000", "9998", "9999"])]
     pop_col = next((c for c in cfg["pop_column_preference"] if c in d.columns), None)
     if pop_col is None or cfg["tot_column"] not in d.columns or "LONGITUD" not in d.columns:
         raise ValueError(f"ITER columns not as expected: {list(d.columns)[:20]}")

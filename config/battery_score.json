@@ -1,24 +1,92 @@
 {
   "_note": "Battery (standalone MDA arbitrage) screening. Costs are ILLUSTRATIVE, editable, MXN. Status: PROVISIONAL.",
   "rte": 0.85,
-  "train_years": [2023, 2024],
+  "train_years": [
+    2023,
+    2024
+  ],
   "test_year": 2025,
   "cost": {
     "power_mxn_per_kw": 4500,
     "energy_mxn_per_kwh": 3800,
     "om_pct_capex_yr": 1.5,
     "life_years": 15,
-    "discount_rate": 0.10
+    "discount_rate": 0.1
   },
   "mode_default": "strict",
-  "weights": {"value": 0.25, "spread": 0.12, "predictability": 0.12, "negative": 0.12, "congvol": 0.08, "grid": 0.12, "realtime": 0.10, "imbalance": 0.04, "voltage": 0.05, "arch": 0.10, "indig": 0.06, "access": 0.05},
-  "scales": {
-    "value_pctl": [10, 90], "spread_pctl": [10, 90], "capture": [0.5, 0.9],
-    "negative_pctl": [10, 90], "congvol_pctl": [10, 90], "grid_km": [0.5, 10], "realtime_pctl": [10, 90], "imbalance_pctl": [10, 90]
+  "weights": {
+    "value": 0.25,
+    "spread": 0.12,
+    "predictability": 0.12,
+    "negative": 0.12,
+    "congvol": 0.08,
+    "grid": 0.12,
+    "realtime": 0.1,
+    "imbalance": 0.04,
+    "voltage": 0.05,
+    "arch": 0.1,
+    "indig": 0.06,
+    "access": 0.05,
+    "strength": 0.08
   },
-  "kv_score": {"400": 1.0, "230": 1.0, "161": 0.85, "138": 0.8, "115": 0.65, "85": 0.4, "69": 0.4, "34.5": 0.15},
+  "scales": {
+    "value_pctl": [
+      10,
+      90
+    ],
+    "spread_pctl": [
+      10,
+      90
+    ],
+    "capture": [
+      0.5,
+      0.9
+    ],
+    "negative_pctl": [
+      10,
+      90
+    ],
+    "congvol_pctl": [
+      10,
+      90
+    ],
+    "grid_km": [
+      0.5,
+      10
+    ],
+    "realtime_pctl": [
+      10,
+      90
+    ],
+    "imbalance_pctl": [
+      10,
+      90
+    ]
+  },
+  "kv_score": {
+    "400": 1.0,
+    "230": 1.0,
+    "161": 0.85,
+    "138": 0.8,
+    "115": 0.65,
+    "85": 0.4,
+    "69": 0.4,
+    "34.5": 0.15
+  },
   "kv_note": "[estimated] higher interconnection voltage = more hosting capacity for MW-scale storage; editable",
   "neutral_missing_mtr": 0.5,
-  "saturation_penalty_pts": [5, 15],
-  "structural_congestion_mxn_mwh": 1000
+  "saturation_penalty_pts": [
+    5,
+    15
+  ],
+  "structural_congestion_mxn_mwh": 1000,
+  "strength": {
+    "scr_scale": [
+      2,
+      10
+    ],
+    "icc_max_flag_ka": 40,
+    "p_ref_mw": 100,
+    "_note": "[estimado] SCR<3 = weak grid for grid-following inverters; filter, not an interconnection study"
+  }
 }
