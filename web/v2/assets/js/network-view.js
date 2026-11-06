@@ -30,9 +30,8 @@ export function mountNetwork(root) {
     <main class="nw-main">
       <section class="nw-stage" aria-label="Grid map">
         <div class="nw-map" id="nw-map"></div>
-        ${titleCard()}${legendCard()}
+        <div class="nw-left">${titleCard()}${legendCard()}<p class="nw-credit mono" id="nw-credit"></p></div>
         <div class="tip" id="nw-tip" hidden></div>
-        <p class="nw-credit mono" id="nw-credit"></p>
         <div class="xp-state loading" id="nw-state" role="status">Loading network…</div>
         <div id="nw-side"></div>
       </section>

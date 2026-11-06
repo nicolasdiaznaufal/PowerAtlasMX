@@ -51,6 +51,10 @@ def build():
                      "yr": None if pd.isna(yr) else int(yr), "ent": r.Entidad, "mod": r.Modalidad, "num": num,
                      "grant": pm.get("otorgamiento"), "exp": pm.get("vencimiento"), "mlab": pm.get("modLabel"),
                      "holder": pm.get("titular"), "lo": round(lo, 4), "la": round(la, 4)})
+    for r in rows:   # NaN is not valid JSON (the browser would fail to parse the whole file)
+        for k, v in r.items():
+            if isinstance(v, float) and math.isnan(v):
+                r[k] = None
     # control region = region of the nearest catalog node (nodes are municipal centroids: approximate near region borders)
     from scipy.spatial import cKDTree
     nodes = json.loads((ROOT / "web/data/derived/network.json").read_text())["nodes"]
@@ -66,5 +70,5 @@ def build():
 
 if __name__ == "__main__":
     out = ROOT / "web/data/derived/plants.json"
-    out.write_text(json.dumps(build(), ensure_ascii=False, separators=(",", ":")))
+    out.write_text(json.dumps(build(), ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     print(out, out.stat().st_size // 1024, "KB")
