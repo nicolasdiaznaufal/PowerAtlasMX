@@ -51,6 +51,14 @@ def build():
                      "yr": None if pd.isna(yr) else int(yr), "ent": r.Entidad, "mod": r.Modalidad, "num": num,
                      "grant": pm.get("otorgamiento"), "exp": pm.get("vencimiento"), "mlab": pm.get("modLabel"),
                      "holder": pm.get("titular"), "lo": round(lo, 4), "la": round(la, 4)})
+    # control region = region of the nearest catalog node (nodes are municipal centroids: approximate near region borders)
+    from scipy.spatial import cKDTree
+    nodes = json.loads((ROOT / "web/data/derived/network.json").read_text())["nodes"]
+    tree = cKDTree([[n["la"], n["lo"]] for n in nodes])
+    for r, j in zip(rows, tree.query([[r["la"], r["lo"]] for r in rows])[1]):
+        r["reg"] = nodes[j]["crc"].title()
+        legacy = r["mod"] in ("Autoabastecimiento", "Cogeneración", "Pequeño Productor", "Productor Independiente de Energía", "Usos Propios Continuos")
+        r["mkt"] = "MEM" if (r["mod"] == "Generación" or r["mlab"] == "Generador MEM") else ("Legado" if legacy else None)
     meta = {"generated": time.strftime("%Y-%m-%d"), "n": len(rows), "with_dates": sum(1 for x in rows if x["grant"]),
             "permits_source": perm["source"]["label"], "note": perm["notaVigencia"]}
     return {"meta": meta, "plants": rows}

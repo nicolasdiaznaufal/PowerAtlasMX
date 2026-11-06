@@ -59,3 +59,22 @@ test('cities: tiers, valid Mexican coordinates, tier by zoom', () => {
   assert.equal(new Set(CITIES.map((c) => c[0])).size, CITIES.length);
   assert.deepEqual([3, 5, 6].map(tierAt), [1, 2, 3]);
 });
+
+import { techFam, TECHS } from '../v2/assets/js/network-plants.js';
+const P2 = [
+  { n: 'a', st: 'operating', t: 'Fotovoltaica', mw: 300, mkt: 'MEM', mlab: 'Generador MEM', reg: 'Norte', exp: '2034-05-01' },
+  { n: 'b', st: 'operating', t: 'Eólico', mw: 40, mkt: 'Legado', mod: 'Autoabastecimiento', reg: 'Oriental', exp: '2037-01-01' },
+  { n: 'c', st: 'none', t: 'Turbina Hidráulica', mw: 10, reg: 'Norte', exp: null },
+];
+const PF = { groups: new Set(['ok', 'permit', 'none', 'bad']), techs: new Set(TECHS.map((t) => t[0])), mkt: 'all', ptype: 'all', exp: 'all', mw: 0, reg: 'all', q: '' };
+test('plant filters: technology, market, permit type, expiry bucket, size, region', () => {
+  assert.equal(filterPlants(P2, PF).length, 3);
+  assert.deepEqual(filterPlants(P2, { ...PF, techs: new Set(['pv']) }).map((p) => p.n), ['a']);
+  assert.deepEqual(filterPlants(P2, { ...PF, mkt: 'Legado' }).map((p) => p.n), ['b']);
+  assert.deepEqual(filterPlants(P2, { ...PF, ptype: 'Autoabastecimiento' }).map((p) => p.n), ['b']);
+  assert.deepEqual(filterPlants(P2, { ...PF, exp: 'lt2035' }).map((p) => p.n), ['a']);
+  assert.deepEqual(filterPlants(P2, { ...PF, exp: '2035' }).map((p) => p.n), ['b']);
+  assert.deepEqual(filterPlants(P2, { ...PF, mw: 200 }).map((p) => p.n), ['a']);
+  assert.deepEqual(filterPlants(P2, { ...PF, reg: 'Norte' }).map((p) => p.n), ['a', 'c']);
+  assert.equal(techFam('Turbina Hidráulica'), 'hydro');
+});

@@ -92,6 +92,7 @@ self.PRECACHE = [
  "assets/js/metrics.js",
  "assets/js/nav.js",
  "assets/js/network-core.js",
+ "assets/js/network-panel.js",
  "assets/js/network-plants.js",
  "assets/js/network-view.js",
  "assets/js/pnl-card.js",
