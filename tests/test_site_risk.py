@@ -62,3 +62,12 @@ def test_strength_formula_and_unifilar_search():
     assert n["max_mw_scr3"] == pytest.approx(n["ssc_min_mva"] / 3, abs=1)
     if unifilares.IDX.exists():
         assert unifilares.unifilar_pages("Arcelia Nueva") == [6, 8]
+
+
+def test_mtr_scenarios_ordering():
+    p = ROOT / "data/analysis/mtr_scenarios.json"
+    if not p.exists():
+        pytest.skip("no scenarios")
+    n = json.loads(p.read_text())["nodes"]
+    ok = sum(1 for v in n.values() if v["ceil_med"] >= v["real_med"] - 1 and v["ceil_med"] >= v["floor_med"] - 1)
+    assert ok / len(n) > 0.99   # perfect foresight is an upper bound

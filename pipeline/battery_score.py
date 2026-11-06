@@ -49,6 +49,7 @@ def main():
     LIFE = json.loads((ROOT / "data/analysis/node_lifecycle.json").read_text())["nodes"] if (ROOT / "data/analysis/node_lifecycle.json").exists() else {}
     RECENT = (datetime.date.today() - datetime.timedelta(days=365)).isoformat()
     FWD = json.loads((ROOT / "data/analysis/mtr_forward.json").read_text())["nodes"] if (ROOT / "data/analysis/mtr_forward.json").exists() else {}
+    SCEN = json.loads((ROOT / "data/analysis/mtr_scenarios.json").read_text())["nodes"] if (ROOT / "data/analysis/mtr_scenarios.json").exists() else {}
     STR = json.loads((ROOT / "data/analysis/strength.json").read_text())["nodes"] if (ROOT / "data/analysis/strength.json").exists() else {}
 
     def col(k):
@@ -91,6 +92,8 @@ def main():
             strength_flags.append("Icc3F max > %g kA: possible breaker replacement" % CFG["strength"]["icc_max_flag_ka"])
         flags = ["no real-time (MTR) data: neutral score for real-time terms"] if not t else []
         flags += site_flags + strength_flags
+        if SCEN.get(i, {}).get("cong_struct_share", 0) > 0.5:
+            flags.append("structural real-time congestion (more than half of the months)")
         if FWD.get(i, {}).get("unstable"):
             flags.append("real-time value rank unstable between the 2025 and 2026 tests")
         lf = LIFE.get(i, {})
@@ -111,7 +114,7 @@ def main():
             if x > 0:
                 pen = p0 + (p1 - p0) * min(1.0, x / 5.0)
         out[i] = {"components": {k: round(v, 3) for k, v in comp.items()}, "pen": round(pen, 1), "sat": sat_info,
-                  "flags": flags, "strength": st, "spread_med": round(m["spread_med"]), "spread_p90": round(m["spread_p90"]),
+                  "flags": flags, "strength": st, "scen": {k: v for k, v in SCEN[i].items() if k != "annual"} if i in SCEN else None, "spread_med": round(m["spread_med"]), "spread_p90": round(m["spread_p90"]),
                   "rule_2h": round(m["rule_kw_yr_2h"]), "rule_4h": round(m["rule_kw_yr_4h"]),
                   "pf_4h": round(m["pf_kw_yr_4h"]),
                   "dis_2h": round(m["dis_kw_yr_2h"], 1), "ch_2h": round(m["ch_kw_yr_2h"], 1),
