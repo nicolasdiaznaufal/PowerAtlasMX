@@ -67,7 +67,6 @@
   .nw-map { position: relative; height: 60vh; }
   .nw-left, .nw-panel { position: static; width: auto; margin: 8px 16px; overflow: visible; }
 }
-}
 
 .nw-lines { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--ink-3); font-size: 11px; }
 .nw-lines i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
