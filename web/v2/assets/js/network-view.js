@@ -38,6 +38,8 @@ export function mountNetwork(root) {
     </main>
   </div>`;
   const q = (s) => root.querySelector(s);
+  const fit = () => { const n = root.querySelector('.nav'); if (n) root.querySelector('.nw-stage').style.setProperty('--nw-top', `${Math.round(n.getBoundingClientRect().bottom)}px`); if (deckInst) deckInst.setProps({ width: '100%', height: '100%' }); };
+  window.addEventListener('resize', fit); fit();
   const tip = q('#nw-tip');
 
   function card(n) {
@@ -178,5 +180,5 @@ export function mountNetwork(root) {
   }
   load().catch((e) => { console.error(e); q('#nw-state').textContent = 'Could not load the network data.'; q('#nw-state').classList.remove('loading'); });
 
-  return { destroy() { dead = true; if (deckInst) deckInst.finalize(); } };
+  return { destroy() { dead = true; window.removeEventListener('resize', fit); if (deckInst) deckInst.finalize(); } };
 }

@@ -1,7 +1,7 @@
 /* Network Atlas (#/network): map left, filters and statistics right. Tokens only; same dark system as Score. */
 .network { min-height: 100vh; display: flex; flex-direction: column; }
-.nw-main { flex: 1; min-height: 0; height: calc(100vh - 64px); }
-.nw-stage { position: relative; background: var(--canvas); height: 100%; min-height: 420px; overflow: hidden; }
+.nw-main { display: contents; }
+.nw-stage { position: fixed; top: var(--nw-top, 66px); left: 0; right: 0; bottom: 0; background: var(--canvas); overflow: hidden; }
 .nw-map { position: absolute; inset: 0; }
 .nw-stage .tip { min-width: 180px; }
 .nw-left { position: absolute; left: 16px; top: 16px; bottom: 16px; width: 300px; z-index: 6; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; pointer-events: none; }
@@ -23,7 +23,7 @@
 .nw-ring { border: 2px solid #fff; border-radius: 50%; box-sizing: border-box; background: transparent; }
 .nw-credit { margin: 0; font-size: 10px; color: var(--ink-3); background: rgba(17, 22, 19, .85); border-radius: var(--radius); padding: 8px 10px; text-transform: none; letter-spacing: 0; }
 .nw-stage .xp-state { position: absolute; left: 16px; top: 120px; z-index: 7; }
-.nw-panel { right: 16px; top: 16px; bottom: 16px; width: 340px; overflow-y: auto; padding: 14px 16px 24px; display: grid; gap: 8px; align-content: start; }
+.nw-panel { right: 16px; top: 16px; bottom: 16px; width: 340px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 14px 16px 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; }
 .nw-panel h2, .nw-panel h3 { font-size: 11px; font-weight: 400; color: var(--ink-3); margin: 10px 0 0; text-transform: uppercase; letter-spacing: .07em; display: flex; gap: 8px; align-items: center; }
 .nw-hd { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; }
 .nw-hd button { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
@@ -63,11 +63,10 @@
 .nw-top i { color: var(--ink-3); font-style: normal; margin-left: 6px; }
 .nw-top b { color: var(--accent); font-weight: 400; }
 @media (max-width: 900px) {
-  .nw-main { height: auto; }
-  .nw-stage { height: auto; min-height: 0; display: grid; }
+  .nw-stage { position: static; display: grid; }
   .nw-map { position: relative; height: 60vh; }
-  .nw-title, .nw-legend, .nw-panel { position: static; margin: 8px 16px; width: auto; max-height: none; }
-  .nw-credit { margin: 0; font-size: 10px; color: var(--ink-3); background: rgba(17, 22, 19, .85); border-radius: var(--radius); padding: 8px 10px; text-transform: none; letter-spacing: 0; }
+  .nw-left, .nw-panel { position: static; width: auto; margin: 8px 16px; overflow: visible; }
+}
 }
 
 .nw-lines { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--ink-3); font-size: 11px; }
